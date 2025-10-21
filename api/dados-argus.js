@@ -46,7 +46,16 @@ export default async function handler(req, res) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Argus API Error:', errorText);
-            return res.status(response.status).json({ message: `Erro ao contatar a API da Argus: ${response.statusText}` });
+            // Try to parse the error as JSON, but fall back to plain text if it fails.
+            let errorJson = {};
+            try {
+                errorJson = JSON.parse(errorText);
+            } catch (e) {
+                // Not a JSON error, send the raw text.
+                return res.status(response.status).json({ message: `Erro da API Argus: ${errorText}` });
+            }
+            // If it is JSON, send the message from it, or the whole object.
+            return res.status(response.status).json({ message: `Erro da API Argus: ${errorJson.message || errorText}` });
         }
 
         const data = await response.json();
