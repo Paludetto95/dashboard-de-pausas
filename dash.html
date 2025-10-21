@@ -836,6 +836,7 @@
                     return handleDataLoadError(responseData.descStatus || "A API da Argus retornou um erro.");
                 }
 
+                console.log("Dados recebidos da API Argus:", responseData);
                 originalData = transformArgusData(responseData.pausasDetalhadas);
 
                 if (originalData.length === 0) {
