@@ -262,7 +262,7 @@
                     </svg>
                     <span>Carregar Dados</span>
                 </h2>
-                <div class="flex flex-col gap-4">
+                <div class="flex flex-col gap-4 w-full">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV</label>
                         <div class="flex justify-center">
@@ -272,18 +272,34 @@
                             <input type="file" id="csv-file-input" accept=".csv, .txt, .tsv" class="hidden"/>
                         </div>
                     </div>
+                    
+                    <hr class="border-slate-600">
 
-                    <!-- NOVOS SELETORES DE DATA PARA API -->
-                    <div class="flex justify-between items-center">
-                        <label for="api-start-date" class="text-sm font-medium text-slate-300">Data Início:</label>
-                        <input type="date" id="api-start-date" class="form-input-dark w-1/2 date-input" required>
+                    <!-- SELETORES DE PERÍODO DA API -->
+                    <div class="space-y-3">
+                        <label class="block text-sm font-medium text-slate-300 text-left">Período</label>
+                        <div class="flex items-center gap-2">
+                            <input type="date" id="api-start-date" class="form-input-dark w-full" required>
+                            <input type="time" id="api-start-time" class="form-input-dark w-2/3" required>
+                        </div>
+                         <div class="flex items-center gap-2">
+                            <input type="date" id="api-end-date" class="form-input-dark w-full" required>
+                            <input type="time" id="api-end-time" class="form-input-dark w-2/3" required>
+                        </div>
                     </div>
-                     <div class="flex justify-between items-center">
-                        <label for="api-end-date" class="text-sm font-medium text-slate-300">Data Fim:</label>
-                        <input type="date" id="api-end-date" class="form-input-dark w-1/2 date-input" required>
+
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-slate-600"></div>
+                        <span class="flex-shrink mx-4 text-slate-400 text-xs">OU</span>
+                        <div class="flex-grow border-t border-slate-600"></div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="ultimos-minutos" class="block text-sm font-medium text-slate-300 text-left">Últimos Minutos</label>
+                        <input type="number" id="ultimos-minutos" placeholder="Ex: 60" class="form-input-dark w-full">
                     </div>
                     
-                    <button id="load-argus-api-btn" class="w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition duration-300 ease-in-out">
+                    <button id="load-argus-api-btn" class="!mt-5 w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition duration-300 ease-in-out">
                         Carregar via API (Argus)
                     </button>
                 </div>
@@ -447,13 +463,17 @@
             typeDistribution: null
         };
 
+        // CORREÇÃO: Objeto 'els' atualizado com os novos campos
         const els = {
             fileInput: document.getElementById('csv-file-input'),
             fileUploadLabel: document.getElementById('file-upload-label'),
             fileStatus: document.getElementById('file-status'),
-            apiDates: { // NOVO: Seletores de data para a API
+            apiControls: { 
                 startDate: document.getElementById('api-start-date'),
-                endDate: document.getElementById('api-end-date')
+                startTime: document.getElementById('api-start-time'),
+                endDate: document.getElementById('api-end-date'),
+                endTime: document.getElementById('api-end-time'),
+                ultimosMinutos: document.getElementById('ultimos-minutos')
             },
             filters: {
                 consultant: document.getElementById('consultant-filter'),
@@ -716,8 +736,6 @@
             updateDashboard();
         }
 
-
-
         function transformArgusData(apiData) {
             if (!Array.isArray(apiData)) {
                 console.error("Formato de dados da API inesperado. Esperava um array.");
@@ -753,35 +771,46 @@
             }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
         }
 
+        // CORREÇÃO: Função `loadArgusApiData` completamente refeita para lidar com a nova lógica
         async function loadArgusApiData() {
             els.fileInput.value = '';
             els.fileUploadLabel.textContent = 'Escolher arquivo';
             els.fileStatus.textContent = 'Carregando dados da API Argus...';
             els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
-            // CORREÇÃO: Utiliza os novos seletores de data da API
-            const startDate = els.apiDates.startDate.value;
-            const endDate = els.apiDates.endDate.value;
+            const ultimosMinutos = parseInt(els.apiControls.ultimosMinutos.value, 10);
+            let payload = {};
 
-            if (!startDate || !endDate) {
-                els.fileStatus.textContent = "Erro: Por favor, selecione uma data de início e uma data de fim na seção 'Carregar Dados'.";
-                els.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
-                return;
+            if (!isNaN(ultimosMinutos) && ultimosMinutos > 0) {
+                payload = { ultimosMinutos: ultimosMinutos };
+            } else {
+                const startDate = els.apiControls.startDate.value;
+                const startTime = els.apiControls.startTime.value || '00:00';
+                const endDate = els.apiControls.endDate.value;
+                const endTime = els.apiControls.endTime.value || '23:59';
+
+                if (!startDate || !endDate) {
+                    els.fileStatus.textContent = "Erro: Por favor, selecione um período de data/hora ou preencha os últimos minutos.";
+                    els.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+                    return;
+                }
+                
+                const startDateObj = new Date(`${startDate}T${startTime}`);
+                const endDateObj = new Date(`${endDate}T${endTime}`);
+
+                payload = {
+                    periodoInicial: startDateObj.toISOString(),
+                    periodoFinal: endDateObj.toISOString()
+                };
             }
-
-            const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-            const startDateObj = new Date(Date.UTC(startYear, startMonth - 1, startDay, 0, 0, 0, 0));
-            const periodoInicial = startDateObj.toISOString();
-
-            const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-            const endDateObj = new Date(Date.UTC(endYear, endMonth - 1, endDay, 23, 59, 59, 999));
-            const periodoFinal = endDateObj.toISOString();
-
+            
             try {
+                // Simulação de chamada de API. Substitua pela sua chamada real.
+                console.log("Enviando para a API:", payload);
                 const response = await fetch('/api/dados-argus', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ periodoInicial, periodoFinal }),
+                    body: JSON.stringify(payload),
                 }); 
 
                 const responseData = await response.json();
@@ -793,15 +822,13 @@
                 if (responseData.codStatus < 1) {
                     return handleDataLoadError(responseData.descStatus || "A API da Argus retornou um erro.");
                 }
-
-                console.log("Dados recebidos da API Argus:", responseData);
+                
                 originalData = transformArgusData(responseData.pausasDetalhadas);
 
                 if (originalData.length === 0) {
                     return handleDataLoadError("Nenhum dado de pausa válido foi retornado pela API para o período selecionado.");
                 }
                 
-                // CORREÇÃO: Preenche os filtros de data com o intervalo dos dados carregados
                 const dates = originalData.map(d => d.DATA_INICIO_OBJ);
                 els.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
                 els.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
@@ -1271,8 +1298,10 @@
 
             els.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
             els.buttons.clearFilters.addEventListener('click', () => {
-                els.filters.startDate.value = '';
-                els.filters.endDate.value = '';
+                // Limpa apenas os filtros do dashboard, não os seletores da API
+                const dates = originalData.map(d => d.DATA_INICIO_OBJ);
+                els.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                els.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
                 els.filters.consultant.value = '';
                 els.filters.pauseType.value = '';
                 applyFilters();
@@ -1294,15 +1323,41 @@
                 if (e.target === els.ignoredRowsModal.overlay) hideIgnoredRowsPopup();
             });
             
-            // CORREÇÃO: Desabilita todos os controles de filtro ao iniciar
             enableDashboardControls(false);
             
-            // CORREÇÃO: Define um período padrão (últimos 7 dias) para os seletores da API
+            // CORREÇÃO: Lógica para alternar entre "Período" e "Últimos Minutos"
+            const dateControls = [els.apiControls.startDate, els.apiControls.startTime, els.apiControls.endDate, els.apiControls.endTime];
+            els.apiControls.ultimosMinutos.addEventListener('input', () => {
+                if (els.apiControls.ultimosMinutos.value) {
+                    dateControls.forEach(control => {
+                        control.disabled = true;
+                        control.style.opacity = '0.5';
+                    });
+                } else {
+                     dateControls.forEach(control => {
+                        control.disabled = false;
+                        control.style.opacity = '1';
+                    });
+                }
+            });
+
+            dateControls.forEach(control => {
+                control.addEventListener('change', () => {
+                    els.apiControls.ultimosMinutos.value = '';
+                     dateControls.forEach(c => {
+                        c.disabled = false;
+                        c.style.opacity = '1';
+                    });
+                })
+            });
+
+
+            // Define um período padrão (hoje) para os seletores da API
             const today = new Date();
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(today.getDate() - 7);
-            els.apiDates.startDate.value = formatDateToYYYYMMDD(sevenDaysAgo);
-            els.apiDates.endDate.value = formatDateToYYYYMMDD(today);
+            els.apiControls.startDate.value = formatDateToYYYYMMDD(today);
+            els.apiControls.endDate.value = formatDateToYYYYMMDD(today);
+            els.apiControls.startTime.value = '00:00';
+            els.apiControls.endTime.value = '23:59';
         }
 
         document.addEventListener('DOMContentLoaded', init);
