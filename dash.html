@@ -811,8 +811,13 @@
                 return;
             }
 
-            const periodoInicial = `${startDate} 00:00:00`;
-            const periodoFinal = `${endDate} 23:59:59`;
+            const startDateObj = new Date(startDate);
+            startDateObj.setUTCHours(0, 0, 0, 0);
+            const periodoInicial = startDateObj.toISOString();
+
+            const endDateObj = new Date(endDate);
+            endDateObj.setUTCHours(23, 59, 59, 999);
+            const periodoFinal = endDateObj.toISOString();
 
             try {
                 const response = await fetch('/api/dados-argus', {
