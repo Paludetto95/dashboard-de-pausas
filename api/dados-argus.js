@@ -22,10 +22,10 @@ export default async function handler(req, res) {
     
     // 4. Construct the request body for the Argus API
     const argusBody = {
-        " idCampanha": idCampanha,
-        " periodoInicial": periodoInicial,
-        " periodoFinal": periodoFinal,
-        " ultimosMinutos ": ultimosMinutos
+        "idCampanha": idCampanha,
+        "periodoInicial": periodoInicial,
+        "periodoFinal": periodoFinal,
+        "ultimosMinutos": ultimosMinutos
     };
     // Remove undefined keys
     Object.keys(argusBody).forEach(key => argusBody[key] === undefined && delete argusBody[key]);
