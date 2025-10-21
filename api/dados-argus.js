@@ -37,8 +37,7 @@ export default async function handler(req, res) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // Assuming Bearer token authentication
-                'Authorization': `Bearer ${apiToken}`
+                'Token-Signature': apiToken
             },
             body: JSON.stringify(argusBody)
         });
