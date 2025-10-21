@@ -32,90 +32,60 @@
         }
 
         /* --- 2. Tipografia e Hierarquia --- */
-        /* Título Principal do Dashboard */
         h1 {
-            /* @apply text-4xl font-extrabold; */
-            font-size: 2.25rem; /* 36px */
-            line-height: 2.5rem; /* 40px */
+            font-size: 2.25rem;
+            line-height: 2.5rem;
             font-weight: 800;
             color: var(--text-main);
         }
 
-        /* Títulos de Widget/Card */
         h2 {
-            /* @apply text-xl font-semibold; */
-            font-size: 1.25rem; /* 20px */
-            line-height: 1.75rem; /* 28px */
+            font-size: 1.25rem;
+            line-height: 1.75rem;
             font-weight: 600;
             color: var(--text-main);
         }
 
-        /* KPIs / Números Principais */
         .kpi-value {
-            /* @apply text-4xl font-bold; */
-            font-size: 2.25rem; /* 36px */
-            line-height: 2.5rem; /* 40px */
+            font-size: 2.25rem;
+            line-height: 2.5rem;
             font-weight: 700;
             color: var(--text-main);
         }
         
-        /* Texto de Suporte (ex: "since last month") */
         .support-text {
-            /* @apply text-sm font-regular; */
-            font-size: 0.875rem; /* 14px */
-            line-height: 1.25rem; /* 20px */
+            font-size: 0.875rem;
+            line-height: 1.25rem;
             font-weight: 400;
             color: var(--text-secondary);
         }
 
         /* --- 3. Componentes e Layout --- */
-        /* Layout Principal */
-        #main-content {
-            transition: padding-left 0.3s ease-in-out;
-        }
-
-        /* Menu Lateral (Sidebar) */
-        #sidebar {
-            background-color: var(--bg-container);
-            /* @apply ... border-r-0; */
-            /* As classes do @apply já estão no HTML. 
-               Apenas garantindo a cor de fundo e a borda zero. */
-            border-right-width: 0px;
-        }
-        /* Adaptação para o menu de filtros já existente */
-        #sidebar .card {
-             background-color: #2D2D3A; /* Um pouco mais escuro para diferenciar */
-        }
-        /* Estilo para um item de menu ativo (exemplo, não implementado no HTML) */
-        .menu-item.active {
-            background-color: var(--highlight-primary);
-            color: var(--text-main);
-            /* @apply rounded-lg; */
-            border-radius: 0.5rem; /* 8px */
-        }
-        .menu-item svg { 
-            /* @apply stroke-current; */
-            stroke: currentColor; 
-        }
-
-        /* Cards/Widgets */
         .card {
             background-color: var(--bg-container);
-            /* @apply p-8 rounded-3xl; */
-            padding: 2rem; /* 32px */
-            border-radius: 1.5rem; /* 24px */
-            /* Sem borda, sem sombra */
+            padding: 2rem;
+            border-radius: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
-        /* Botões */
+        #sidebar .card {
+             background-color: #2D2D3A;
+             text-align: center;
+        }
+
+        #sidebar .card .flex.justify-between {
+            text-align: left;
+        }
+
         .btn {
-            /* @apply px-6 py-3 font-semibold rounded-lg shadow-md transition duration-300 ease-in-out; */
-            padding-left: 1.5rem; /* 24px */
-            padding-right: 1.5rem; /* 24px */
-            padding-top: 0.75rem; /* 12px */
-            padding-bottom: 0.75rem; /* 12px */
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
             font-weight: 600;
-            border-radius: 0.5rem; /* 8px */
+            border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             transition-property: all;
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -125,28 +95,40 @@
             background-color: var(--highlight-primary);
             color: var(--text-main);
         }
-        .btn-primary:hover {
-            filter: brightness(1.2);
-        }
+        .btn-primary:hover { filter: brightness(1.2); }
         .btn-danger {
             background-color: var(--status-danger);
             color: var(--text-main);
         }
-        .btn-danger:hover {
-             filter: brightness(1.2);
-        }
+        .btn-danger:hover { filter: brightness(1.2); }
         .btn-secondary {
             background-color: #4A4A58;
             color: var(--text-main);
         }
-        .btn-secondary:hover {
-            background-color: #5A5A68;
+        .btn-secondary:hover { background-color: #5A5A68; }
+
+
+        /* --- 4. Menu Lateral Expansível --- */
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%);
+        }
+        #main-content {
+            transition: padding-left 0.3s ease-in-out;
+        }
+        body.sidebar-open #sidebar {
+            transform: translateX(0);
+        }
+        body.sidebar-open #sidebar-overlay {
+            display: block;
+        }
+        @media (min-width: 1024px) {
+            body.sidebar-open #main-content {
+                padding-left: 20rem; /* w-80 */
+            }
         }
 
-
         /* --- Elementos Específicos do Dashboard --- */
-        
-        /* Gráficos */
         .chart-container {
             position: relative;
             height: 300px;
@@ -154,171 +136,110 @@
         }
         @media (min-width: 768px) { .chart-container { height: 350px; } }
 
-        /* Customização de Formulários */
         .form-input-dark {
-            /* @apply block w-full pl-3 pr-4 py-2 text-base rounded-lg shadow-sm border-0; */
             display: block;
             width: 100%;
-            padding-left: 0.75rem; /* 12px */
-            padding-right: 1rem; /* 16px */
-            padding-top: 0.5rem; /* 8px */
-            padding-bottom: 0.5rem; /* 8px */
-            font-size: 1rem; /* 16px */
-            line-height: 1.5rem; /* 24px */
-            border-radius: 0.5rem; /* 8px */
+            padding: 0.5rem 1rem 0.5rem 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5rem;
+            border-radius: 0.5rem;
             box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             border-width: 0px;
             background-color: #2D2D3A;
             color: var(--text-main);
         }
         .form-input-dark:focus {
-            /* @apply outline-none ring-2; */
             outline: 2px solid transparent;
             outline-offset: 2px;
             --tw-ring-color: var(--highlight-primary);
             box-shadow: 0 0 0 2px var(--tw-ring-color);
-            ring-color: var(--highlight-primary);
         }
         .form-input-dark:disabled {
             background-color: #334155;
             opacity: 0.6;
         }
         
-        /* Placeholder para input de data */
-        .date-input { position: relative; background-color: transparent; }
-        .date-input:before {
-        
-            content: attr(data-placeholder);
-            position: absolute;
-            top: 50%; left: 0.75rem; transform: translateY(-50%);
-            pointer-events: none;
-        }
-        .date-input:valid:before, .date-input:focus:before { display: none; }
-        .date-input:valid, .date-input:focus { color: var(--text-main); }
-        
-        /* Modal de Erros */
         .modal-overlay {
-            /* @apply fixed inset-0 flex justify-center items-center z-[1000]; */
-            position: fixed;
-            inset: 0px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            background-color: rgba(0, 0, 0, 0.8);
+            position: fixed; inset: 0px; display: flex;
+            justify-content: center; align-items: center;
+            z-index: 1000; background-color: rgba(0, 0, 0, 0.8);
         }
         .modal-content {
-            background-color: var(--bg-container);
-            /* @apply p-8 rounded-2xl shadow-2xl max-w-2xl max-h-[80%] overflow-y-auto relative; */
-            padding: 2rem; /* 32px */
-            border-radius: 1rem; /* 16px */
-            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-            max-width: 42rem; /* 672px */
-            max-height: 80%;
-            overflow-y: auto;
-            position: relative;
+            background-color: var(--bg-container); padding: 2rem;
+            border-radius: 1rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            max-width: 42rem; max-height: 80%;
+            overflow-y: auto; position: relative;
         }
         .modal-close-btn {
-            /* @apply absolute top-4 right-4 bg-none border-none text-2xl cursor-pointer; */
-            position: absolute;
-            top: 1rem; /* 16px */
-            right: 1rem; /* 16px */
-            background: none;
-            border: none;
-            font-size: 1.5rem; /* 24px */
-            line-height: 2rem; /* 32px */
-            cursor: pointer;
-            color: var(--text-secondary);
+            position: absolute; top: 1rem; right: 1rem;
+            background: none; border: none; font-size: 1.5rem;
+            cursor: pointer; color: var(--text-secondary);
         }
         .modal-close-btn:hover { color: var(--text-main); }
         .error-item {
-            /* @apply border-l-4 p-3 mb-2 rounded; */
-            border-left-width: 4px;
-            padding: 0.75rem; /* 12px */
-            margin-bottom: 0.5rem; /* 8px */
-            border-radius: 0.25rem; /* 4px */
-            background-color: rgba(213, 0, 0, 0.2);
+            border-left-width: 4px; padding: 0.75rem; margin-bottom: 0.5rem;
+            border-radius: 0.25rem; background-color: rgba(213, 0, 0, 0.2);
             border-color: var(--status-danger);
         }
         .error-item strong { color: #ff8a80; }
         .error-item span { color: #ffcdd2; }
 
-        /* Spinner */
         .spinner {
             width: 1.5em; height: 1.5em;
             border: 3px solid rgba(255, 255, 255, .2);
-            border-radius: 50%;
-            border-top-color: var(--highlight-primary);
+            border-radius: 50%; border-top-color: var(--highlight-primary);
             animation: spin 1s ease-in-out infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* --- Estilos da Tabela (Tabulator) --- */
         #pause-detail-table {
-            border: none;
-            background-color:#252532;
+            border: none; background-color:#252532;
         }
         #pause-detail-table .tabulator-header {
             background-color: var(--bg-container) !important;
             border-bottom: 1px solid #4A4A58 !important;
         }
-        #pause-detail-table .tabulator-col,
-        #pause-detail-table .tabulator-col-content {
+        #pause-detail-table .tabulator-col, #pause-detail-table .tabulator-col-content {
              background-color: transparent !important;
         }
         #pause-detail-table .tabulator-col-title {
-            color: var(--text-secondary) !important;
-            font-weight: 500;
+            color: var(--text-secondary) !important; font-weight: 500;
         }
         #pause-detail-table .tabulator-header .tabulator-header-filter input {
-            background-color: #1C1C24 !important;
-            color: var(--text-main) !important;
-            border: 1px solid #4A4A58 !important;
-            border-radius: 8px !important;
+            background-color: #1C1C24 !important; color: var(--text-main) !important;
+            border: 1px solid #4A4A58 !important; border-radius: 8px !important;
             padding: 6px 10px !important;
         }
         #pause-detail-table .tabulator-header .tabulator-header-filter input::placeholder {
-             color: var(--text-secondary) !important;
-             
-             opacity: 0.7;
+             color: var(--text-secondary) !important; opacity: 0.7;
         }
         #pause-detail-table .tabulator-tableHolder {
-            background-color: black !important;
+            background-color: #1C1C24 !important;
         }
-        #pause-detail-table .tabulator-placeholder span {
-             color: white !important;
-        }
+        #pause-detail-table .tabulator-placeholder span { color: white !important; }
         #pause-detail-table .tabulator-row {
-            background: #1C1C24; /* MUDADO AQUI */
-            border-bottom: 1px solid #2D2D3A !important;
+            background: #1C1C24; border-bottom: 1px solid #2D2D3A !important;
         }
-        #pause-detail-table .tabulator-row:hover {
-            background: rgba(58, 127, 255, 0.1) !important; /* MUDADO AQUI */
+        #pause-detail-table .tabulator-row:hover .tabulator-cell {
+            background-color: rgba(58, 127, 255, 0.1) !important;
         }
         #pause-detail-table .tabulator-cell {
-            background-color: transparent !important; /* <-- ADICIONE ESTA LINHA */
             color: var(--text-main) !important;
             border-right: 1px solid #2D2D3A !important;
             padding: 12px 10px !important;
         }
-        #pause-detail-table .tabulator-cell:last-of-type {
-             border-right: none !important;
-        }
-        #pause-detail-table .tabulator-cell span:not([class*="text-"]) {
-             color: var(--text-main) !important;
-        }
-        /* Cores Semânticas na Tabela */
-         #pause-detail-table .status-success { color: var(--status-success) !important; }
-         #pause-detail-table .status-danger { color: var(--status-danger) !important; }
-         #pause-detail-table .status-warning { color: var(--highlight-secondary-yellow) !important; }
+        #pause-detail-table .tabulator-cell:last-of-type { border-right: none !important; }
+        
+        #pause-detail-table .status-success { color: var(--status-success) !important; }
+        #pause-detail-table .status-danger { color: var(--status-danger) !important; }
+        #pause-detail-table .status-warning { color: var(--highlight-secondary-yellow) !important; }
 
         /* Scrollbar */
         ::-webkit-scrollbar { height: 10px; width: 10px; }
         ::-webkit-scrollbar-track { background: #1C1C24; }
         ::-webkit-scrollbar-thumb {
-            background-color: #4A4A58;
-            border-radius: 5px;
-            border: 2px solid #1C1C24;
+            background-color: #4A4A58; border-radius: 5px; border: 2px solid #1C1C24;
         }
     </style>
 </head>
@@ -332,7 +253,7 @@
     
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden"></div>
     
-    <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-slate-900/70 backdrop-blur-lg border-r border-slate-700/80 z-40 p-6 overflow-y-auto transform -translate-x-full transition-transform duration-300 ease-in-out">
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-slate-900/70 backdrop-blur-lg border-r border-slate-700/80 z-40 p-6 overflow-y-auto">
         <div class="flex flex-col gap-6">
             <div class="card">
                 <h2 class="text-2xl font-semibold text-slate-100 mb-4 flex items-center gap-3">
@@ -344,16 +265,20 @@
                 <div class="flex flex-col gap-5">
                     <div>
                         <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV</label>
-                        <div class="flex items-center gap-2">
-                            <label for="csv-file-input" class="cursor-pointer px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out whitespace-nowrap">
+                        <!-- ATUALIZAÇÃO DO HTML DO BOTÃO -->
+                        <div class="flex justify-center">
+                            <label id="file-upload-label" for="csv-file-input" class="w-full cursor-pointer px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out truncate text-center">
                                 Escolher arquivo
                             </label>
-                            <span id="file-name-display" class="text-sm text-slate-400 truncate"></span>
                             <input type="file" id="csv-file-input" accept=".csv, .txt, .tsv" class="hidden"/>
                         </div>
                     </div>
+                    <!-- NOVO BOTÃO DA API -->
+                    <button id="load-argus-api-btn" class="w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition duration-300 ease-in-out">
+                        Carregar via API (Argus)
+                    </button>
                     <button id="load-api-data-btn" class="w-full px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition duration-300 ease-in-out">
-                        Carregar Dados Exemplo (API)
+                        Carregar Dados Exemplo
                     </button>
                 </div>
                 <p id="file-status" class="text-sm text-slate-400 mt-4">Nenhum arquivo carregado.</p>
@@ -400,22 +325,22 @@
         </div>
     </aside>
 
-    <main id="main-content" class="transition-all duration-300 ease-in-out">
+    <main id="main-content">
         <div class="container mx-auto">
             <h1 class="text-4xl font-extrabold text-white mb-8 text-center">
                 Dashboard de Pausas Consultores
             </h1>
     
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="card text-center">
+                <div class="card">
                     <p class="text-sm font-medium text-slate-400">Pausas Registradas</p>
                     <p id="kpi-total-pauses" class="text-4xl font-bold text-blue-400 mt-2">0</p>
                 </div>
-                <div class="card text-center">
+                <div class="card">
                     <p class="text-sm font-medium text-slate-400">Total Global de Pausa</p>
                     <p id="kpi-total-global-pause" class="text-4xl font-bold text-green-400 mt-2">00:00</p>
                 </div>
-                <div class="card text-center">
+                <div class="card">
                     <p class="text-sm font-medium text-slate-400">Consultores Únicos</p>
                     <p id="kpi-unique-consultants" class="text-4xl font-bold text-purple-400 mt-2">0</p>
                 </div>
@@ -484,7 +409,6 @@
 
     <script>
         // --- Configuração Global ---
-        // ... (resto do seu JS permanece igual) ...
         const COLUMN_ALIASES = {
             'CONSULTOR': ['operador', 'consultor', 'nome', 'agente', 'usuario', 'employee', 'name', 'colaborador'],
             'DURACAO': ['tempo', 'duracao', 'duration', 'time', 'periodo', 'horas'],
@@ -517,9 +441,10 @@
             typeDistribution: null
         };
 
+        // ATUALIZAÇÃO DO JAVASCRIPT: Objeto 'els'
         const els = {
             fileInput: document.getElementById('csv-file-input'),
-            fileNameDisplay: document.getElementById('file-name-display'),
+            fileUploadLabel: document.getElementById('file-upload-label'),
             fileStatus: document.getElementById('file-status'),
             filters: {
                 consultant: document.getElementById('consultant-filter'),
@@ -531,6 +456,7 @@
                 clearFilters: document.getElementById('clear-filters-btn'),
                 generateAi: document.getElementById('generate-ai-analysis-btn'),
                 loadApi: document.getElementById('load-api-data-btn'),
+                loadArgusApi: document.getElementById('load-argus-api-btn'),
                 closeAi: document.getElementById('close-ai-analysis-btn')
             },
             kpis: {
@@ -548,13 +474,7 @@
                 overlay: document.getElementById('ignored-rows-modal-overlay'),
                 closeBtn: document.getElementById('close-ignored-rows-modal-btn'),
                 list: document.getElementById('ignored-rows-list')
-            },
-            sidebar: {
-                toggleBtn: document.getElementById('sidebar-toggle-btn'),
-                overlay: document.getElementById('sidebar-overlay'),
-                menu: document.getElementById('sidebar')
-            },
-            mainContent: document.getElementById('main-content')
+            }
         };
 
         // --- Funções Utilitárias ---
@@ -642,6 +562,17 @@
             });
             return values;
         }
+        
+        function abbreviateName(fullName, maxLength = 18) {
+            if (typeof fullName !== 'string' || fullName.length <= maxLength) {
+                return fullName;
+            }
+            const parts = fullName.trim().split(' ').filter(p => p.length > 0);
+            if (parts.length > 1) {
+                return `${parts[0]} ${parts[parts.length - 1]}`;
+            }
+            return fullName.substring(0, maxLength - 3) + '...';
+        }
 
         // --- Processamento de Dados ---
         function detectDelimiter(firstLine) {
@@ -707,8 +638,7 @@
                 handleDataLoadError('Não foi possível detectar o separador de colunas (vírgula, ponto e vírgula ou tabulação).');
                 return;
             }
-            console.log(`Delimitador detectado: "${delimiter === '\t' ? 'TAB' : delimiter}"`);
-
+            
             const rawHeaders = splitCsvLine(lines[0], delimiter);
             const mappingResult = mapHeaders(rawHeaders);
 
@@ -778,12 +708,14 @@
             updateDashboard();
         }
 
+        // ATUALIZAÇÃO DO JAVASCRIPT: Função loadMockApiData
         function loadMockApiData() {
             els.fileInput.value = '';
+            els.fileUploadLabel.textContent = 'Escolher arquivo'; 
             els.fileStatus.textContent = 'Carregando dados de exemplo...';
             els.fileStatus.className = 'text-sm text-slate-400 mt-4';
 
-            const names = ['Ana Silva', 'Carlos Souza', 'Beatriz Costa', 'Daniel Oliveira'];
+            const names = ['Ana Silva', 'Carlos Eduardo de Almeida Souza', 'Beatriz Ferreira Costa', 'Daniel Oliveira Medeiros'];
             const types = ['Almoço', 'Café', 'Reunião', 'Treinamento', 'Banheiro', 'Feedback', 'Formalização', 'Negociação', 'Cadastrando Proposta', 'Intervalo'];
             const baseDate = new Date();
             baseDate.setHours(8, 0, 0, 0);
@@ -826,6 +758,96 @@
             updateDashboard();
         }
 
+        function transformArgusData(apiData) {
+            if (!Array.isArray(apiData)) {
+                console.error("Formato de dados da API inesperado. Esperava um array.");
+                handleDataLoadError("A resposta da API não continha os dados esperados.");
+                return [];
+            }
+            return apiData.map(item => {
+                // Use the first matching alias found in the item object
+                const findField = (aliases) => aliases.find(alias => item[alias] !== undefined);
+
+                const consultorField = findField(['operador', 'agent_name', 'consultor', 'nome']);
+                const tipoField = findField(['descricao', 'pause_type', 'tipo', 'motivo']);
+                const dataInicioField = findField(['inicio', 'start_time', 'data_inicio']);
+                // The original function expected seconds, but the CSV parser handles HH:mm:ss.
+                // Let's assume a field 'duracao' or 'tempo' with a time string, or 'duration_seconds'.
+                const duracaoSecondsField = findField(['duration_seconds']);
+                const duracaoStringField = findField(['duracao', 'tempo']);
+
+                const consultor = item[consultorField] || 'Não informado';
+                const tipo = item[tipoField] || 'Não informado';
+                const dataInicio = item[dataInicioField];
+                
+                let durationMinutes = 0;
+                if (duracaoSecondsField) {
+                    durationMinutes = (item[duracaoSecondsField] || 0) / 60;
+                } else if (duracaoStringField) {
+                    durationMinutes = parseDurationToMinutes(item[duracaoStringField] || '0');
+                }
+
+                return {
+                    CONSULTOR: normalizeDataString(consultor),
+                    TIPO: toTitleCase(normalizeDataString(tipo)),
+                    DATA_INICIO_OBJ: parseDateTimeRobust(dataInicio),
+                    DURACAO_MINUTES: durationMinutes
+                };
+            }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
+        }
+
+        async function loadArgusApiData() {
+            els.fileInput.value = '';
+            els.fileUploadLabel.textContent = 'Escolher arquivo';
+            els.fileStatus.textContent = 'Carregando dados da API Argus...';
+            els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+
+            const startDate = els.filters.startDate.value;
+            const endDate = els.filters.endDate.value;
+
+            if (!startDate || !endDate) {
+                els.fileStatus.textContent = "Erro: Por favor, selecione uma data de início e uma data de fim.";
+                els.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+                return;
+            }
+
+            const periodoInicial = `${startDate} 00:00:00`;
+            const periodoFinal = `${endDate} 23:59:59`;
+
+            try {
+                const response = await fetch('/api/dados-argus', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ periodoInicial, periodoFinal }),
+                }); 
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(responseData.message || `Erro na rede: ${response.statusText}`);
+                }
+
+                if (responseData.codStatus < 1) {
+                    return handleDataLoadError(responseData.descStatus || "A API da Argus retornou um erro.");
+                }
+
+                originalData = transformArgusData(responseData.pausasDetalhadas);
+
+                if (originalData.length === 0) {
+                    return handleDataLoadError("Nenhum dado de pausa válido foi retornado pela API para o período selecionado.");
+                }
+                
+                filteredData = [...originalData];
+                populateFilters();
+                enableDashboardControls(true);
+                els.fileStatus.textContent = `Sucesso! Carregados ${originalData.length} registros via API.`;
+                els.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
+                updateDashboard();
+            } catch (error) {
+                handleDataLoadError(`Falha ao buscar dados da API: ${error.message}`);
+            }
+        }
+
         function handleDataLoadError(msg) {
             console.error(msg);
             els.fileStatus.textContent = `Erro: ${msg}`;
@@ -842,7 +864,7 @@
             const pauseTypes = [...new Set(originalData.map(d => d.TIPO))].sort();
 
             const consultantFilter = els.filters.consultant;
-            consultantFilter.innerHTML = '<option value="">Todos</option>'; // Limpa opções anteriores
+            consultantFilter.innerHTML = '<option value="">Todos</option>';
             consultants.forEach(c => {
                 const option = document.createElement('option');
                 option.value = c;
@@ -851,7 +873,7 @@
             });
 
             const pauseTypeFilter = els.filters.pauseType;
-            pauseTypeFilter.innerHTML = '<option value="">Todos</option>'; // Limpa opções anteriores
+            pauseTypeFilter.innerHTML = '<option value="">Todos</option>';
             pauseTypes.forEach(t => {
                 const option = document.createElement('option');
                 option.value = t;
@@ -975,14 +997,14 @@
             for(const k in totals) avgs[k] = totals[k] / counts[k];
             return avgs;
         }
-
-        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color) {
+        
+        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (charts[chartInstanceVar]) charts[chartInstanceVar].destroy();
 
             const chartColors = {
                 'doughnut': ['#60A5FA', '#4ADE80', '#FACC15', '#F87171', '#A78BFA', '#F472B6', '#9CA3AF'],
-                'barDefault': 'rgba(96, 165, 250, 0.7)', // blue-400
+                'barDefault': 'rgba(96, 165, 250, 0.7)',
             };
 
             const backgroundColor = type === 'doughnut' ? chartColors.doughnut : color || chartColors.barDefault;
@@ -995,8 +1017,8 @@
                         label: label,
                         data: data,
                         backgroundColor: backgroundColor,
-                        borderColor: type === 'doughnut' ? '#252532' : 'transparent', // Usando a cor de fundo do card
-                        borderWidth: type === 'doughnut' ? 0.6 : 1                 // Borda mais fina (2px)
+                        borderColor: type === 'doughnut' ? '#252532' : 'transparent',
+                        borderWidth: type === 'doughnut' ? 0.6 : 1
                     }]
                 },
                 options: {
@@ -1006,22 +1028,27 @@
                         legend: {
                             display: type === 'doughnut',
                             position: 'right',
-                            labels: {
-                                color: '#cbd5e1' // slate-300
-                            }
+                            labels: { color: '#cbd5e1' }
                         },
                         tooltip: {
                             callbacks: {
+                                title: function(tooltipItems) {
+                                    if (fullLabels && tooltipItems.length > 0) {
+                                        const dataIndex = tooltipItems[0].dataIndex;
+                                        return fullLabels[dataIndex];
+                                    }
+                                    return tooltipItems[0].label;
+                                },
                                 label: function(context) {
                                     let val = context.raw;
-                                    let lbl = context.label || '';
+                                    let lbl = (type === 'doughnut') ? context.label : '';
                                     if (lbl) lbl += ': ';
                                     if (type === 'doughnut') {
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const perc = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
                                         return `${lbl}${formatMinutesToHHMM(val)} (${perc})`;
                                     }
-                                    return lbl + formatMinutesToHHMM(val) + ` (${val.toFixed(1)} min)`;
+                                    return `Duração: ${formatMinutesToHHMM(val)} (${val.toFixed(1)} min)`;
                                 }
                             }
                         }
@@ -1030,11 +1057,17 @@
                         y: {
                             beginAtZero: true,
                             grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                            ticks: { color: '#94a3b8' } // slate-400
+                            ticks: { color: '#94a3b8' }
                         },
                         x: {
                             grid: { color: 'transparent' },
-                            ticks: { color: '#94a3b8' } // slate-400
+                            ticks: { 
+                                color: '#94a3b8',
+                                maxRotation: 45,
+                                minRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 10
+                            }
                         }
                     } : {}
                 }
@@ -1045,16 +1078,26 @@
 
         function renderCharts() {
             const consData = aggregateData('CONSULTOR');
-            const consLabels = Object.keys(consData).sort();
-            createChart('total-pause-consultant-chart', 'consultantTotal', 'bar', consLabels, consLabels.map(k => consData[k]), 'Total Duração', 'rgba(167, 139, 250, 0.7)'); // purple-400
+            const consLabels = Object.keys(consData).sort((a, b) => consData[b] - consData[a]);
+            const abbreviatedLabels = consLabels.map(name => abbreviateName(name));
+            createChart(
+                'total-pause-consultant-chart', 
+                'consultantTotal', 
+                'bar', 
+                abbreviatedLabels,
+                consLabels.map(k => consData[k]), 
+                'Total Duração', 
+                'rgba(167, 139, 250, 0.7)',
+                consLabels
+            );
 
             const typeData = aggregateData('TIPO');
             const typeLabels = Object.keys(typeData).sort();
-            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', 'rgba(74, 222, 128, 0.7)'); // green-400
+            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', 'rgba(74, 222, 128, 0.7)');
 
             const typeAvgData = aggregateAverage('TIPO');
             const avgChartData = typeLabels.map(type => typeAvgData[type] || 0);
-            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', 'rgba(250, 204, 21, 0.7)'); // yellow-400
+            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', 'rgba(250, 204, 21, 0.7)');
 
             createChart('pause-type-distribution-chart', 'typeDistribution', 'doughnut', typeLabels, typeLabels.map(k => typeData[k]), 'Distribuição', null);
         }
@@ -1125,9 +1168,8 @@
             `;
 
             try {
-                // ATENÇÃO: A chave de API abaixo é apenas para fins de demonstração e pode estar desativada.
-                // Substitua pela sua própria chave de API do Google AI Studio.
-                const apiKey = "AIzaSyAqzAYVdmYUGqfEGr8TvsgDxMWmPdc0-XU"; // Exemplo de chave, substitua
+                // ATENÇÃO: Substitua pela sua própria chave de API do Google AI Studio.
+                const apiKey = "SUA_CHAVE_API_AQUI"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1145,7 +1187,7 @@
                 els.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;
             } catch (error) {
                 console.error(error);
-                els.ai.content.innerHTML = `<p class="text-red-400 font-medium">Falha ao gerar análise. (${error.message})</p>`;
+                els.ai.content.innerHTML = `<p class="text-red-400 font-medium">Falha ao gerar análise. Verifique a chave de API. (${error.message})</p>`;
             } finally {
                 els.ai.loading.classList.add('hidden');
             }
@@ -1169,29 +1211,24 @@
 
         // --- Função para controlar a Sidebar ---
         function setupSidebar() {
+            const toggleBtn = document.getElementById('sidebar-toggle-btn');
+            const overlay = document.getElementById('sidebar-overlay');
+            const body = document.body;
+
             const toggleSidebar = () => {
-                els.sidebar.menu.classList.toggle('-translate-x-full');
-                els.sidebar.overlay.classList.toggle('hidden');
-                els.mainContent.classList.toggle('lg:pl-80');
+                body.classList.toggle('sidebar-open');
+                overlay.classList.toggle('hidden'); 
             };
 
-            els.sidebar.toggleBtn.addEventListener('click', toggleSidebar);
-            els.sidebar.overlay.addEventListener('click', toggleSidebar);
+            toggleBtn.addEventListener('click', toggleSidebar);
+            overlay.addEventListener('click', toggleSidebar);
         }
 
         // --- Inicialização e Event Listeners ---
         function init() {
             setupSidebar();
 
-            // Inicialização da Tabela com Tabulator
             tabulatorTable = new Tabulator("#pause-detail-table", {
-
-                // **** CORREÇÃO APLICADA AQUI ****
-                // Mantido theme: "bootstrap5" para usar as classes corretas
-                // LINHA ~1003 (ERRADA)
-                theme: "bootstrap5",
-            
-                
                 height: "500px",
                 layout: "fitData",
                 placeholder: "<span class='text-slate-400'>Nenhum dado para exibir</span>",
@@ -1244,16 +1281,17 @@
                 }
             });
 
-            // File Input
+            // ATUALIZAÇÃO DO JAVASCRIPT: Event Listener do Input
             els.fileInput.addEventListener('change', (e) => {
                 hideIgnoredRowsPopup();
                 const file = e.target.files[0];
+                
                 if (!file) {
-                    els.fileNameDisplay.textContent = 'Nenhum...colhido';
+                    els.fileUploadLabel.textContent = 'Escolher arquivo';
                     return;
                 }
 
-                els.fileNameDisplay.textContent = file.name;
+                els.fileUploadLabel.textContent = file.name;
                 els.fileStatus.textContent = `Lendo "${file.name}"...`;
                 els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
@@ -1263,10 +1301,9 @@
                 reader.readAsText(file, 'UTF-8');
             });
 
-            // Buttons
             els.buttons.loadApi.addEventListener('click', loadMockApiData);
+            els.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
             els.buttons.clearFilters.addEventListener('click', () => {
-                const dates = originalData.map(d => d.DATA_INICIO_OBJ);
                 els.filters.startDate.value = '';
                 els.filters.endDate.value = '';
                 els.filters.consultant.value = '';
@@ -1280,28 +1317,31 @@
                 els.ai.content.innerHTML = '';
             });
 
-            // Filters
             const debouncedApplyFilters = debounce(applyFilters, 300);
             Object.values(els.filters).forEach(filter => {
                 filter.addEventListener('change', debouncedApplyFilters);
             });
 
-            // Modal de Erros
             els.ignoredRowsModal.closeBtn.addEventListener('click', hideIgnoredRowsPopup);
             els.ignoredRowsModal.overlay.addEventListener('click', (e) => {
-                if (e.target === els.ignoredRowsModal.overlay) {
-                    hideIgnoredRowsPopup();
-                }
+                if (e.target === els.ignoredRowsModal.overlay) hideIgnoredRowsPopup();
             });
 
-            // Estado inicial
             enableDashboardControls(false);
+            
+            // Habilita os filtros de data para permitir a seleção antes de carregar os dados da API
+            els.filters.startDate.disabled = false;
+            els.filters.endDate.disabled = false;
+
+            // Define um período padrão (últimos 7 dias)
+            const today = new Date();
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            els.filters.startDate.value = formatDateToYYYYMMDD(sevenDaysAgo);
+            els.filters.endDate.value = formatDateToYYYYMMDD(today);
         }
 
         document.addEventListener('DOMContentLoaded', init);
-    </script>
-</body>
-</html>
     </script>
 </body>
 </html>
