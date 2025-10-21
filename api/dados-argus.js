@@ -1,4 +1,17 @@
 
+function toArgusDateTime(isoString) {
+    if (!isoString) return undefined;
+    const date = new Date(isoString);
+    const pad = (num) => (num < 10 ? '0' + num : num);
+    const year = date.getUTCFullYear();
+    const month = pad(date.getUTCMonth() + 1);
+    const day = pad(date.getUTCDate());
+    const hours = pad(date.getUTCHours());
+    const minutes = pad(date.getUTCMinutes());
+    const seconds = pad(date.getUTCSeconds());
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 export default async function handler(req, res) {
     // 1. Only allow POST requests
     if (req.method !== 'POST') {
@@ -23,8 +36,8 @@ export default async function handler(req, res) {
     // 4. Construct the request body for the Argus API
     const argusBody = {
         "idCampanha": idCampanha,
-        "periodoInicial": periodoInicial,
-        "periodoFinal": periodoFinal,
+        "periodoInicial": toArgusDateTime(periodoInicial),
+        "periodoFinal": toArgusDateTime(periodoFinal),
         "ultimosMinutos": ultimosMinutos
     };
     // Remove undefined keys
