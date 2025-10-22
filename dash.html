@@ -805,8 +805,8 @@
                 const [endYear, endMonth, endDay] = endDate.split('-');
                 const formattedEndDate = `${endDay}/${endMonth}/${endYear}`;
 
-                payload.periodoInicial = `${formattedStartDate} ${startTime}`;
-                payload.periodoFinal = `${formattedEndDate} ${endTime}`;
+                payload.periodoInicial = `${formattedStartDate} ${startTime}:00`;
+                payload.periodoFinal = `${formattedEndDate} ${endTime}:00`;
             }
             
             const idCampanha = parseInt(els.apiControls.idCampanha.value, 10);
