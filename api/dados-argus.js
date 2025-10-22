@@ -52,8 +52,8 @@ export default async function handler(req, res) {
     // 4. Construct the request body for the Argus API
     const argusBody = {
         "idCampanha": idCampanha,
-        "periodoInicial": toArgusDateTime(periodoInicial),
-        "periodoFinal": toArgusDateTime(periodoFinal),
+        "periodoInicial": periodoInicial, // Pass directly from frontend
+        "periodoFinal": periodoFinal,   // Pass directly from frontend
         "ultimosMinutos": ultimosMinutos
     };
     // Remove undefined keys
