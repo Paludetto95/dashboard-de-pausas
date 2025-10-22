@@ -48,12 +48,20 @@ export default async function handler(req, res) {
     if (!ultimosMinutos && (!periodoInicial || !periodoFinal)) {
         return res.status(400).json({ message: 'Parâmetros insuficientes. Forneça ultimosMinutos ou periodoInicial/periodoFinal.' });
     }
+
+    function parseAndFormatDateTime(dateTimeStr) {
+        if (!dateTimeStr) return undefined;
+        const parts = dateTimeStr.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
+        if (!parts) return undefined; // Return undefined if format doesn't match
+        // parts[1] = DD, parts[2] = MM, parts[3] = YYYY, parts[4] = HH, parts[5] = mm, parts[6] = ss
+        return `${parts[3]}-${parts[2]}-${parts[1]} ${parts[4]}:${parts[5]}:${parts[6]}`;
+    }
     
     // 4. Construct the request body for the Argus API, respecting the exact keys from documentation
     const argusBody = {
         "idCampanha": idCampanha,
-        "periodoInicial": periodoInicial,
-        "periodoFinal": periodoFinal,
+        "periodoInicial": parseAndFormatDateTime(periodoInicial),
+        "periodoFinal": parseAndFormatDateTime(periodoFinal),
         "ultimosMinutos": ultimosMinutos
     };
     // Remove undefined keys
