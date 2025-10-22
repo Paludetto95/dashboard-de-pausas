@@ -277,7 +277,7 @@
                     
                     <div class="space-y-2">
                         <label for="id-campanha" class="block text-sm font-medium text-slate-300 text-left">ID Campanha (Opcional)</label>
-                        <input type="number" id="id-campanha" placeholder="Ex: 1001" class="form-input-dark w-full">
+                        <input type="number" id="id-campanha" placeholder="Ex: 1 ou 2" class="form-input-dark w-full">
                     </div>
 
                     <!-- SELETORES DE PERÍODO DA API -->
@@ -308,7 +308,7 @@
                         Carregar via API (Argus)
                     </button>
                 </div>
-                <p id="file-status" class="text-sm text-slate-400 mt-4">Nenhum arquivo carregado.</p>
+                <p id="file-status" class="text-sm text-slate-400 mt-4">Nenhum dado carregado.</p>
             </div>
 
             <div class="card">
@@ -761,9 +761,9 @@
                 const dataInicio = item[dataInicioField];
                 
                 let durationMinutes = 0;
-                if (duracaoSecondsField) {
+                if (item[duracaoSecondsField] !== undefined) {
                     durationMinutes = (item[duracaoSecondsField] || 0) / 60;
-                } else if (duracaoStringField) {
+                } else if (item[duracaoStringField] !== undefined) {
                     durationMinutes = parseDurationToMinutes(item[duracaoStringField] || '0');
                 }
 
@@ -776,20 +776,37 @@
             }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
         }
 
-        // CORREÇÃO: Função `loadArgusApiData` agora aponta para o PROXY LOCAL
+        // =========================================================================
+        // AQUI ESTÁ A NOVA FUNÇÃO IMPLEMENTADA COM O MÉTODO GET
+        // =========================================================================
         async function loadArgusApiData() {
+            // 1. Preparação da UI
             els.fileInput.value = '';
             els.fileUploadLabel.textContent = 'Escolher arquivo';
-            els.fileStatus.textContent = 'Carregando dados da API Argus...';
+            els.fileStatus.textContent = 'Carregando dados da API Argus (GET)...';
             els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
-            const ultimosMinutos = parseInt(els.apiControls.ultimosMinutos.value, 10);
-            let payload = {};
+            // 2. Configurações da API (SEU TOKEN DA IMAGEM)
+            const API_TOKEN = "woQzLP54uk5Y5HQ6TvFgNb4oNhLkso7CRPURLdICggKs160rnZMcm09JCGjp5Ae3";
+            const BASE_URL = "https://argus.app.br/apiargus/report/pausasdetalhadas";
 
-            // A lógica de qual parâmetro enviar permanece a mesma
-            if (!isNaN(ultimosMinutos) && ultimosMinutos > 0) {
-                payload.ultimosMinutos = ultimosMinutos;
+            // 3. Construção dos Parâmetros da URL (Query String)
+            const params = new URLSearchParams();
+
+            // -- ID Campanha (Opcional) --
+            const idCampanhaVal = els.apiControls.idCampanha.value.trim();
+            if (idCampanhaVal) {
+                params.append("idCampanha", idCampanhaVal);
+            }
+
+            // -- Decisão: Últimos Minutos OU Período Fixo --
+            const ultimosMinutosVal = els.apiControls.ultimosMinutos.value.trim();
+
+            if (ultimosMinutosVal && parseInt(ultimosMinutosVal) > 0) {
+                // Opção A: Usando Últimos Minutos
+                params.append("ultimosMinutos", ultimosMinutosVal);
             } else {
+                // Opção B: Usando Data Inicial e Final
                 const startDate = els.apiControls.startDate.value;
                 const startTime = els.apiControls.startTime.value || '00:00';
                 const endDate = els.apiControls.endDate.value;
@@ -799,49 +816,46 @@
                     return handleDataLoadError("Selecione um período de data/hora ou preencha os últimos minutos.");
                 }
 
-                const [startYear, startMonth, startDay] = startDate.split('-');
-                const formattedStartDate = `${startDay}/${startMonth}/${startYear}`;
-
-                const [endYear, endMonth, endDay] = endDate.split('-');
-                const formattedEndDate = `${endDay}/${endMonth}/${endYear}`;
-
-                payload.periodoInicial = `${formattedStartDate} ${startTime}:00`;
-                payload.periodoFinal = `${formattedEndDate} ${endTime}:00`;
+                // Formata para o padrão ISO esperado pela maioria das APIs: YYYY-MM-DDTHH:MM:SS
+                params.append("periodoInicial", `${startDate}T${startTime}:00`);
+                params.append("periodoFinal", `${endDate}T${endTime}:00`);
             }
-            
-            const idCampanha = parseInt(els.apiControls.idCampanha.value, 10);
-            if (!isNaN(idCampanha) && idCampanha > 0) {
-                payload.idCampanha = idCampanha;
-            }
+
+            // URL Final com os parâmetros
+            const fullUrl = `${BASE_URL}?${params.toString()}`;
+            console.log("Tentando carregar via GET:", fullUrl);
 
             try {
-                // *** MUDANÇA CRÍTICA: Apontar para o servidor proxy local ***
-                const proxyUrl = '/api/dados-argus';
-
-                console.log("Enviando para o Proxy:", JSON.stringify(payload));
-                
-                const response = await fetch(proxyUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
+                // 4. Fazendo a chamada GET
+                const response = await fetch(fullUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Token-Signature': API_TOKEN,
+                        'Accept': 'application/json'
+                    }
                 });
                 
+                // 5. Tratamento da Resposta
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Falha na API (${response.status}): ${errorText}`);
+                }
+
                 const responseData = await response.json();
 
-                if (!response.ok || (responseData.codStatus && responseData.codStatus < 1)) {
-                    throw new Error(responseData.descStatus || `Erro HTTP: ${response.status}`);
+                if (responseData.codStatus && responseData.codStatus < 1) {
+                    throw new Error(responseData.descStatus || "A API retornou um erro desconhecido.");
                 }
                 
-                // A API pode retornar `pausasDetalhadas` ou pode estar dentro de outro objeto.
-                // Verifique se o campo esperado existe.
-                if (!responseData.pausasDetalhadas) {
-                     throw new Error("A resposta da API não contém o campo 'pausasDetalhadas'.");
+                if (!responseData.pausasDetalhadas || !Array.isArray(responseData.pausasDetalhadas)) {
+                     throw new Error("Formato de resposta inválido: campo 'pausasDetalhadas' não encontrado.");
                 }
                 
+                // 6. Processamento dos dados recebidos
                 originalData = transformArgusData(responseData.pausasDetalhadas);
 
                 if (!originalData || originalData.length === 0) {
-                    return handleDataLoadError("Nenhum dado de pausa válido foi retornado pela API para o período selecionado.");
+                    return handleDataLoadError("A API retornou sucesso, mas nenhum registro de pausa foi encontrado para este filtro.");
                 }
                 
                 const dates = originalData.map(d => d.DATA_INICIO_OBJ);
@@ -851,11 +865,16 @@
                 filteredData = [...originalData];
                 populateFilters();
                 enableDashboardControls(true);
-                els.fileStatus.textContent = `Sucesso! Carregados ${originalData.length} registros via API.`;
+                els.fileStatus.textContent = `Sucesso! ${originalData.length} registros carregados via API Argus.`;
                 els.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
                 updateDashboard();
+
             } catch (error) {
-                handleDataLoadError(error.message);
+                let msg = error.message;
+                if (msg.includes("Failed to fetch")) {
+                    msg += " (Possível bloqueio de CORS pelo navegador. Verifique o console F12).";
+                }
+                handleDataLoadError(msg);
             }
         }
 
