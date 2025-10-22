@@ -3,12 +3,12 @@ function toArgusDateTime(isoString) {
     if (!isoString) return undefined;
     const date = new Date(isoString);
     const pad = (num) => (num < 10 ? '0' + num : num);
-    const year = date.getUTCFullYear();
-    const month = pad(date.getUTCMonth() + 1);
-    const day = pad(date.getUTCDate());
-    const hours = pad(date.getUTCHours());
-    const minutes = pad(date.getUTCMinutes());
-    const seconds = pad(date.getUTCSeconds());
+    const year = date.getFullYear();
+    const month = pad(date.getMonth() + 1);
+    const day = pad(date.getDate());
+    const hours = pad(date.getHours());
+    const minutes = pad(date.getMinutes());
+    const seconds = pad(date.getSeconds());
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
