@@ -44,26 +44,32 @@ export default async function handler(req, res) {
     // 3. Get parameters from the frontend request body
     const { periodoInicial, periodoFinal, idCampanha, ultimosMinutos } = req.body;
 
-    // Basic validation
-    if (!ultimosMinutos && (!periodoInicial || !periodoFinal)) {
-        return res.status(400).json({ message: 'Parâmetros insuficientes. Forneça ultimosMinutos ou periodoInicial/periodoFinal.' });
-    }
-
     function parseAndFormatDateTime(dateTimeStr) {
         if (!dateTimeStr) return undefined;
         const parts = dateTimeStr.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
-        if (!parts) return undefined; // Return undefined if format doesn't match
-        // parts[1] = DD, parts[2] = MM, parts[3] = YYYY, parts[4] = HH, parts[5] = mm, parts[6] = ss
+        if (!parts) return undefined;
         return `${parts[3]}-${parts[2]}-${parts[1]} ${parts[4]}:${parts[5]}:${parts[6]}`;
     }
-    
-    // 4. Construct the request body for the Argus API, respecting the exact keys from documentation
-    const argusBody = {
-        "idCampanha": idCampanha,
-        "periodoInicial": parseAndFormatDateTime(periodoInicial),
-        "periodoFinal": parseAndFormatDateTime(periodoFinal),
-        "ultimosMinutos": ultimosMinutos
-    };
+
+    // 4. Construct the request body for the Argus API
+    const argusBody = {};
+
+    const numUltimosMinutos = ultimosMinutos ? parseInt(ultimosMinutos, 10) : 0;
+    const numIdCampanha = idCampanha ? parseInt(idCampanha, 10) : 0;
+
+    if (numUltimosMinutos > 0) {
+        argusBody.ultimosMinutos = numUltimosMinutos;
+    } else if (periodoInicial && periodoFinal) {
+        argusBody.periodoInicial = parseAndFormatDateTime(periodoInicial);
+        argusBody.periodoFinal = parseAndFormatDateTime(periodoFinal);
+    } else {
+        return res.status(400).json({ message: 'Parâmetros insuficientes. Forneça ultimosMinutos ou periodoInicial/periodoFinal.' });
+    }
+
+    if (numIdCampanha > 0) {
+        argusBody.idCampanha = numIdCampanha;
+    }
+
     // Remove undefined keys
     Object.keys(argusBody).forEach(key => argusBody[key] === undefined && delete argusBody[key]);
 
