@@ -275,7 +275,6 @@
                     
                     <hr class="border-slate-600">
                     
-                    <!-- CORREÇÃO: Adicionado campo opcional para ID da Campanha -->
                     <div class="space-y-2">
                         <label for="id-campanha" class="block text-sm font-medium text-slate-300 text-left">ID Campanha (Opcional)</label>
                         <input type="number" id="id-campanha" placeholder="Ex: 1001" class="form-input-dark w-full">
@@ -777,6 +776,7 @@
             }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
         }
 
+        // CORREÇÃO: Função `loadArgusApiData` agora aponta para o PROXY LOCAL
         async function loadArgusApiData() {
             els.fileInput.value = '';
             els.fileUploadLabel.textContent = 'Escolher arquivo';
@@ -784,18 +784,11 @@
             els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
             const ultimosMinutos = parseInt(els.apiControls.ultimosMinutos.value, 10);
-            const idCampanha = parseInt(els.apiControls.idCampanha.value, 10);
             let payload = {};
-            
-            // Adiciona idCampanha se for válido
-            if (!isNaN(idCampanha) && idCampanha > 0) {
-                // CORREÇÃO: A chave precisa ter o espaço conforme a documentação
-                payload[' idCampanha'] = idCampanha;
-            }
 
+            // A lógica de qual parâmetro enviar permanece a mesma
             if (!isNaN(ultimosMinutos) && ultimosMinutos > 0) {
-                // CORREÇÃO: A chave precisa ter os espaços conforme a documentação
-                payload[' ultimosMinutos '] = ultimosMinutos;
+                payload.ultimosMinutos = ultimosMinutos;
             } else {
                 const startDate = els.apiControls.startDate.value;
                 const startTime = els.apiControls.startTime.value || '00:00';
@@ -808,33 +801,43 @@
                 
                 const startDateObj = new Date(`${startDate}T${startTime}`);
                 const endDateObj = new Date(`${endDate}T${endTime}`);
-                
-                // CORREÇÃO: As chaves precisam ter o espaço conforme a documentação
-                payload[' periodoInicial'] = startDateObj.toISOString();
-                payload[' periodoFinal'] = endDateObj.toISOString();
+
+                payload.periodoInicial = startDateObj.toISOString();
+                payload.periodoFinal = endDateObj.toISOString();
             }
             
+            const idCampanha = parseInt(els.apiControls.idCampanha.value, 10);
+            if (!isNaN(idCampanha) && idCampanha > 0) {
+                payload.idCampanha = idCampanha;
+            }
+
             try {
-                const response = await fetch('/apiargus/report/pausasdetalhadas', { // Endpoint corrigido
+                // *** MUDANÇA CRÍTICA: Apontar para o servidor proxy local ***
+                const proxyUrl = 'http://localhost:3000/api/dados-argus';
+
+                console.log("Enviando para o Proxy:", JSON.stringify(payload));
+                
+                const response = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
-                }); 
-
+                });
+                
                 const responseData = await response.json();
 
-                if (!response.ok) {
-                    // Tenta usar a 'descStatus' da API no erro para mais detalhes
-                    throw new Error(responseData.descStatus || `Erro na rede: ${response.statusText}`);
+                if (!response.ok || (responseData.codStatus && responseData.codStatus < 1)) {
+                    throw new Error(responseData.descStatus || `Erro HTTP: ${response.status}`);
                 }
                 
-                if (responseData.codStatus < 1) {
-                    return handleDataLoadError(responseData.descStatus || "A API da Argus retornou um erro desconhecido.");
+                // A API pode retornar `pausasDetalhadas` ou pode estar dentro de outro objeto.
+                // Verifique se o campo esperado existe.
+                if (!responseData.pausasDetalhadas) {
+                     throw new Error("A resposta da API não contém o campo 'pausasDetalhadas'.");
                 }
                 
                 originalData = transformArgusData(responseData.pausasDetalhadas);
 
-                if (originalData.length === 0) {
+                if (!originalData || originalData.length === 0) {
                     return handleDataLoadError("Nenhum dado de pausa válido foi retornado pela API para o período selecionado.");
                 }
                 
@@ -849,7 +852,7 @@
                 els.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
                 updateDashboard();
             } catch (error) {
-                handleDataLoadError(`Erro da API Argus: ${error.message}`);
+                handleDataLoadError(error.message);
             }
         }
 
@@ -1354,6 +1357,8 @@
                 })
             });
 
+
+            // Define um período padrão (hoje) para os seletores da API
             const today = new Date();
             els.apiControls.startDate.value = formatDateToYYYYMMDD(today);
             els.apiControls.endDate.value = formatDateToYYYYMMDD(today);
