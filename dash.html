@@ -798,10 +798,15 @@
                 if (!startDate || !endDate) {
                     return handleDataLoadError("Selecione um período de data/hora ou preencha os últimos minutos.");
                 }
-                
-                // Formato esperado pela API Argus: 'AAAA-MM-DD HH:mm:ss'
-                payload.periodoInicial = `${startDate} ${startTime}:00`;
-                payload.periodoFinal = `${endDate} ${endTime}:00`;
+
+                const [startYear, startMonth, startDay] = startDate.split('-');
+                const formattedStartDate = `${startDay}/${startMonth}/${startYear}`;
+
+                const [endYear, endMonth, endDay] = endDate.split('-');
+                const formattedEndDate = `${endDay}/${endMonth}/${endYear}`;
+
+                payload.periodoInicial = `${formattedStartDate} ${startTime}`;
+                payload.periodoFinal = `${formattedEndDate} ${endTime}`;
             }
             
             const idCampanha = parseInt(els.apiControls.idCampanha.value, 10);

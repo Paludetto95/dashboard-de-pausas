@@ -49,12 +49,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Parâmetros insuficientes. Forneça ultimosMinutos ou periodoInicial/periodoFinal.' });
     }
     
-    // 4. Construct the request body for the Argus API
+    // 4. Construct the request body for the Argus API, respecting the exact keys from documentation
     const argusBody = {
-        "idCampanha": idCampanha,
-        "periodoInicial": periodoInicial, // Pass directly from frontend
-        "periodoFinal": periodoFinal,   // Pass directly from frontend
-        "ultimosMinutos": ultimosMinutos
+        " idCampanha": idCampanha,
+        " periodoInicial": periodoInicial,
+        " periodoFinal": periodoFinal,
+        " ultimosMinutos ": ultimosMinutos
     };
     // Remove undefined keys
     Object.keys(argusBody).forEach(key => argusBody[key] === undefined && delete argusBody[key]);
