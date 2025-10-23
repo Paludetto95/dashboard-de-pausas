@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     // 2. Get token from environment variables
-    const apiToken = process.env.ARGUS_API_TOKEN;
+    const apiToken = process.env.ARGUS_API_TOKEN || "woQzLP54uk5Y5HQ6TvFgNb4oNhLkso7CRPURLdICggKs160rnZMcm09JCGjp5Ae3";
     if (!apiToken) {
         return res.status(500).json({ message: 'Token da API Argus (ARGUS_API_TOKEN) não configurado no servidor.' });
     }

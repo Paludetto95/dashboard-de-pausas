@@ -1,0 +1,27 @@
+{
+  "name": "analise-de-dados",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000d\u0000a\u0000s\u0000h\u0000b\u0000o\u0000a\u0000r\u0000d\u0000-\u0000d\u0000e\u0000-\u0000p\u0000a\u0000u\u0000s\u0000a\u0000s\u0000\r\u0000 \u0000",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Paludetto95/dashboard-de-pausas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Paludetto95/dashboard-de-pausas/issues"
+  },
+  "homepage": "https://github.com/Paludetto95/dashboard-de-pausas#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "node-fetch": "^2.7.0"
+  }
+}

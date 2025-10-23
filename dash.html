@@ -775,38 +775,32 @@
                 };
             }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
         }
-
+        
         // =========================================================================
-        // AQUI ESTÁ A NOVA FUNÇÃO IMPLEMENTADA COM O MÉTODO GET
+        // FUNÇÃO ATUALIZADA PARA USAR O SERVIDOR PROXY
         // =========================================================================
         async function loadArgusApiData() {
             // 1. Preparação da UI
             els.fileInput.value = '';
             els.fileUploadLabel.textContent = 'Escolher arquivo';
-            els.fileStatus.textContent = 'Carregando dados da API Argus (GET)...';
+            els.fileStatus.textContent = 'Conectando ao servidor proxy...';
             els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
-            // 2. Configurações da API (SEU TOKEN DA IMAGEM)
-            const API_TOKEN = "woQzLP54uk5Y5HQ6TvFgNb4oNhLkso7CRPURLdICggKs160rnZMcm09JCGjp5Ae3";
-            const BASE_URL = "https://argus.app.br/apiargus/report/pausasdetalhadas";
+            // 2. Endereço do nosso proxy local
+            const PROXY_URL = "http://localhost:3000/api/dados-argus";
 
-            // 3. Construção dos Parâmetros da URL (Query String)
-            const params = new URLSearchParams();
-
-            // -- ID Campanha (Opcional) --
+            // 3. Montar o corpo (payload) da requisição para o proxy
+            const payload = {};
+            
             const idCampanhaVal = els.apiControls.idCampanha.value.trim();
             if (idCampanhaVal) {
-                params.append("idCampanha", idCampanhaVal);
+                payload.idCampanha = idCampanhaVal;
             }
 
-            // -- Decisão: Últimos Minutos OU Período Fixo --
             const ultimosMinutosVal = els.apiControls.ultimosMinutos.value.trim();
-
             if (ultimosMinutosVal && parseInt(ultimosMinutosVal) > 0) {
-                // Opção A: Usando Últimos Minutos
-                params.append("ultimosMinutos", ultimosMinutosVal);
+                payload.ultimosMinutos = ultimosMinutosVal;
             } else {
-                // Opção B: Usando Data Inicial e Final
                 const startDate = els.apiControls.startDate.value;
                 const startTime = els.apiControls.startTime.value || '00:00';
                 const endDate = els.apiControls.endDate.value;
@@ -815,43 +809,38 @@
                 if (!startDate || !endDate) {
                     return handleDataLoadError("Selecione um período de data/hora ou preencha os últimos minutos.");
                 }
-
-                // Formata para o padrão ISO esperado pela maioria das APIs: YYYY-MM-DDTHH:MM:SS
-                params.append("periodoInicial", `${startDate}T${startTime}:00`);
-                params.append("periodoFinal", `${endDate}T${endTime}:00`);
+                
+                payload.periodoInicial = `${startDate}T${startTime}:00`;
+                payload.periodoFinal = `${endDate}T${endTime}:00`;
             }
 
-            // URL Final com os parâmetros
-            const fullUrl = `${BASE_URL}?${params.toString()}`;
-            console.log("Tentando carregar via GET:", fullUrl);
+            console.log("Enviando para o Proxy:", payload);
 
             try {
-                // 4. Fazendo a chamada GET
-                const response = await fetch(fullUrl, {
-                    method: 'GET',
+                // 4. Fazer a chamada POST para o nosso proxy
+                const response = await fetch(PROXY_URL, {
+                    method: 'POST',
                     headers: {
-                        'Token-Signature': API_TOKEN,
-                        'Accept': 'application/json'
-                    }
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
                 });
                 
-                // 5. Tratamento da Resposta
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Falha na API (${response.status}): ${errorText}`);
-                }
-
                 const responseData = await response.json();
 
-                if (responseData.codStatus && responseData.codStatus < 1) {
-                    throw new Error(responseData.descStatus || "A API retornou um erro desconhecido.");
+                if (!response.ok) {
+                    throw new Error(responseData.descStatus || responseData.error || `Erro do Proxy (${response.status})`);
                 }
-                
+
+                if (responseData.codStatus && responseData.codStatus < 1) {
+                    throw new Error(responseData.descStatus || "A API Argus retornou um erro.");
+                }
+
                 if (!responseData.pausasDetalhadas || !Array.isArray(responseData.pausasDetalhadas)) {
                      throw new Error("Formato de resposta inválido: campo 'pausasDetalhadas' não encontrado.");
                 }
                 
-                // 6. Processamento dos dados recebidos
+                // 6. Processar os dados recebidos com sucesso
                 originalData = transformArgusData(responseData.pausasDetalhadas);
 
                 if (!originalData || originalData.length === 0) {
@@ -872,11 +861,12 @@
             } catch (error) {
                 let msg = error.message;
                 if (msg.includes("Failed to fetch")) {
-                    msg += " (Possível bloqueio de CORS pelo navegador. Verifique o console F12).";
+                    msg = "Não foi possível conectar ao servidor proxy. Verifique se ele está rodando no terminal e tente novamente.";
                 }
                 handleDataLoadError(msg);
             }
         }
+
 
         function handleDataLoadError(msg) {
             console.error(msg);
