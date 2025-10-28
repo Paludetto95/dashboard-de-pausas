@@ -3,6 +3,6 @@
     { "source": "/((?!api/).*)", "destination": "/dash.html" }
   ],
   "env": {
-    "ARGUS_API_TOKEN": "woQzLP54uk5Y5HQ6TvFgNb4oNhLkso7CRPURLdICggKs160rnZMcm09JCGjp5Ae3"
+    "ARGUS_API_TOKEN": "nahybptvaa25vyybq0fyoj8bqyahrlw52acotbquc8du1z033ezsvfn5nx0egxqz"
   }
 }

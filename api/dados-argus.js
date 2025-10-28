@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     }
 
     // 2. Get token from environment variables
-    const apiToken = process.env.ARGUS_API_TOKEN || "woQzLP54uk5Y5HQ6TvFgNb4oNhLkso7CRPURLdICggKs160rnZMcm09JCGjp5Ae3";
+    const apiToken = process.env.ARGUS_API_TOKEN || "nahybptvaa25vyybq0fyoj8bqyahrlw52acotbquc8du1z033ezsvfn5nx0egxqz";
     if (!apiToken) {
         return res.status(500).json({ message: 'Token da API Argus (ARGUS_API_TOKEN) não configurado no servidor.' });
     }
@@ -103,7 +103,12 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         
-        // 7. Send the data back to the frontend
+        // 7. Check if data is empty
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+            return res.status(404).json({ message: 'Nenhum registro de pausa encontrado para os filtros informados. Tente ajustar o período ou os filtros de busca.' });
+        }
+        
+        // 8. Send the data back to the frontend
         return res.status(200).json(data);
 
     } catch (error) {

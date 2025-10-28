@@ -9,7 +9,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator_bootstrap5.min.css" rel="stylesheet">
-    
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
     <style>
         /* --- 1. Paleta de Cores e Tema --- */
@@ -127,6 +126,12 @@
                 padding-left: 20rem; /* w-80 */
             }
         }
+        
+        .tab-button.active {
+            background-color: var(--highlight-primary) !important;
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+        }
 
         /* --- Elementos Específicos do Dashboard --- */
         .chart-container {
@@ -163,11 +168,12 @@
             position: fixed; inset: 0px; display: flex;
             justify-content: center; align-items: center;
             z-index: 1000; background-color: rgba(0, 0, 0, 0.8);
+            transition: opacity 0.3s ease-in-out;
         }
         .modal-content {
             background-color: var(--bg-container); padding: 2rem;
             border-radius: 1rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-            max-width: 42rem; max-height: 80%;
+            max-width: 42rem; width: 90%; max-height: 80%;
             overflow-y: auto; position: relative;
         }
         .modal-close-btn {
@@ -193,47 +199,47 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         /* --- Estilos da Tabela (Tabulator) --- */
-        #pause-detail-table {
+        .tabulator {
             border: none; background-color:#252532;
         }
-        #pause-detail-table .tabulator-header {
+        .tabulator .tabulator-header {
             background-color: var(--bg-container) !important;
             border-bottom: 1px solid #4A4A58 !important;
         }
-        #pause-detail-table .tabulator-col, #pause-detail-table .tabulator-col-content {
+        .tabulator .tabulator-col, .tabulator .tabulator-col-content {
              background-color: transparent !important;
         }
-        #pause-detail-table .tabulator-col-title {
+        .tabulator .tabulator-col-title {
             color: var(--text-secondary) !important; font-weight: 500;
         }
-        #pause-detail-table .tabulator-header .tabulator-header-filter input {
+        .tabulator .tabulator-header .tabulator-header-filter input {
             background-color: #1C1C24 !important; color: var(--text-main) !important;
             border: 1px solid #4A4A58 !important; border-radius: 8px !important;
             padding: 6px 10px !important;
         }
-        #pause-detail-table .tabulator-header .tabulator-header-filter input::placeholder {
+        .tabulator .tabulator-header .tabulator-header-filter input::placeholder {
              color: var(--text-secondary) !important; opacity: 0.7;
         }
-        #pause-detail-table .tabulator-tableHolder {
+        .tabulator .tabulator-tableHolder {
             background-color: #1C1C24 !important;
         }
-        #pause-detail-table .tabulator-placeholder span { color: white !important; }
-        #pause-detail-table .tabulator-row {
+        .tabulator .tabulator-placeholder span { color: white !important; }
+        .tabulator .tabulator-row {
             background: #1C1C24; border-bottom: 1px solid #2D2D3A !important;
         }
-        #pause-detail-table .tabulator-row:hover .tabulator-cell {
+        .tabulator .tabulator-row:hover .tabulator-cell {
             background-color: rgba(58, 127, 255, 0.1) !important;
         }
-        #pause-detail-table .tabulator-cell {
+        .tabulator .tabulator-cell {
             color: var(--text-main) !important;
             border-right: 1px solid #2D2D3A !important;
             padding: 12px 10px !important;
         }
-        #pause-detail-table .tabulator-cell:last-of-type { border-right: none !important; }
+        .tabulator .tabulator-cell:last-of-type { border-right: none !important; }
         
-        #pause-detail-table .status-success { color: var(--status-success) !important; }
-        #pause-detail-table .status-danger { color: var(--status-danger) !important; }
-        #pause-detail-table .status-warning { color: var(--highlight-secondary-yellow) !important; }
+        .tabulator .status-success { color: var(--status-success) !important; }
+        .tabulator .status-danger { color: var(--status-danger) !important; }
+        .tabulator .status-warning { color: var(--highlight-secondary-yellow) !important; }
 
         /* Scrollbar */
         ::-webkit-scrollbar { height: 10px; width: 10px; }
@@ -251,7 +257,7 @@
         </svg>
     </button>
     
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden"></div>
     
     <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-slate-900/70 backdrop-blur-lg border-r border-slate-700/80 z-40 p-6 overflow-y-auto">
         <div class="flex flex-col gap-4">
@@ -272,16 +278,22 @@
                             <input type="file" id="csv-file-input" accept=".csv, .txt, .tsv" class="hidden"/>
                         </div>
                     </div>
-                    
+
                     <hr class="border-slate-600">
                     
-                    <div class="space-y-2">
-                        <label for="id-campanha" class="block text-sm font-medium text-slate-300 text-left">ID Campanha (Opcional)</label>
-                        <input type="number" id="id-campanha" placeholder="Ex: 1 ou 2" class="form-input-dark w-full">
+                    <!-- SELETORES DE PERÍODO DA API -->
+                    <div class="flex items-center justify-around mb-4">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="time-selection" value="periodo" class="form-radio text-teal-500" checked>
+                            <span class="ml-2 text-slate-300">Período</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="time-selection" value="ultimosMinutos" class="form-radio text-teal-500">
+                            <span class="ml-2 text-slate-300">Últimos Minutos</span>
+                        </label>
                     </div>
 
-                    <!-- SELETORES DE PERÍODO DA API -->
-                    <div class="space-y-3">
+                    <div id="periodo-inputs" class="space-y-3">
                         <label class="block text-sm font-medium text-slate-300 text-left">Período</label>
                         <div class="flex items-center gap-2">
                             <input type="date" id="api-start-date" class="form-input-dark w-full" required>
@@ -293,13 +305,7 @@
                         </div>
                     </div>
 
-                    <div class="relative flex py-2 items-center">
-                        <div class="flex-grow border-t border-slate-600"></div>
-                        <span class="flex-shrink mx-4 text-slate-400 text-xs">OU</span>
-                        <div class="flex-grow border-t border-slate-600"></div>
-                    </div>
-
-                    <div class="space-y-2">
+                    <div id="ultimos-minutos-inputs" class="space-y-2 hidden">
                         <label for="ultimos-minutos" class="block text-sm font-medium text-slate-300 text-left">Últimos Minutos</label>
                         <input type="number" id="ultimos-minutos" placeholder="Ex: 60" class="form-input-dark w-full">
                     </div>
@@ -354,9 +360,19 @@
 
     <main id="main-content">
         <div class="container mx-auto">
-            <h1 class="text-4xl font-extrabold text-white mb-8 text-center">
-                Dashboard de Pausas Consultores
+            <h1 class="text-4xl font-extrabold text-white mb-4 text-center">
+                Dashboard de Análise
             </h1>
+            <div class="flex justify-center mb-8 space-x-4">
+                <button id="tab-pauses-btn" class="tab-button active px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                    Pausas
+                </button>
+                <button id="tab-call-tabulations-btn" class="tab-button px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition duration-300 ease-in-out">
+                    Tabulações de Ligações
+                </button>
+            </div>
+
+            <div id="pauses-dashboard-content">
     
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="card">
@@ -422,12 +438,111 @@
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+
+    <div id="call-tabulations-dashboard-content" class="hidden">
+        <h2 class="text-3xl font-extrabold text-white mb-8 text-center">Análise de Tabulações de Ligações</h2>
+        <div class="card mb-8">
+            <h2 class="text-2xl font-semibold text-slate-100 mb-4 flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Carregar Dados de Tabulações</span>
+            </h2>
+            <div class="flex flex-col gap-4 w-full">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV de Tabulações</label>
+                    <div class="flex justify-center">
+                        <label id="call-tabulations-file-upload-label" for="call-tabulations-csv-file-input" class="w-full cursor-pointer px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out truncate text-center">
+                            Escolher arquivo
+                        </label>
+                        <input type="file" id="call-tabulations-csv-file-input" accept=".csv, .txt, .tsv" class="hidden"/>
+                    </div>
+                </div>
+                <p id="call-tabulations-file-status" class="text-sm text-slate-400 mt-4">Nenhum dado carregado.</p>
+            </div>
+        </div>
+
+        <div class="card mb-8">
+            <h2 class="text-2xl font-semibold text-slate-100 mb-4 flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span>Filtros de Tabulações</span>
+            </h2>
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <label for="tabulation-operator-filter" class="text-sm font-medium text-slate-300">Operador:</label>
+                    <select id="tabulation-operator-filter" class="form-input-dark w-1/2" disabled>
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label for="tabulation-type-filter" class="text-sm font-medium text-slate-300">Tipo de Tabulação:</label>
+                    <select id="tabulation-type-filter" class="form-input-dark w-1/2" disabled>
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label for="tabulation-category-filter" class="text-sm font-medium text-slate-300">Categoria:</label>
+                    <select id="tabulation-category-filter" class="form-input-dark w-1/2" disabled>
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label for="tabulation-start-date-filter" class="text-sm font-medium text-slate-300">Data Início:</label>
+                    <input type="date" id="tabulation-start-date-filter" class="form-input-dark w-1/2 date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                </div>
+                <div class="flex justify-between items-center">
+                    <label for="tabulation-end-date-filter" class="text-sm font-medium text-slate-300">Data Fim:</label>
+                    <input type="date" id="tabulation-end-date-filter" class="form-input-dark w-1/2 date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                </div>
+            </div>
+            <div class="flex flex-col gap-4 mt-6">
+                <button id="clear-tabulation-filters-btn" class="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out" disabled>
+                    Limpar Filtros
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="card">
+                <h2 class="text-xl font-semibold text-slate-200 mb-4">Total de Tabulações por Operador</h2>
+                <div class="chart-container">
+                    <canvas id="total-tabulations-operator-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold text-slate-200 mb-4">Total de Tabulações por Tipo</h2>
+                <div class="chart-container">
+                    <canvas id="total-tabulations-type-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold text-slate-200 mb-4">Total de Tabulações por Categoria</h2>
+                <div class="chart-container">
+                    <canvas id="total-tabulations-category-chart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold text-slate-200 mb-4">Distribuição de Tabulações por Tipo</h2>
+                <div class="chart-container">
+                    <canvas id="tabulation-type-distribution-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="text-2xl font-semibold text-slate-100 mb-4">Detalhes das Tabulações</h2>
+            <div id="call-tabulations-detail-table" data-bs-theme="dark" class="table-dark"></div>
+        </div>
+    </div>
+</main>
 
     <div id="ignored-rows-modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
             <button id="close-ignored-rows-modal-btn" class="modal-close-btn">&times;</button>
-            <h3 class="text-xl font-bold text-red-400 mb-4">⚠️ Linhas Ignoradas no CSV</h3>
+            <h3 class="text-xl font-bold text-red-400 mb-4">⚠️ <span id="ignored-rows-count">0</span> Linhas Ignoradas no CSV</h3>
             <p class="text-slate-300 mb-4">As seguintes linhas foram ignoradas devido a dados inválidos ou ausentes. Por favor, revise seu arquivo CSV.</p>
             <ul id="ignored-rows-list" class="space-y-2"></ul>
         </div>
@@ -437,13 +552,39 @@
     <script>
         // --- Configuração Global ---
         const COLUMN_ALIASES = {
-            'CONSULTOR': ['operador', 'consultor', 'nome', 'agente', 'usuario', 'employee', 'name', 'colaborador'],
-            'DURACAO': ['tempo', 'duracao', 'duration', 'time', 'periodo', 'horas'],
-            'TIPO': ['descricao', 'descricao da pausa', 'tipo', 'motivo', 'reason', 'type', 'pausa', 'atividade'],
-            'DATA_INICIO': ['inicio', 'data', 'data hora', 'data_inicio', 'start', 'date', 'hora inicio']
+            'GRUPO_OPERACIONAL': ['GRUPO OPERACIONAL', 'GRUPO OP'],
+            'OPERADOR': ['OPERADOR', 'CONSULTOR', 'NOME DO OPERADOR', 'NOME OPERADOR'],
+            'ESTADO': ['ESTADO'],
+            'DESCRICAO_PAUSA': ['DESCRICAO DA PAUSA', 'DESCRIÇÃO DA PAUSA', 'TIPO PAUSA', 'TIPO_PAUSA', 'PAUSA', 'MOTIVO PAUSA', 'MOTIVO_PAUSA'],
+            'DATA_INICIO': ['INICIO', 'DATA INICIO', 'DATA_INICIO', 'DATA_HORA_INICIO', 'DATA HORA INICIO'],
+            'DATA_FIM': ['FIM', 'DATA FIM', 'DATA_FIM', 'DATA_HORA_FIM', 'DATA HORA FIM'],
+            'TEMPO_PAUSA': ['TEMPO', 'TEMPO PAUSA', 'TEMPO_PAUSA', 'TEMPO_TOTAL_PAUSA', 'TEMPO TOTAL PAUSA'],
+            'INICIO_LIVRE': ['INICIO EM LIVRE'],
+            'SEGUNDOS_EM_LIVRE': ['SEGUNDOS EM LIVRE'],
+            'DURACAO_ESPERADA': ['DURACAO ESPERADA', 'DURACAO_ESPERADA']
         };
 
-        const EXPECTED_DURATIONS = {
+        const columnAliasesCallTabulations = {
+            'NR_LEAD': ['NR. LEAD', 'NR.LEAD', 'NR LEAD', 'NR_LEAD', 'LEAD'],
+            'DATA_HORA_TABULACAO': ['DATA/HORA TABULAÇÃO', 'DATA/HORA_TABULACAO', 'DATA HORA TABULACAO', 'DATA_HORA_TABULACAO', 'DATA', 'HORA', 'DATA E HORA'],
+            'TIPO_AGENDA': ['TIPO AGENDA (SALVOU)', 'TIPO_AGENDA', 'AGENDA'],
+            'TABULADO_COMO': ['TABULADO COMO', 'TABULADO_COMO', 'STATUS'],
+            'CATEGORIA_TABULACAO': ['CATEGORIA TABULAÇÃO', 'CATEGORIA_TABULACAO', 'CATEGORIA'],
+            'OPERADOR': ['OPERADOR', 'CONSULTOR', 'NOME DO OPERADOR', 'NOME OPERADOR'],
+            'COD_LOTE': ['CÓD. LOTE', 'COD. LOTE', 'COD LOTE', 'COD_LOTE', 'LOTE ID'],
+            'LOTE': ['LOTE', 'DESCRICAO LOTE'],
+            'NOME_CLIENTE': ['NOME DO CLIENTE', 'NOME_CLIENTE', 'CLIENTE'],
+            'DATA_IMPORTACAO': ['DATA IMPORTAÇÃO', 'DATA_IMPORTACAO', 'IMPORTACAO'],
+            'CPF_CNPJ': ['CPF / CNPJ', 'CPF/CNPJ', 'CPF_CNPJ', 'DOCUMENTO'],
+            'COD_CLIENTE': ['CÓD. CLIENTE', 'COD. CLIENTE', 'COD CLIENTE', 'COD_CLIENTE', 'ID CLIENTE'],
+            'TELEFONE': ['TELEFONE', 'FONE'],
+            'ORIGEM_TABULACAO': ['ORIGEM TABULAÇÃO', 'ORIGEM_TABULACAO', 'ORIGEM'],
+            'ORIGEM_POPUP': ['ORIGEM POPUP', 'ORIGEM_POPUP'],
+            'GRUPO_USUARIO': ['GRUPO USUÁRIO', 'GRUPO_USUARIO'],
+            'INFORMACAO_ATENDIMENTO': ['INFORMAÇÃO DO ATENDIMENTO', 'INFORMACAO_ATENDIMENTO'],
+        };
+        
+        const expectedDurations = {
             'Almoço': { minutes: 60, tolerance: 3 },
             'Café': { minutes: 15, tolerance: 2 },
             'Intervalo': { minutes: 15, tolerance: 2 },
@@ -456,58 +597,92 @@
             'Novo Lead': { minutes: 5, tolerance: 2 }
         };
 
+        // Objeto unificado para seletores do DOM
+        const els = {
+            main: {
+                tabPausasBtn: document.getElementById('tab-pauses-btn'),
+                tabCallTabulationsBtn: document.getElementById('tab-call-tabulations-btn'),
+                pausesDashboardContent: document.getElementById('pauses-dashboard-content'),
+                fileInput: document.getElementById('csv-file-input'),
+                fileUploadLabel: document.getElementById('file-upload-label'),
+                fileStatus: document.getElementById('file-status'),
+                pauseDetailsTable: null,
+                buttons: {
+                    loadArgusApi: document.getElementById('load-argus-api-btn'),
+                    generateAi: document.getElementById('generate-ai-analysis-btn'),
+                    clearFilters: document.getElementById('clear-filters-btn'),
+                    closeAi: document.getElementById('close-ai-analysis-btn'),
+                },
+                filters: {
+                    consultant: document.getElementById('consultant-filter'),
+                    pauseType: document.getElementById('pause-type-filter'),
+                    startDate: document.getElementById('start-date-filter'),
+                    endDate: document.getElementById('end-date-filter'),
+                },
+                apiControls: {
+                    startDate: document.getElementById('api-start-date'),
+                    endDate: document.getElementById('api-end-date'),
+                    startTime: document.getElementById('api-start-time'),
+                    endTime: document.getElementById('api-end-time'),
+                    ultimosMinutos: document.getElementById('ultimos-minutos'),
+                },
+                kpis: {
+                    totalPauses: document.getElementById('kpi-total-pauses'),
+                    totalDuration: document.getElementById('kpi-total-global-pause'),
+                    uniqueConsultants: document.getElementById('kpi-unique-consultants')
+                },
+                ai: {
+                    section: document.getElementById('ai-analysis-section'),
+                    content: document.getElementById('ai-analysis-content'),
+                    loading: document.getElementById('ai-loading-message'),
+                    placeholder: document.getElementById('ai-placeholder-message')
+                },
+                ignoredRowsModal: {
+                    modal: document.querySelector('#ignored-rows-modal-overlay .modal-content'),
+                    closeBtn: document.getElementById('close-ignored-rows-modal-btn'),
+                    overlay: document.getElementById('ignored-rows-modal-overlay'),
+                    count: document.getElementById('ignored-rows-count'),
+                    list: document.getElementById('ignored-rows-list')
+                }
+            },
+            callTabulations: {
+                dashboardContent: document.getElementById('call-tabulations-dashboard-content'),
+                fileInput: document.getElementById('call-tabulations-csv-file-input'),
+                fileUploadLabel: document.getElementById('call-tabulations-file-upload-label'),
+                fileStatus: document.getElementById('call-tabulations-file-status'),
+                tableContainer: document.getElementById('call-tabulations-detail-table'),
+                filters: {
+                     operator: document.getElementById('tabulation-operator-filter'),
+                     type: document.getElementById('tabulation-type-filter'),
+                     category: document.getElementById('tabulation-category-filter'),
+                     startDate: document.getElementById('tabulation-start-date-filter'),
+                     endDate: document.getElementById('tabulation-end-date-filter'),
+                },
+                buttons: {
+                    clearFilters: document.getElementById('clear-tabulation-filters-btn'),
+                }
+                // Adicionar seletores para KPIs e Modal de erros de tabulações se/quando forem implementados no HTML
+            }
+        };
+
         let originalData = [];
         let filteredData = [];
-        let filteredAveragesForComparison = {};
+        let callTabulationsOriginalData = [];
+        let callTabulationsFilteredData = [];
+
         let tabulatorTable = null;
+        let callTabulationsTable = null;
+        let filteredAveragesForComparison = {};
 
         let charts = {
             consultantTotal: null,
             typeTotal: null,
             typeAverage: null,
-            typeDistribution: null
-        };
-
-        const els = {
-            fileInput: document.getElementById('csv-file-input'),
-            fileUploadLabel: document.getElementById('file-upload-label'),
-            fileStatus: document.getElementById('file-status'),
-            apiControls: { 
-                idCampanha: document.getElementById('id-campanha'),
-                startDate: document.getElementById('api-start-date'),
-                startTime: document.getElementById('api-start-time'),
-                endDate: document.getElementById('api-end-date'),
-                endTime: document.getElementById('api-end-time'),
-                ultimosMinutos: document.getElementById('ultimos-minutos')
-            },
-            filters: {
-                consultant: document.getElementById('consultant-filter'),
-                pauseType: document.getElementById('pause-type-filter'),
-                startDate: document.getElementById('start-date-filter'),
-                endDate: document.getElementById('end-date-filter')
-            },
-            buttons: {
-                clearFilters: document.getElementById('clear-filters-btn'),
-                generateAi: document.getElementById('generate-ai-analysis-btn'),
-                loadArgusApi: document.getElementById('load-argus-api-btn'),
-                closeAi: document.getElementById('close-ai-analysis-btn')
-            },
-            kpis: {
-                totalPauses: document.getElementById('kpi-total-pauses'),
-                totalDuration: document.getElementById('kpi-total-global-pause'),
-                uniqueConsultants: document.getElementById('kpi-unique-consultants')
-            },
-            ai: {
-                section: document.getElementById('ai-analysis-section'),
-                content: document.getElementById('ai-analysis-content'),
-                loading: document.getElementById('ai-loading-message'),
-                placeholder: document.getElementById('ai-placeholder-message')
-            },
-            ignoredRowsModal: {
-                overlay: document.getElementById('ignored-rows-modal-overlay'),
-                closeBtn: document.getElementById('close-ignored-rows-modal-btn'),
-                list: document.getElementById('ignored-rows-list')
-            }
+            typeDistribution: null,
+            tabulationOperatorTotal: null,
+            tabulationTypeTotal: null,
+            tabulationCategoryTotal: null,
+            tabulationTypeDistribution: null
         };
 
         // --- Funções Utilitárias ---
@@ -622,34 +797,38 @@
             return maxCount > 1 ? bestDelimiter : null;
         }
 
-        function mapHeaders(rawHeaders) {
+        function mapHeaders(rawHeaders, aliases) {
             const headerMap = {};
-            const normalizedRawHeaders = rawHeaders.map(h => ({ original: h, normalized: normalizeHeader(h) }));
-            const requiredKeys = ['CONSULTOR', 'DURACAO', 'TIPO', 'DATA_INICIO'];
-            let missingKeys = [];
-            requiredKeys.forEach(key => {
-                const aliases = COLUMN_ALIASES[key];
+            const normalize = (str) => str ? str.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+
+            const normalizedRawHeaders = rawHeaders.map(normalize);
+            console.log('Normalized Raw Headers:', normalizedRawHeaders);
+
+            for (const key in aliases) {
+                const aliasList = aliases[key].map(normalize);
                 let foundIndex = -1;
-                for (let i = 0; i < normalizedRawHeaders.length; i++) {
-                    const csvHeaderNorm = normalizedRawHeaders[i].normalized;
-                    if (aliases.some(alias => csvHeaderNorm === alias || csvHeaderNorm.includes(alias))) {
-                        foundIndex = i;
+
+                for (const alias of aliasList) {
+                    const index = normalizedRawHeaders.indexOf(alias);
+                    if (index !== -1) {
+                        foundIndex = index;
                         break;
                     }
                 }
+
                 if (foundIndex !== -1) {
-                    headerMap[key] = foundIndex;
-                } else {
-                    missingKeys.push(key);
+                    headerMap[key] = rawHeaders[foundIndex];
                 }
-            });
-            return { map: headerMap, missing: missingKeys, originalHeaders: rawHeaders };
+            }
+
+            console.log('Mapped Headers:', headerMap);
+            return headerMap;
         }
 
         function processData(csvContent) {
             console.log('Iniciando processamento inteligente do CSV...');
-            els.fileStatus.className = 'text-sm text-slate-400 mt-4';
-            els.ignoredRowsModal.overlay.classList.add('hidden');
+            els.main.fileStatus.className = 'text-sm text-slate-400 mt-4';
+            els.main.ignoredRowsModal.overlay.classList.add('hidden');
 
             if (!csvContent || !csvContent.trim()) {
                 handleDataLoadError('Arquivo vazio.');
@@ -672,48 +851,79 @@
                 return;
             }
             
-            const rawHeaders = splitCsvLine(lines[0], delimiter);
-            const mappingResult = mapHeaders(rawHeaders);
-
-            if (mappingResult.missing.length > 0) {
-                const missingNames = mappingResult.missing.map(k => COLUMN_ALIASES[k].join(' ou ')).join('; \n');
-                handleDataLoadError(`Não foi possível encontrar colunas correspondentes a:\n${missingNames}.\nVerifique os cabeçalhos do seu CSV.`);
-                return;
+            let rawHeaders = splitCsvLine(lines[0], delimiter);
+            let emptyCellOffset = 0;
+            if (rawHeaders.length > 0 && rawHeaders[0].trim() === '') {
+                rawHeaders = rawHeaders.slice(1);
+                emptyCellOffset = 1;
             }
 
-            const map = mappingResult.map;
+            console.log('Raw Headers from CSV (after potential trim):', rawHeaders);
+            const headerMap = mapHeaders(rawHeaders, COLUMN_ALIASES);
+
+            const requiredHeaders = ['GRUPO_OPERACIONAL', 'OPERADOR', 'ESTADO', 'DESCRICAO_PAUSA', 'DATA_INICIO', 'TEMPO_PAUSA', 'INICIO_LIVRE', 'SEGUNDOS_EM_LIVRE'];
+            const missingHeaders = requiredHeaders.filter(h => !headerMap[h]);
+
+            if (missingHeaders.length > 0) {
+                 const missingNames = missingHeaders.map(k => COLUMN_ALIASES[k].join(' ou ')).join('; \n');
+                 handleDataLoadError(`Não foi possível encontrar colunas correspondentes a:\n${missingNames}.\nVerifique os cabeçalhos do seu CSV.`);
+                 return;
+            }
+
+            const headerIndexes = {};
+            for(const key in headerMap) {
+                const rawHeaderIndex = rawHeaders.indexOf(headerMap[key]);
+                if (rawHeaderIndex !== -1) {
+                    headerIndexes[key] = rawHeaderIndex + emptyCellOffset;
+                }
+            }
+
             let ignoredRowsDetails = [];
 
             originalData = lines.slice(1).map((line, index) => {
                 const currentLineNumber = index + 2;
                 const values = splitCsvLine(line, delimiter);
 
-                if (values.length !== rawHeaders.length) {
+                // A verificação de colunas deve considerar o offset da célula vazia
+                if (values.length !== rawHeaders.length + emptyCellOffset) {
                     ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Número de colunas diferente do cabeçalho', columnName: 'Linha Completa', columnValue: line.substring(0, 150) + (line.length > 150 ? '...' : '') });
                     return null;
                 }
 
-                const rawDuration = values[map.DURACAO];
+                const getColumnValue = (key) => values[headerIndexes[key]] || '';
+
+                const rawDuration = getColumnValue('TEMPO_PAUSA');
                 const durationMinutes = parseDurationToMinutes(rawDuration);
-                const dateRawValue = values[map.DATA_INICIO];
+                const dateRawValue = getColumnValue('DATA_INICIO');
                 const dateObj = parseDateTimeRobust(dateRawValue);
-                const consultorRawValue = values[map.CONSULTOR];
-                const consultor = normalizeDataString(consultorRawValue);
-                const tipoRawValue = values[map.TIPO];
+                const operadorRawValue = getColumnValue('OPERADOR');
+                const operador = normalizeDataString(operadorRawValue);
+                const tipoRawValue = getColumnValue('DESCRICAO_PAUSA');
                 const tipo = toTitleCase(normalizeDataString(tipoRawValue));
 
                 let rowProblem = null;
-                if (!dateObj) rowProblem = { reason: `Data/Hora de Início inválida ou vazia`, columnName: rawHeaders[map.DATA_INICIO], columnValue: dateRawValue };
-                else if (durationMinutes <= 0) rowProblem = { reason: `Duração da pausa inválida ou zero`, columnName: rawHeaders[map.DURACAO], columnValue: rawDuration };
-                else if (consultor === 'Não informado' || consultorRawValue.trim() === '') rowProblem = { reason: `Nome do Consultor não informado`, columnName: rawHeaders[map.CONSULTOR], columnValue: consultorRawValue };
-                else if (tipo === 'Não informado' || tipoRawValue.trim() === '') rowProblem = { reason: `Tipo de Pausa não informado`, columnName: rawHeaders[map.TIPO], columnValue: tipoRawValue };
+                if (!dateObj) rowProblem = { reason: `Data/Hora de Início inválida ou vazia`, columnName: headerMap.DATA_INICIO, columnValue: dateRawValue };
+                else if (durationMinutes <= 0) rowProblem = { reason: `Duração da pausa inválida ou zero`, columnName: headerMap.TEMPO_PAUSA, columnValue: rawDuration };
+                else if (operador === 'Não informado' || operadorRawValue.trim() === '') rowProblem = { reason: `Nome do Operador não informado`, columnName: headerMap.OPERADOR, columnValue: operadorRawValue };
+                else if (tipo === 'Não informado' || tipoRawValue.trim() === '') rowProblem = { reason: `Descrição da Pausa não informada`, columnName: headerMap.DESCRICAO_PAUSA, columnValue: tipoRawValue };
 
                 if (rowProblem) {
                     ignoredRowsDetails.push({ lineNumber: currentLineNumber, ...rowProblem });
                     return null;
                 }
 
-                return { CONSULTOR: consultor, TIPO: tipo, DURACAO_MINUTES: durationMinutes, DATA_INICIO_OBJ: dateObj, _raw: { duration: rawDuration, date: dateRawValue } };
+                return {
+                    GRUPO_OPERACIONAL: getColumnValue('GRUPO_OPERACIONAL'),
+                    CONSULTOR: operador,
+                    ESTADO: getColumnValue('ESTADO'),
+                    TIPO: tipo,
+                    DATA_INICIO_OBJ: dateObj,
+                    DATA_FIM: parseDateTimeRobust(getColumnValue('DATA_FIM')),
+                    DURACAO_MINUTES: durationMinutes,
+                    INICIO_LIVRE: getColumnValue('INICIO_LIVRE'),
+                    SEGUNDOS_EM_LIVRE: getColumnValue('SEGUNDOS_EM_LIVRE'),
+                    _raw: { duration: rawDuration, date: dateRawValue }
+                };
             }).filter(row => row !== null);
 
             if (originalData.length === 0) {
@@ -723,8 +933,8 @@
             }
 
             const dates = originalData.map(d => d.DATA_INICIO_OBJ);
-            els.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-            els.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+            els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+            els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
 
             filteredData = [...originalData];
             populateFilters();
@@ -736,8 +946,8 @@
                 showIgnoredRowsPopup(ignoredRowsDetails);
             }
 
-            els.fileStatus.textContent = statusMsg;
-            els.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
+            els.main.fileStatus.textContent = statusMsg;
+            els.main.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
             updateDashboard();
         }
 
@@ -776,53 +986,44 @@
             }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
         }
         
-        // =========================================================================
-        // FUNÇÃO ATUALIZADA PARA USAR O SERVIDOR PROXY
-        // =========================================================================
         async function loadArgusApiData() {
-            // 1. Preparação da UI
-            els.fileInput.value = '';
-            els.fileUploadLabel.textContent = 'Escolher arquivo';
-            els.fileStatus.textContent = 'Conectando ao servidor proxy...';
-            els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+            els.main.fileInput.value = '';
+            els.main.fileUploadLabel.textContent = 'Escolher arquivo';
+            els.main.fileStatus.textContent = 'Conectando ao servidor proxy...';
+            els.main.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
-            // 2. Endereço do nosso proxy local
             const PROXY_URL = "http://localhost:3000/api/dados-argus";
-
-            // 3. Montar o corpo (payload) da requisição para o proxy
             const payload = {};
             
-            const idCampanhaVal = els.apiControls.idCampanha.value.trim();
-            if (idCampanhaVal) {
-                payload.idCampanha = idCampanhaVal;
-            }
+            const selectedTimeOption = document.querySelector('input[name="time-selection"]:checked').value;
 
-            const ultimosMinutosVal = els.apiControls.ultimosMinutos.value.trim();
-            if (ultimosMinutosVal && parseInt(ultimosMinutosVal) > 0) {
-                payload.ultimosMinutos = ultimosMinutosVal;
-            } else {
-                const startDate = els.apiControls.startDate.value;
-                const startTime = els.apiControls.startTime.value || '00:00';
-                const endDate = els.apiControls.endDate.value;
-                const endTime = els.apiControls.endTime.value || '23:59';
+            if (selectedTimeOption === 'ultimosMinutos') {
+                const ultimosMinutosVal = els.main.apiControls.ultimosMinutos.value.trim();
+                if (ultimosMinutosVal && parseInt(ultimosMinutosVal) > 0) {
+                    payload.ultimosMinutos = ultimosMinutosVal;
+                } else {
+                    return handleDataLoadError("Por favor, preencha o campo 'Últimos Minutos'.");
+                }
+            } else { // selectedTimeOption === 'periodo'
+                const startDate = els.main.apiControls.startDate.value;
+                const startTime = els.main.apiControls.startTime.value || '00:00';
+                const endDate = els.main.apiControls.endDate.value;
+                const endTime = els.main.apiControls.endTime.value || '23:59';
 
                 if (!startDate || !endDate) {
-                    return handleDataLoadError("Selecione um período de data/hora ou preencha os últimos minutos.");
+                    return handleDataLoadError("Por favor, selecione um período de data/hora.");
                 }
                 
                 payload.periodoInicial = `${startDate}T${startTime}:00`;
                 payload.periodoFinal = `${endDate}T${endTime}:00`;
             }
 
-            console.log("Enviando para o Proxy:", payload);
+            console.log("Payload enviado para o Proxy:", payload);
 
             try {
-                // 4. Fazer a chamada POST para o nosso proxy
                 const response = await fetch(PROXY_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
                 
@@ -840,7 +1041,6 @@
                      throw new Error("Formato de resposta inválido: campo 'pausasDetalhadas' não encontrado.");
                 }
                 
-                // 6. Processar os dados recebidos com sucesso
                 originalData = transformArgusData(responseData.pausasDetalhadas);
 
                 if (!originalData || originalData.length === 0) {
@@ -848,14 +1048,14 @@
                 }
                 
                 const dates = originalData.map(d => d.DATA_INICIO_OBJ);
-                els.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-                els.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
 
                 filteredData = [...originalData];
                 populateFilters();
                 enableDashboardControls(true);
-                els.fileStatus.textContent = `Sucesso! ${originalData.length} registros carregados via API Argus.`;
-                els.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
+                els.main.fileStatus.textContent = `Sucesso! ${originalData.length} registros carregados via API Argus.`;
+                els.main.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
                 updateDashboard();
 
             } catch (error) {
@@ -867,15 +1067,24 @@
             }
         }
 
-
         function handleDataLoadError(msg) {
             console.error(msg);
-            els.fileStatus.textContent = `Erro: ${msg}`;
-            els.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+            els.main.fileStatus.textContent = `Erro: ${msg}`;
+            els.main.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
             originalData = [];
             filteredData = [];
             enableDashboardControls(false);
             updateDashboard();
+        }
+
+        function handleCallTabulationsError(msg) {
+            console.error(msg);
+            els.callTabulations.fileStatus.textContent = `Erro: ${msg}`;
+            els.callTabulations.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+            callTabulationsOriginalData = [];
+            callTabulationsFilteredData = [];
+            enableDashboardControls(false, 'callTabulations');
+            updateCallTabulationsDashboard();
         }
 
         // --- Lógica do Dashboard ---
@@ -883,7 +1092,7 @@
             const consultants = [...new Set(originalData.map(d => d.CONSULTOR))].sort();
             const pauseTypes = [...new Set(originalData.map(d => d.TIPO))].sort();
 
-            const consultantFilter = els.filters.consultant;
+            const consultantFilter = els.main.filters.consultant;
             consultantFilter.innerHTML = '<option value="">Todos</option>';
             consultants.forEach(c => {
                 const option = document.createElement('option');
@@ -892,7 +1101,7 @@
                 consultantFilter.appendChild(option);
             });
 
-            const pauseTypeFilter = els.filters.pauseType;
+            const pauseTypeFilter = els.main.filters.pauseType;
             pauseTypeFilter.innerHTML = '<option value="">Todos</option>';
             pauseTypes.forEach(t => {
                 const option = document.createElement('option');
@@ -902,26 +1111,64 @@
             });
         }
 
-        function enableDashboardControls(enable) {
-            Object.values(els.filters).forEach(el => el.disabled = !enable);
-            els.buttons.clearFilters.disabled = !enable;
-            if (!enable) {
-                els.buttons.generateAi.disabled = true;
-                els.ai.section.classList.add('hidden');
+        function populateCallTabulationFilters() {
+            const operators = [...new Set(callTabulationsOriginalData.map(d => d.OPERADOR))].sort();
+            const tabulationTypes = [...new Set(callTabulationsOriginalData.map(d => d.TABULADO_COMO))].sort();
+            const categories = [...new Set(callTabulationsOriginalData.map(d => d.CATEGORIA_TABULACAO))].sort();
+
+            const operatorFilter = els.callTabulations.filters.operator;
+            operatorFilter.innerHTML = '<option value="">Todos</option>';
+            operators.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c;
+                option.textContent = c;
+                operatorFilter.appendChild(option);
+            });
+
+            const typeFilter = els.callTabulations.filters.type;
+            typeFilter.innerHTML = '<option value="">Todos</option>';
+            tabulationTypes.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t;
+                option.textContent = t;
+                typeFilter.appendChild(option);
+            });
+
+            const categoryFilter = els.callTabulations.filters.category;
+            categoryFilter.innerHTML = '<option value="">Todas</option>';
+            categories.forEach(t => {
+                const option = document.createElement('option');
+                option.value = t;
+                option.textContent = t;
+                categoryFilter.appendChild(option);
+            });
+        }
+        
+        function enableDashboardControls(enable, dashboardType = 'pauses') {
+             if (dashboardType === 'pauses') {
+                Object.values(els.main.filters).forEach(el => el.disabled = !enable);
+                els.main.buttons.clearFilters.disabled = !enable;
+                if (!enable) {
+                    els.main.buttons.generateAi.disabled = true;
+                    els.main.ai.section.classList.add('hidden');
+                }
+            } else if (dashboardType === 'callTabulations') {
+                Object.values(els.callTabulations.filters).forEach(el => el.disabled = !enable);
+                els.callTabulations.buttons.clearFilters.disabled = !enable;
             }
         }
 
         function applyFilters() {
-            const selConsultant = els.filters.consultant.value;
-            const selType = els.filters.pauseType.value;
+            const selConsultant = els.main.filters.consultant.value;
+            const selType = els.main.filters.pauseType.value;
 
             let startDate = null, endDate = null;
-            if (els.filters.startDate.value) {
-                startDate = new Date(els.filters.startDate.value);
+            if (els.main.filters.startDate.value) {
+                startDate = new Date(els.main.filters.startDate.value);
                 startDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0,0,0);
             }
-            if (els.filters.endDate.value) {
-                endDate = new Date(els.filters.endDate.value);
+            if (els.main.filters.endDate.value) {
+                endDate = new Date(els.main.filters.endDate.value);
                 endDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999);
             }
 
@@ -954,11 +1201,39 @@
             }
 
             const canUseAI = selConsultant && !selType;
-            els.buttons.generateAi.disabled = !canUseAI;
+            els.main.buttons.generateAi.disabled = !canUseAI;
 
-            if (!canUseAI) els.ai.section.classList.add('hidden');
+            if (!canUseAI) els.main.ai.section.classList.add('hidden');
 
             updateDashboard();
+        }
+
+        function applyCallTabulationFilters() {
+            const selOperator = els.callTabulations.filters.operator.value;
+            const selType = els.callTabulations.filters.type.value;
+            const selCategory = els.callTabulations.filters.category.value;
+
+            let startDate = null, endDate = null;
+            if (els.callTabulations.filters.startDate.value) {
+                startDate = new Date(els.callTabulations.filters.startDate.value);
+                startDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0,0,0);
+            }
+            if (els.callTabulations.filters.endDate.value) {
+                endDate = new Date(els.callTabulations.filters.endDate.value);
+                endDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999);
+            }
+
+            callTabulationsFilteredData = callTabulationsOriginalData.filter(d => {
+                const matchOperator = !selOperator || d.OPERADOR === selOperator;
+                const matchType = !selType || d.TABULADO_COMO === selType;
+                const matchCategory = !selCategory || d.CATEGORIA_TABULACAO === selCategory;
+                let matchDate = true;
+                if (startDate) matchDate = matchDate && d.DATA_HORA_TABULACAO_OBJ >= startDate;
+                if (endDate) matchDate = matchDate && d.DATA_HORA_TABULACAO_OBJ <= endDate;
+                return matchOperator && matchType && matchCategory && matchDate;
+            });
+
+            updateCallTabulationsDashboard();
         }
 
         function updateDashboard() {
@@ -966,6 +1241,155 @@
             renderCharts();
             if (tabulatorTable) {
                 tabulatorTable.setData(filteredData);
+            }
+        }
+
+        function processCallTabulationsData(csvContent) {
+            console.log('Iniciando processamento do CSV de tabulações...');
+            els.callTabulations.fileStatus.className = 'text-sm text-slate-400 mt-4';
+            hideIgnoredRowsPopup('pauses'); // Esconde o modal de pausas, se estiver aberto
+
+            if (!csvContent || !csvContent.trim()) {
+                return handleCallTabulationsError('Arquivo vazio.');
+            }
+
+            if (csvContent.charCodeAt(0) === 0xFEFF) {
+                csvContent = csvContent.slice(1);
+            }
+
+            const lines = csvContent.trim().split(/\r\n|\n|\r/);
+            if (lines.length < 2) {
+                return handleCallTabulationsError('Arquivo contém apenas cabeçalho ou está vazio.');
+            }
+
+            const delimiter = detectDelimiter(lines[0]);
+            if (!delimiter) {
+                return handleCallTabulationsError('Não foi possível detectar o separador de colunas.');
+            }
+            
+            let rawHeaders = splitCsvLine(lines[0], delimiter);
+            let emptyCellOffset = 0;
+            if (rawHeaders.length > 0 && rawHeaders[0].trim() === '') {
+                rawHeaders = rawHeaders.slice(1);
+                emptyCellOffset = 1;
+            }
+
+            console.log('Raw Headers (Tabulações):', rawHeaders);
+            const headerMap = mapHeaders(rawHeaders, columnAliasesCallTabulations);
+
+            const requiredHeaders = ['OPERADOR', 'DATA_HORA_TABULACAO', 'TABULADO_COMO', 'CATEGORIA_TABULACAO'];
+            const missingHeaders = requiredHeaders.filter(h => !headerMap[h]);
+
+            if (missingHeaders.length > 0) {
+                 const missingNames = missingHeaders.map(k => columnAliasesCallTabulations[k].join(' ou ')).join('; \n');
+                 return handleCallTabulationsError(`Colunas não encontradas:\n${missingNames}.`);
+            }
+
+            const headerIndexes = {};
+            for(const key in headerMap) {
+                const rawHeaderIndex = rawHeaders.indexOf(headerMap[key]);
+                if (rawHeaderIndex !== -1) {
+                    headerIndexes[key] = rawHeaderIndex + emptyCellOffset;
+                }
+            }
+            
+            const getColumnValue = (key, values) => {
+                if (headerIndexes[key] === undefined) return '';
+                return values[headerIndexes[key]] || '';
+            };
+
+            let ignoredRowsDetails = [];
+            callTabulationsOriginalData = lines.slice(1).map((line, index) => {
+                const currentLineNumber = index + 2;
+                const values = splitCsvLine(line, delimiter);
+
+                if (values.length !== rawHeaders.length + emptyCellOffset) {
+                    ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Número de colunas diferente do cabeçalho', columnName: 'Linha Completa', columnValue: line.substring(0, 150) + (line.length > 150 ? '...' : '') });
+                    return null;
+                }
+                
+                const dateRawValue = getColumnValue('DATA_HORA_TABULACAO', values);
+                const dateObj = parseDateTimeRobust(dateRawValue);
+                const operadorRawValue = getColumnValue('OPERADOR', values);
+                const operador = normalizeDataString(operadorRawValue); // Validado aqui
+
+                if (!dateObj) {
+                    ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Data/Hora de Tabulação inválida', columnName: headerMap.DATA_HORA_TABULACAO, columnValue: dateRawValue });
+                    return null;
+                }
+                if (operador === 'Não informado' || operadorRawValue.trim() === '') {
+                    ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Nome do Operador não informado', columnName: headerMap.OPERADOR, columnValue: operadorRawValue });
+                    return null;
+                }
+
+                // Mapeia todos os campos do alias
+                const rowData = {
+                    DATA_HORA_TABULACAO_OBJ: dateObj,
+                    OPERADOR: operador // <-- *** CORREÇÃO APLICADA AQUI ***
+                };
+                
+                for (const key in columnAliasesCallTabulations) {
+                    // Pula os campos que já processamos manualmente
+                    if (key !== 'DATA_HORA_TABULACAO' && key !== 'OPERADOR') { 
+                        rowData[key] = normalizeDataString(getColumnValue(key, values));
+                    }
+                }
+
+                return rowData;
+
+            }).filter(row => row !== null);
+
+            if (callTabulationsOriginalData.length === 0) {
+                if (ignoredRowsDetails.length > 0) showIgnoredRowsPopup(ignoredRowsDetails, 'pauses');
+                return handleCallTabulationsError('Nenhuma linha de dados válida encontrada.');
+            }
+
+            const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
+            els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+            els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+
+            callTabulationsFilteredData = [...callTabulationsOriginalData];
+            
+            populateCallTabulationFilters();
+            enableDashboardControls(true, 'callTabulations'); 
+
+            let statusMsg = `Sucesso! Carregados ${callTabulationsOriginalData.length} registros de tabulação.`;
+            if (ignoredRowsDetails.length > 0) {
+                statusMsg += ` (${ignoredRowsDetails.length} linhas ignoradas).`;
+                showIgnoredRowsPopup(ignoredRowsDetails, 'pauses');
+            }
+
+            els.callTabulations.fileStatus.textContent = statusMsg;
+            els.callTabulations.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
+            
+            updateCallTabulationsDashboard();
+        }
+
+        function updateCallTabulationsDashboard() {
+            renderCallTabulationCharts();
+            console.log("Updating call tabulations dashboard...");
+            if (callTabulationsTable) {
+                callTabulationsTable.setData(callTabulationsFilteredData);
+            } else {
+                 callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
+                    data: callTabulationsFilteredData, // Initially empty
+                    placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
+                    layout: "fitColumns",
+                    columns:[
+                        {title:"Operador", field:"OPERADOR", headerFilter: "input"},
+                        {title:"Tabulado Como", field:"TABULADO_COMO", headerFilter: "input"},
+                        {title:"Categoria", field:"CATEGORIA_TABULACAO", headerFilter: "input"},
+                        {title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                    ],
+                    locale: "pt-br",
+                    langs:{
+                        "pt-br":{
+                            "headerFilters":{
+                                "default":"filtrar...",
+                            }
+                        }
+                    }
+                });
             }
         }
 
@@ -977,9 +1401,9 @@
                 totalMin += d.DURACAO_MINUTES;
                 uniqueCons.add(d.CONSULTOR);
             });
-            animateValue(els.kpis.totalPauses, parseInt(els.kpis.totalPauses.innerText) || 0, filteredData.length, 500);
-            els.kpis.totalDuration.textContent = formatMinutesToHHMM(totalMin);
-            animateValue(els.kpis.uniqueConsultants, parseInt(els.kpis.uniqueConsultants.innerText) || 0, uniqueCons.size, 500);
+            animateValue(els.main.kpis.totalPauses, parseInt(els.main.kpis.totalPauses.innerText) || 0, filteredData.length, 500);
+            els.main.kpis.totalDuration.textContent = formatMinutesToHHMM(totalMin);
+            animateValue(els.main.kpis.uniqueConsultants, parseInt(els.main.kpis.uniqueConsultants.innerText) || 0, uniqueCons.size, 500);
         }
 
         function animateValue(obj, start, end, duration) {
@@ -1006,6 +1430,15 @@
             return agg;
         }
 
+        function aggregateTabulationData(key) {
+            const agg = {};
+            callTabulationsFilteredData.forEach(d => {
+                const value = d[key] || 'Não informado';
+                agg[value] = (agg[value] || 0) + 1;
+            });
+            return agg;
+        }
+
         function aggregateAverage(key) {
             const totals = {};
             const counts = {};
@@ -1018,7 +1451,7 @@
             return avgs;
         }
         
-        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null) {
+        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min') {
             const ctx = document.getElementById(canvasId).getContext('2d');
             if (charts[chartInstanceVar]) charts[chartInstanceVar].destroy();
 
@@ -1066,9 +1499,17 @@
                                     if (type === 'doughnut') {
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const perc = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
-                                        return `${lbl}${formatMinutesToHHMM(val)} (${perc})`;
+                                        if (tooltipUnit === 'min') {
+                                            return `${lbl}${formatMinutesToHHMM(val)} (${perc})`;
+                                        } else {
+                                            return `${lbl}${val} (${perc})`;
+                                        }
                                     }
-                                    return `Duração: ${formatMinutesToHHMM(val)} (${val.toFixed(1)} min)`;
+                                    if (tooltipUnit === 'min') {
+                                        return `Duração: ${formatMinutesToHHMM(val)} (${val.toFixed(1)} min)`;
+                                    } else {
+                                        return `${label}: ${val}`;
+                                    }
                                 }
                             }
                         }
@@ -1108,18 +1549,76 @@
                 consLabels.map(k => consData[k]), 
                 'Total Duração', 
                 'rgba(167, 139, 250, 0.7)',
-                consLabels
+                consLabels,
+                'min'
             );
 
             const typeData = aggregateData('TIPO');
             const typeLabels = Object.keys(typeData).sort();
-            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', 'rgba(74, 222, 128, 0.7)');
+            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', 'rgba(74, 222, 128, 0.7)', null, 'min');
 
             const typeAvgData = aggregateAverage('TIPO');
             const avgChartData = typeLabels.map(type => typeAvgData[type] || 0);
-            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', 'rgba(250, 204, 21, 0.7)');
+            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', 'rgba(250, 204, 21, 0.7)', null, 'min');
 
-            createChart('pause-type-distribution-chart', 'typeDistribution', 'doughnut', typeLabels, typeLabels.map(k => typeData[k]), 'Distribuição', null);
+            createChart('pause-type-distribution-chart', 'typeDistribution', 'doughnut', typeLabels, typeLabels.map(k => typeData[k]), 'Distribuição', null, null, 'min');
+        }
+
+        function renderCallTabulationCharts() {
+            const operatorData = aggregateTabulationData('OPERADOR');
+            const operatorLabels = Object.keys(operatorData).sort((a, b) => operatorData[b] - operatorData[a]);
+            const abbreviatedOperatorLabels = operatorLabels.map(name => abbreviateName(name));
+            createChart(
+                'total-tabulations-operator-chart',
+                'tabulationOperatorTotal',
+                'bar',
+                abbreviatedOperatorLabels,
+                operatorLabels.map(k => operatorData[k]),
+                'Total de Tabulações',
+                'rgba(167, 139, 250, 0.7)',
+                operatorLabels,
+                'count'
+            );
+
+            const typeData = aggregateTabulationData('TABULADO_COMO');
+            const typeLabels = Object.keys(typeData).sort();
+            createChart(
+                'total-tabulations-type-chart',
+                'tabulationTypeTotal',
+                'bar',
+                typeLabels,
+                typeLabels.map(k => typeData[k]),
+                'Total de Tabulações',
+                'rgba(74, 222, 128, 0.7)',
+                null,
+                'count'
+            );
+
+            const categoryData = aggregateTabulationData('CATEGORIA_TABULACAO');
+            const categoryLabels = Object.keys(categoryData).sort();
+            createChart(
+                'total-tabulations-category-chart',
+                'tabulationCategoryTotal',
+                'bar',
+                categoryLabels,
+                categoryLabels.map(k => categoryData[k]),
+                'Total de Tabulações',
+                'rgba(250, 204, 21, 0.7)',
+                null,
+                'count'
+            );
+
+            createChart(
+                'tabulation-type-distribution-chart',
+                'tabulationTypeDistribution',
+                'doughnut',
+                typeLabels,
+                typeLabels.map(k => typeData[k]),
+                'Distribuição de Tabulações',
+                null,
+                null,
+                'count'
+            );
         }
 
         // --- Integração IA (Gemini) ---
@@ -1131,11 +1630,11 @@
             }
             const consultant = uniqueConsultants[0];
 
-            els.ai.section.classList.remove('hidden');
-            els.ai.placeholder.classList.add('hidden');
-            els.ai.loading.classList.remove('hidden');
-            els.ai.content.innerHTML = '';
-            els.ai.section.scrollIntoView({ behavior: 'smooth' });
+            els.main.ai.section.classList.remove('hidden');
+            els.main.ai.placeholder.classList.add('hidden');
+            els.main.ai.loading.classList.remove('hidden');
+            els.main.ai.content.innerHTML = '';
+            els.main.ai.section.scrollIntoView({ behavior: 'smooth' });
 
             const totalPausas = filteredData.length;
             const totalMinutos = filteredData.reduce((sum, d) => sum + d.DURACAO_MINUTES, 0);
@@ -1147,14 +1646,14 @@
                 typeStats[d.TIPO].count++;
             });
 
-            let dataText = `Consultor: ${consultant}\nPeríodo: ${els.filters.startDate.value} a ${els.filters.endDate.value}\nTotal Pausas: ${totalPausas}, Tempo Total: ${formatMinutesToHHMM(totalMinutos)}\n\nDetalhamento por Tipo:\n`;
+            let dataText = `Consultor: ${consultant}\nPeríodo: ${els.main.filters.startDate.value} a ${els.main.filters.endDate.value}\nTotal Pausas: ${totalPausas}, Tempo Total: ${formatMinutesToHHMM(totalMinutos)}\n\nDetalhamento por Tipo:\n`;
 
             for(const type in typeStats) {
                 const stats = typeStats[type];
                 const avg = stats.total / stats.count;
                 const contextAvg = filteredAveragesForComparison[type] || 0;
                 let statusDescription = '';
-                const expected = EXPECTED_DURATIONS[type];
+                const expected = expectedDurations[type];
                 if (expected) {
                     const lowerBound = expected.minutes - expected.tolerance;
                     const upperBound = expected.minutes + expected.tolerance;
@@ -1190,6 +1689,9 @@
             try {
                 // ATENÇÃO: Substitua pela sua própria chave de API do Google AI Studio.
                 const apiKey = "SUA_CHAVE_API_AQUI"; 
+                if (apiKey === "SUA_CHAVE_API_AQUI") {
+                    throw new Error("A chave de API do Google AI não foi definida. Por favor, substitua 'SUA_CHAVE_API_AQUI' no código.");
+                }
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -1204,29 +1706,50 @@
                 const aiText = data.candidates[0]?.content?.parts[0]?.text;
                 if (!aiText) throw new Error('Resposta da IA vazia ou malformada.');
                 const htmlText = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                els.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;
+                els.main.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;
             } catch (error) {
                 console.error(error);
-                els.ai.content.innerHTML = `<p class="text-red-400 font-medium">Falha ao gerar análise. Verifique a chave de API. (${error.message})</p>`;
+                els.main.ai.content.innerHTML = `<p class="text-red-400 font-medium">Falha ao gerar análise. (${error.message})</p>`;
             } finally {
-                els.ai.loading.classList.add('hidden');
+                els.main.ai.loading.classList.add('hidden');
             }
         }
 
         // --- Funções do Modal de Erros ---
-        function showIgnoredRowsPopup(errors) {
-            els.ignoredRowsModal.list.innerHTML = '';
-            errors.forEach(err => {
-                const li = document.createElement('li');
-                li.className = 'error-item';
-                li.innerHTML = `<p><strong>Linha ${err.lineNumber}:</strong> ${err.reason}</p><p>Campo: <span>${err.columnName || 'N/A'}</span>, Valor: <span>"${err.columnValue || 'Vazio'}"</span></p>`;
-                els.ignoredRowsModal.list.appendChild(li);
-            });
-            els.ignoredRowsModal.overlay.classList.remove('hidden');
+        function showIgnoredRowsPopup(errors, dashboardType = 'pauses') {
+            let modal, overlay, countEl, listEl;
+
+            if (dashboardType === 'pauses') {
+                modal = els.main.ignoredRowsModal.modal;
+                overlay = els.main.ignoredRowsModal.overlay;
+                countEl = els.main.ignoredRowsModal.count;
+                listEl = els.main.ignoredRowsModal.list;
+            } 
+            // Adicionar lógica para 'callTabulations' quando o modal for implementado no HTML
+
+            if (modal && overlay && countEl && listEl) {
+                countEl.textContent = errors.length;
+                listEl.innerHTML = '';
+                errors.slice(0, 100).forEach(err => { // Limita a 100 para não travar o navegador
+                    const li = document.createElement('li');
+                    li.className = 'error-item';
+                    li.innerHTML = `<p><strong>Linha ${err.lineNumber}:</strong> ${err.reason}</p><p>Campo: <span>${err.columnName || 'N/A'}</span>, Valor: <span>"${err.columnValue || 'Vazio'}"</span></p>`;
+                    listEl.appendChild(li);
+                });
+                overlay.classList.remove('hidden');
+            }
         }
 
-        function hideIgnoredRowsPopup() {
-            els.ignoredRowsModal.overlay.classList.add('hidden');
+        function hideIgnoredRowsPopup(dashboardType = 'pauses') {
+            let overlay;
+            if (dashboardType === 'pauses') {
+                overlay = els.main.ignoredRowsModal.overlay;
+            }
+            // Adicionar lógica para 'callTabulations'
+
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
         }
 
         // --- Função para controlar a Sidebar ---
@@ -1237,11 +1760,14 @@
 
             const toggleSidebar = () => {
                 body.classList.toggle('sidebar-open');
-                overlay.classList.toggle('hidden'); 
             };
 
-            toggleBtn.addEventListener('click', toggleSidebar);
-            overlay.addEventListener('click', toggleSidebar);
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleSidebar);
+            }
+            if (overlay) {
+                overlay.addEventListener('click', toggleSidebar);
+            }
         }
 
         // --- Inicialização e Event Listeners ---
@@ -1251,7 +1777,7 @@
             tabulatorTable = new Tabulator("#pause-detail-table", {
                 height: "500px",
                 layout: "fitData",
-                placeholder: "<span class='text-slate-400'>Nenhum dado para exibir</span>",
+                placeholder: "<span class='text-slate-400'>Nenhum dado para exibir. Carregue um arquivo CSV ou use a API.</span>",
                 columns: [
                     { title: "Consultor", field: "CONSULTOR", headerFilter: "input", width: 150 },
                     { title: "Tipo de Pausa", field: "TIPO", headerFilter: "input" },
@@ -1260,7 +1786,7 @@
                     { title: "Duração (Min)", field: "DURACAO_MINUTES", hozAlign: "right", formatter: (c) => c.getValue().toFixed(1) },
                     { title: "Meta / Média (Min)", field: "TIPO", hozAlign: "right", formatter: (cell) => {
                         const type = cell.getValue();
-                        const expected = EXPECTED_DURATIONS[type];
+                        const expected = expectedDurations[type];
                         if (expected) return expected.minutes.toFixed(1);
                         const avg = filteredAveragesForComparison[type] || 0;
                         return avg.toFixed(1);
@@ -1268,25 +1794,25 @@
                     { title: "Status", field: "DURACAO_MINUTES", hozAlign: "center", formatter: (cell) => {
                         const duration = cell.getValue();
                         const type = cell.getRow().getData().TIPO;
-                        const expected = EXPECTED_DURATIONS[type];
+                        const expected = expectedDurations[type];
                         let statusText = '';
 
                         if (expected) {
                             const lowerBound = expected.minutes - expected.tolerance;
                             const upperBound = expected.minutes + expected.tolerance;
                             if (duration >= lowerBound && duration <= upperBound) {
-                                statusText = '<span class="text-green-400 font-medium">✓ Correto</span>';
+                                statusText = '<span class="status-success font-medium">✓ Correto</span>';
                             } else if (duration < lowerBound) {
-                                statusText = '<span class="text-yellow-400 font-semibold">↓ Curto</span>';
+                                statusText = '<span class="status-warning font-semibold">↓ Curto</span>';
                             } else {
-                                statusText = '<span class="text-red-400 font-semibold">↑ Longo</span>';
+                                statusText = '<span class="status-danger font-semibold">↑ Longo</span>';
                             }
                         } else {
                             const avg = filteredAveragesForComparison[type] || 0;
                             const isAbove = duration > (avg * 1.1) && avg > 0;
                             statusText = isAbove
-                                ? '<span class="text-red-400 font-semibold">↑ Acima</span>'
-                                : '<span class="text-green-400 font-medium">✓ Normal</span>';
+                                ? '<span class="status-danger font-semibold">↑ Acima</span>'
+                                : '<span class="status-success font-medium">✓ Normal</span>';
                         }
                         return statusText;
                     }}
@@ -1301,18 +1827,18 @@
                 }
             });
 
-            els.fileInput.addEventListener('change', (e) => {
-                hideIgnoredRowsPopup();
+            els.main.fileInput.addEventListener('change', (e) => {
+                hideIgnoredRowsPopup('pauses');
                 const file = e.target.files[0];
                 
                 if (!file) {
-                    els.fileUploadLabel.textContent = 'Escolher arquivo';
+                    els.main.fileUploadLabel.textContent = 'Escolher arquivo';
                     return;
                 }
 
-                els.fileUploadLabel.textContent = file.name;
-                els.fileStatus.textContent = `Lendo "${file.name}"...`;
-                els.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+                els.main.fileUploadLabel.textContent = file.name;
+                els.main.fileStatus.textContent = `Lendo "${file.name}"...`;
+                els.main.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
                 const reader = new FileReader();
                 reader.onload = (evt) => processData(evt.target.result);
@@ -1320,62 +1846,113 @@
                 reader.readAsText(file, 'UTF-8');
             });
 
-            els.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
-            els.buttons.clearFilters.addEventListener('click', () => {
+            els.callTabulations.fileInput.addEventListener('change', (e) => {
+                //hideIgnoredRowsPopup('callTabulations');
+                const file = e.target.files[0];
+                if (!file) {
+                    els.callTabulations.fileStatus.textContent = 'Nenhum arquivo selecionado.';
+                    els.callTabulations.fileStatus.className = 'text-sm text-gray-500 mt-4';
+                    return;
+                }
+
+                els.callTabulations.fileStatus.textContent = `Lendo "${file.name}"...`;
+                els.callTabulations.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+
+                const reader = new FileReader();
+                reader.onload = (evt) => processCallTabulationsData(evt.target.result);
+                reader.onerror = () => handleDataLoadError('Falha ao ler o arquivo de tabulações.'); // Reutiliza o handler principal
+                reader.readAsText(file, 'UTF-8');
+            });
+
+            els.main.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
+            els.main.buttons.clearFilters.addEventListener('click', () => {
                 if (originalData.length > 0) {
                     const dates = originalData.map(d => d.DATA_INICIO_OBJ);
-                    els.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-                    els.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                    els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                    els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
                 }
-                els.filters.consultant.value = '';
-                els.filters.pauseType.value = '';
+                els.main.filters.consultant.value = '';
+                els.main.filters.pauseType.value = '';
                 applyFilters();
             });
-            els.buttons.generateAi.addEventListener('click', generateAIAnalysis);
-            els.buttons.closeAi.addEventListener('click', () => {
-                els.ai.section.classList.add('hidden');
-                els.ai.placeholder.classList.remove('hidden');
-                els.ai.content.innerHTML = '';
+            els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
+            els.main.buttons.closeAi.addEventListener('click', () => {
+                els.main.ai.section.classList.add('hidden');
+                els.main.ai.placeholder.classList.remove('hidden');
+                els.main.ai.content.innerHTML = '';
             });
 
             const debouncedApplyFilters = debounce(applyFilters, 300);
-            Object.values(els.filters).forEach(filter => {
+            Object.values(els.main.filters).forEach(filter => {
                 filter.addEventListener('change', debouncedApplyFilters);
             });
 
-            els.ignoredRowsModal.closeBtn.addEventListener('click', hideIgnoredRowsPopup);
-            els.ignoredRowsModal.overlay.addEventListener('click', (e) => {
-                if (e.target === els.ignoredRowsModal.overlay) hideIgnoredRowsPopup();
+            const debouncedApplyCallTabulationFilters = debounce(applyCallTabulationFilters, 300);
+            Object.values(els.callTabulations.filters).forEach(filter => {
+                filter.addEventListener('change', debouncedApplyCallTabulationFilters);
+            });
+
+            els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
+                if (callTabulationsOriginalData.length > 0) {
+                    const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
+                    els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                    els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                }
+                els.callTabulations.filters.operator.value = '';
+                els.callTabulations.filters.type.value = '';
+                els.callTabulations.filters.category.value = '';
+                applyCallTabulationFilters();
+            });
+
+            els.main.ignoredRowsModal.closeBtn.addEventListener('click', () => hideIgnoredRowsPopup('pauses'));
+            els.main.ignoredRowsModal.overlay.addEventListener('click', (e) => {
+                if (e.target === els.main.ignoredRowsModal.overlay) hideIgnoredRowsPopup('pauses');
             });
             
-            enableDashboardControls(false);
+            enableDashboardControls(false, 'pauses');
+            enableDashboardControls(false, 'callTabulations');
             
-            const dateControls = [els.apiControls.startDate, els.apiControls.startTime, els.apiControls.endDate, els.apiControls.endTime];
-            els.apiControls.ultimosMinutos.addEventListener('input', () => {
-                const hasValue = !!els.apiControls.ultimosMinutos.value;
-                dateControls.forEach(control => {
-                    control.disabled = hasValue;
-                    control.style.opacity = hasValue ? '0.5' : '1';
+            const timeSelectionRadios = document.querySelectorAll('input[name="time-selection"]');
+            const periodoInputsDiv = document.getElementById('periodo-inputs');
+            const ultimosMinutosInputsDiv = document.getElementById('ultimos-minutos-inputs');
+
+            timeSelectionRadios.forEach(radio => {
+                radio.addEventListener('change', (event) => {
+                    if (event.target.value === 'periodo') {
+                        periodoInputsDiv.classList.remove('hidden');
+                        ultimosMinutosInputsDiv.classList.add('hidden');
+                    } else {
+                        periodoInputsDiv.classList.add('hidden');
+                        ultimosMinutosInputsDiv.classList.remove('hidden');
+                    }
                 });
             });
 
-            dateControls.forEach(control => {
-                control.addEventListener('input', () => {
-                    els.apiControls.ultimosMinutos.value = '';
-                    dateControls.forEach(c => {
-                        c.disabled = false;
-                        c.style.opacity = '1';
-                    });
-                })
-            });
-
-
-            // Define um período padrão (hoje) para os seletores da API
             const today = new Date();
-            els.apiControls.startDate.value = formatDateToYYYYMMDD(today);
-            els.apiControls.endDate.value = formatDateToYYYYMMDD(today);
-            els.apiControls.startTime.value = '00:00';
-            els.apiControls.endTime.value = '23:59';
+            els.main.apiControls.startDate.value = formatDateToYYYYMMDD(today);
+            els.main.apiControls.endDate.value = formatDateToYYYYMMDD(today);
+            els.main.apiControls.startTime.value = '00:00';
+            els.main.apiControls.endTime.value = '23:59';
+
+            function showDashboard(dashboardType) {
+                const isPauses = dashboardType === 'pauses';
+                els.main.pausesDashboardContent.classList.toggle('hidden', !isPauses);
+                els.callTabulations.dashboardContent.classList.toggle('hidden', isPauses);
+                
+                els.main.tabPausasBtn.classList.toggle('active', isPauses);
+                els.main.tabCallTabulationsBtn.classList.toggle('active', !isPauses);
+
+                if (isPauses) {
+                    if(originalData.length > 0) updateDashboard();
+                } else {
+                    updateCallTabulationsDashboard();
+                }
+            }
+
+            els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
+            els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
+
+            showDashboard('pauses');
         }
 
         document.addEventListener('DOMContentLoaded', init);
