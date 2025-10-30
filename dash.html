@@ -318,7 +318,7 @@
         }
     </style>
 </head>
-<body class="p-4 md:p-8 sidebar-open">
+<body class="p-4 md:p-8">
 
     <!-- BOTÃO PARA ABRIR A SIDEBAR -->
     <button id="sidebar-open-btn" class="fixed top-4 left-4 p-2 rounded-md text-white hover:bg-slate-700 transition-colors z-50">
@@ -2056,7 +2056,9 @@
                 filter.addEventListener('change', debouncedApplyCallTabulationFilters);
             });
 
-            document.addEventListener('DOMContentLoaded', init);
+            els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
+                if (callTabulationsOriginalData.length > 0) {
+                    const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
                     els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
                     els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
                 }
