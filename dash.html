@@ -124,7 +124,9 @@
             }
         }
         body.sidebar-open #main-content {
-            margin-left: 20rem; /* Empurra o conteúdo para a direita */
+            margin-left: 0; /* Garante que não há margin-left por padrão */
+            position: relative; /* Necessário para z-index funcionar */
+            z-index: 10; /* Garante que o main-content fique abaixo da sidebar */
         }
         #sidebar-open-btn { /* Visível por padrão */
             display: block;
@@ -280,7 +282,7 @@
                         </svg>
                         <span>Carregar Dados</span>
                     </h2>
-                    <div class="flex flex-col gap-4 w-full">
+                    <div class="flex flex-col gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV</label>
                             <div class="flex justify-center">
@@ -380,7 +382,7 @@
                         </svg>
                         <span>Carregar Dados de Tabulações</span>
                     </h2>
-                    <div class="flex flex-col gap-4 w-full">
+                    <div class="flex flex-col gap-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV de Tabulações</label>
                             <div class="flex justify-center">
