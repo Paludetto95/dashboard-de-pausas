@@ -113,7 +113,8 @@
             transform: translateX(-100%);
         }
         #main-content {
-            transition: padding-left 0.3s ease-in-out;
+            transition: margin-left 0.3s ease-in-out; /* Alterado para margin-left */
+            margin-left: 0; /* Garante que não há margin-left por padrão */
         }
         body.sidebar-open #sidebar {
             transform: translateX(0);
@@ -121,9 +122,15 @@
         body.sidebar-open #sidebar-overlay {
             display: block;
         }
-        @media (min-width: 1024px) {
+        body.sidebar-open #main-content {
+            margin-left: 20rem; /* Empurra o conteúdo para a direita */
+        }
+        body.sidebar-open #sidebar-open-btn { /* Esconde o botão de abrir quando a sidebar está aberta */
+            display: none;
+        }
+        @media (max-width: 1023px) { /* Para telas menores, a sidebar ocupa a tela toda */
             body.sidebar-open #main-content {
-                padding-left: 20rem; /* w-80 */
+                margin-left: 0; /* Não empurra o conteúdo em telas pequenas */
             }
         }
         
@@ -252,15 +259,13 @@
 <body class="p-4 md:p-8">
     <button onclick="exportarDadosParaHtml()" style="margin: 10px; padding: 8px 15px;">Exportar para HTML</button>
 
-    <button id="sidebar-toggle-btn" class="fixed top-5 left-5 z-50 p-2 rounded-md bg-slate-800/50 text-white hover:bg-slate-700 transition-colors">
+    <button id="sidebar-open-btn" class="fixed top-4 left-4 p-2 rounded-md text-white hover:bg-slate-700 transition-colors z-50">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
     </button>
     
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden"></div>
-    
-    <aside id="sidebar" class="fixed top-0 left-0 h-full w-80 bg-slate-900/70 backdrop-blur-lg border-r border-slate-700/80 z-40 p-6 overflow-y-auto">
         <div class="flex flex-col gap-4">
             <!-- PAUSES CONTROLS -->
             <div id="pauses-sidebar-content" class="flex flex-col gap-4">
@@ -561,8 +566,7 @@
 
     <script>
         // --- Configuração Global ---
-        let geminiApiKey = null;
-        const COLUMN_ALIASES = {
+        let geminiApiKey = null;        const COLUMN_ALIASES = {
             'GRUPO_OPERACIONAL': ['GRUPO OPERACIONAL', 'GRUPO OP'],
             'OPERADOR': ['OPERADOR', 'CONSULTOR', 'NOME DO OPERADOR', 'NOME OPERADOR'],
             'ESTADO': ['ESTADO'],
@@ -1770,7 +1774,8 @@
 
         // --- Função para controlar a Sidebar ---
         function setupSidebar() {
-            const toggleBtn = document.getElementById('sidebar-toggle-btn');
+            const openBtn = document.getElementById('sidebar-open-btn');
+            const closeBtn = document.getElementById('sidebar-close-btn');
             const overlay = document.getElementById('sidebar-overlay');
             const body = document.body;
 
@@ -1778,8 +1783,11 @@
                 body.classList.toggle('sidebar-open');
             };
 
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', toggleSidebar);
+            if (openBtn) {
+                openBtn.addEventListener('click', toggleSidebar);
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', toggleSidebar);
             }
             if (overlay) {
                 overlay.addEventListener('click', toggleSidebar);
@@ -1892,6 +1900,7 @@
                 applyFilters();
             });
             els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
+            document.getElementById('floating-ai-btn').addEventListener('click', generateAIAnalysis);
             els.main.buttons.closeAi.addEventListener('click', () => {
                 els.main.ai.section.classList.add('hidden');
                 els.main.ai.placeholder.classList.remove('hidden');
@@ -1990,5 +1999,14 @@
 
         document.addEventListener('DOMContentLoaded', init);
     </script>
+    <button id="floating-ai-btn" class="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out transform hover:scale-110">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+    </button>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+        </svg>
+    </button>
 </body>
 </html>
