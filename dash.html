@@ -260,6 +260,62 @@
         ::-webkit-scrollbar-thumb {
             background-color: #4A4A58; border-radius: 5px; border: 2px solid #1C1C24;
         }
+
+        /* === NOVAS REGRAS PARA SIDEBAR RECOLHÍVEL E ESTILO REFINADO === */
+        
+        /* Ajusta o fundo da sidebar para se destacar mais */
+        #sidebar {
+            background-color: #1F1F2B; /* Um tom mais escuro */
+        }
+        
+        /* Remove o padding padrão do card e ajusta a aparência */
+        #sidebar .card.collapsible-card {
+            padding: 0;
+            background-color: #2D2D3A;
+            overflow: hidden; /* Essencial para a animação de altura */
+            width: 100%;
+        }
+
+        /* Estiliza o cabeçalho clicável da seção */
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem; /* Espaçamento interno do cabeçalho */
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s ease;
+        }
+
+        .collapsible-header:hover {
+            background-color: #3a3a4a;
+        }
+        
+        /* Estiliza o conteúdo que será mostrado/escondido */
+        .collapsible-content {
+            padding: 0 1.25rem 1.25rem 1.25rem; /* Padding apenas no conteúdo */
+            max-height: 1000px; /* Altura máxima grande para caber o conteúdo */
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+        }
+        
+        /* Estado recolhido: esconde o conteúdo com uma animação suave */
+        .collapsible-content.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        /* Ícone de seta */
+        .chevron-icon {
+            transition: transform 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        /* Estado girado do ícone */
+        .chevron-icon.rotated {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8 sidebar-open">
@@ -1816,9 +1872,42 @@
             }
         }
 
+        // --- Função para controlar a Sidebar Recolhível ---
+        function setupCollapsibleSidebar() {
+            const headers = document.querySelectorAll('#sidebar .collapsible-header');
+
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('.chevron-icon');
+
+                    // Fecha outros painéis abertos para funcionar como um accordion
+                    headers.forEach(otherHeader => {
+                        const otherContent = otherHeader.nextElementSibling;
+                        if (otherContent !== content && !otherContent.classList.contains('collapsed')) {
+                            otherContent.classList.add('collapsed');
+                            otherHeader.querySelector('.chevron-icon').classList.remove('rotated');
+                        }
+                    });
+
+                    // Abre ou fecha o painel clicado
+                    content.classList.toggle('collapsed');
+                    icon.classList.toggle('rotated');
+                });
+
+                // Inicia com o primeiro painel aberto e o resto fechado
+                if (header.parentElement.parentElement.id !== 'pauses-sidebar-content') {
+                     header.nextElementSibling.classList.add('collapsed');
+                } else {
+                     header.querySelector('.chevron-icon').classList.add('rotated');
+                }
+            });
+        }
+        
         // --- Inicialização e Event Listeners ---
         function init() {
             setupSidebar();
+            setupCollapsibleSidebar(); // <-- ADICIONE ESTA LINHA
 
             tabulatorTable = new Tabulator("#pause-detail-table", {
                 height: "500px",
