@@ -130,6 +130,10 @@
         }
         #sidebar-toggle-btn {
             z-index: 50;
+            transition: left 0.3s ease-in-out;
+        }
+        body.sidebar-open #sidebar-toggle-btn {
+            left: 20.5rem; /* w-80 is 20rem, this pushes it just to the right of the sidebar */
         }
         body.sidebar-open #sidebar-toggle-btn .hamburger-icon {
             display: none;
