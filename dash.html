@@ -370,34 +370,14 @@
                                 </div>
                             </div>
 
-                            <hr class="border-slate-600">
-                            
-                            <div class="flex items-center justify-around mb-4">
-                                <label class="inline-flex items-center">
-                                    <input type="radio" name="time-selection" value="periodo" class="form-radio text-teal-500" checked>
-                                    <span class="ml-2 text-slate-300">Período</span>
-                                </label>
-                                <label class="inline-flex items-center">
-                                    <input type="radio" name="time-selection" value="ultimosMinutos" class="form-radio text-teal-500">
-                                    <span class="ml-2 text-slate-300">Últimos Minutos</span>
-                                </label>
-                            </div>
-
                             <div id="periodo-inputs" class="space-y-3">
                                 <label class="block text-sm font-medium text-slate-300 text-left">Período</label>
                                 <div class="flex items-center gap-2">
                                     <input type="date" id="api-start-date" class="form-input-dark w-full" required>
-                                    <input type="time" id="api-start-time" class="form-input-dark w-2/3" required>
                                 </div>
                                  <div class="flex items-center gap-2">
                                     <input type="date" id="api-end-date" class="form-input-dark w-full" required>
-                                    <input type="time" id="api-end-time" class="form-input-dark w-2/3" required>
                                 </div>
-                            </div>
-
-                            <div id="ultimos-minutos-inputs" class="space-y-2 hidden">
-                                <label for="ultimos-minutos" class="block text-sm font-medium text-slate-300 text-left">Últimos Minutos</label>
-                                <input type="number" id="ultimos-minutos" placeholder="Ex: 60" class="form-input-dark w-full">
                             </div>
                             
                             <button id="load-argus-api-btn" class="!mt-5 w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition duration-300 ease-in-out">
@@ -422,25 +402,25 @@
                     </div>
                     <div class="collapsible-content">
                         <div class="flex flex-col gap-4">
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col gap-1">
                                 <label for="consultant-filter" class="text-sm font-medium text-slate-300">Consultor:</label>
-                                <select id="consultant-filter" class="form-input-dark w-1/2" disabled>
+                                <select id="consultant-filter" class="form-input-dark w-full" disabled>
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                             <div class="flex justify-between items-center">
+                             <div class="flex flex-col gap-1">
                                 <label for="pause-type-filter" class="text-sm font-medium text-slate-300">Tipo de Pausa:</label>
-                                <select id="pause-type-filter" class="form-input-dark w-1/2" disabled>
+                                <select id="pause-type-filter" class="form-input-dark w-full" disabled>
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                             <div class="flex justify-between items-center">
+                             <div class="flex flex-col gap-1">
                                 <label for="start-date-filter" class="text-sm font-medium text-slate-300">Data Início:</label>
-                                <input type="date" id="start-date-filter" class="form-input-dark w-1/2 date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                                <input type="date" id="start-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
                             </div>
-                             <div class="flex justify-between items-center">
+                             <div class="flex flex-col gap-1">
                                 <label for="end-date-filter" class="text-sm font-medium text-slate-300">Data Fim:</label>
-                                <input type="date" id="end-date-filter" class="form-input-dark w-1/2 date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                                <input type="date" id="end-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
                             </div>
                         </div>
                         <div class="flex flex-col gap-4 mt-6">
@@ -502,31 +482,31 @@
                     </div>
                     <div class="collapsible-content">
                         <div class="flex flex-col gap-4">
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col gap-1">
                                 <label for="tabulation-operator-filter" class="text-sm font-medium text-slate-300">Operador:</label>
-                                <select id="tabulation-operator-filter" class="form-input-dark w-1/2" disabled>
+                                <select id="tabulation-operator-filter" class="form-input-dark w-full" disabled>
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col gap-1">
                                 <label for="tabulation-type-filter" class="text-sm font-medium text-slate-300">Tipo de Tabulação:</label>
-                                <select id="tabulation-type-filter" class="form-input-dark w-1/2" disabled>
+                                <select id="tabulation-type-filter" class="form-input-dark w-full" disabled>
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col gap-1">
                                 <label for="tabulation-category-filter" class="text-sm font-medium text-slate-300">Categoria:</label>
-                                <select id="tabulation-category-filter" class="form-input-dark w-1/2" disabled>
+                                <select id="tabulation-category-filter" class="form-input-dark w-full" disabled>
                                     <option value="">Todas</option>
                                 </select>
                             </div>
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col gap-1">
                                 <label for="tabulation-start-date-filter" class="text-sm font-medium text-slate-300">Data Início:</label>
-                                <input type="date" id="tabulation-start-date-filter" class="form-input-dark w-1/2 date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                                <input type="date" id="tabulation-start-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
                             </div>
-                            <div class="flex justify-between items-center">
+                            <div class="flex flex-col gap-1">
                                 <label for="tabulation-end-date-filter" class="text-sm font-medium text-slate-300">Data Fim:</label>
-                                <input type="date" id="tabulation-end-date-filter" class="form-input-dark w-1/2 date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                                <input type="date" id="tabulation-end-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
                             </div>
                         </div>
                         <div class="flex flex-col gap-4 mt-6">
@@ -743,9 +723,6 @@
                 apiControls: {
                     startDate: document.getElementById('api-start-date'),
                     endDate: document.getElementById('api-end-date'),
-                    startTime: document.getElementById('api-start-time'),
-                    endTime: document.getElementById('api-end-time'),
-                    ultimosMinutos: document.getElementById('ultimos-minutos'),
                 },
                 kpis: {
                     totalPauses: document.getElementById('kpi-total-pauses'),
@@ -1117,28 +1094,15 @@
             const PROXY_URL = "http://localhost:3000/api/dados-argus";
             const payload = {};
             
-            const selectedTimeOption = document.querySelector('input[name="time-selection"]:checked').value;
+            const startDate = els.main.apiControls.startDate.value;
+            const endDate = els.main.apiControls.endDate.value;
 
-            if (selectedTimeOption === 'ultimosMinutos') {
-                const ultimosMinutosVal = els.main.apiControls.ultimosMinutos.value.trim();
-                if (ultimosMinutosVal && parseInt(ultimosMinutosVal) > 0) {
-                    payload.ultimosMinutos = ultimosMinutosVal;
-                } else {
-                    return handleDataLoadError("Por favor, preencha o campo 'Últimos Minutos'.");
-                }
-            } else { // selectedTimeOption === 'periodo'
-                const startDate = els.main.apiControls.startDate.value;
-                const startTime = els.main.apiControls.startTime.value || '00:00';
-                const endDate = els.main.apiControls.endDate.value;
-                const endTime = els.main.apiControls.endTime.value || '23:59';
-
-                if (!startDate || !endDate) {
-                    return handleDataLoadError("Por favor, selecione um período de data/hora.");
-                }
-                
-                payload.periodoInicial = `${startDate}T${startTime}:00`;
-                payload.periodoFinal = `${endDate}T${endTime}:00`;
+            if (!startDate || !endDate) {
+                return handleDataLoadError("Por favor, selecione um período de data.");
             }
+            
+            payload.periodoInicial = `${startDate}T00:00:00`;
+            payload.periodoFinal = `${endDate}T23:59:59`;
 
             console.log("Payload enviado para o Proxy:", payload);
 
@@ -2074,22 +2038,6 @@
             
             enableDashboardControls(false, 'pauses');
             enableDashboardControls(false, 'callTabulations');
-            
-            const timeSelectionRadios = document.querySelectorAll('input[name="time-selection"]');
-            const periodoInputsDiv = document.getElementById('periodo-inputs');
-            const ultimosMinutosInputsDiv = document.getElementById('ultimos-minutos-inputs');
-
-            timeSelectionRadios.forEach(radio => {
-                radio.addEventListener('change', (event) => {
-                    if (event.target.value === 'periodo') {
-                        periodoInputsDiv.classList.remove('hidden');
-                        ultimosMinutosInputsDiv.classList.add('hidden');
-                    } else {
-                        periodoInputsDiv.classList.add('hidden');
-                        ultimosMinutosInputsDiv.classList.remove('hidden');
-                    }
-                });
-            });
 
             const today = new Date();
             els.main.apiControls.startDate.value = formatDateToYYYYMMDD(today);
