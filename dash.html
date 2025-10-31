@@ -2047,22 +2047,30 @@
 
             function showDashboard(dashboardType) {
                 const isPauses = dashboardType === 'pauses';
-                
-                // Conteúdo principal
-                els.main.pausesDashboardContent.classList.toggle('hidden', !isPauses);
-                els.callTabulations.dashboardContent.classList.toggle('hidden', isPauses);
-                
-                // Botões da Aba
-                els.main.tabPausasBtn.classList.toggle('active', isPauses);
-                els.main.tabCallTabulationsBtn.classList.toggle('active', !isPauses);
-
-                // Conteúdo da Sidebar
-                document.getElementById('pauses-sidebar-content').classList.toggle('hidden', !isPauses);
-                document.getElementById('tabulations-sidebar-content').classList.toggle('hidden', isPauses);
 
                 if (isPauses) {
-                    if(originalData.length > 0) updateDashboard();
+                    // Show Pauses, Hide Tabulations
+                    els.main.pausesDashboardContent.classList.remove('hidden');
+                    els.callTabulations.dashboardContent.classList.add('hidden');
+
+                    els.main.tabPausasBtn.classList.add('active');
+                    els.main.tabCallTabulationsBtn.classList.remove('active');
+
+                    document.getElementById('pauses-sidebar-content').classList.remove('hidden');
+                    document.getElementById('tabulations-sidebar-content').classList.add('hidden');
+
+                    if (originalData.length > 0) updateDashboard();
                 } else {
+                    // Show Tabulations, Hide Pauses
+                    els.main.pausesDashboardContent.classList.add('hidden');
+                    els.callTabulations.dashboardContent.classList.remove('hidden');
+
+                    els.main.tabPausasBtn.classList.remove('active');
+                    els.main.tabCallTabulationsBtn.classList.add('active');
+
+                    document.getElementById('pauses-sidebar-content').classList.add('hidden');
+                    document.getElementById('tabulations-sidebar-content').classList.remove('hidden');
+
                     updateCallTabulationsDashboard();
                 }
             }
