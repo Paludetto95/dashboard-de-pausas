@@ -128,11 +128,14 @@
             position: relative; /* Necessário para z-index funcionar */
             z-index: 10; /* Garante que o main-content fique abaixo da sidebar */
         }
-        #sidebar-open-btn { /* Visível por padrão */
-            display: block;
+        #sidebar-toggle-btn {
+            z-index: 50;
         }
-        body.sidebar-open #sidebar-open-btn { /* Esconde o botão de abrir quando a sidebar está aberta */
+        body.sidebar-open #sidebar-toggle-btn .hamburger-icon {
             display: none;
+        }
+        body.sidebar-open #sidebar-toggle-btn .close-icon {
+            display: block;
         }
         @media (max-width: 1023px) { /* Para telas menores, a sidebar ocupa a tela toda */
             body.sidebar-open #main-content {
@@ -320,26 +323,22 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <!-- BOTÃO PARA ABRIR A SIDEBAR -->
-    <button id="sidebar-open-btn" class="fixed top-4 left-4 p-2 rounded-md text-white hover:bg-slate-700 transition-colors z-50">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <!-- BOTÃO DE ALTERNÂNCIA DA SIDEBAR -->
+    <button id="sidebar-toggle-btn" class="fixed top-4 left-4 p-2 rounded-md text-white hover:bg-slate-700 transition-colors z-50">
+        <svg class="h-6 w-6 hamburger-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
+        <svg class="h-6 w-6 close-icon hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
     </button>
-    
+
     <!-- OVERLAY PARA FECHAR A SIDEBAR EM TELAS PEQUENAS -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden"></div>
 
     <!-- INÍCIO DO MENU LATERAL CORRIGIDO -->
     <aside id="sidebar" class="fixed top-0 h-full w-80 bg-gray-900 z-40 overflow-y-auto p-4">
         
-        <!-- BOTÃO PARA FECHAR A SIDEBAR (VISÍVEL EM TELAS MENORES) -->
-        <button id="sidebar-close-btn" class="absolute top-4 right-4 p-2 rounded-md text-white hover:bg-slate-700 transition-colors lg:hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
-
         <div class="flex flex-col gap-4 mt-8 lg:mt-0">
             <!-- PAUSES CONTROLS -->
             <div id="pauses-sidebar-content" class="flex flex-col gap-4">
@@ -1880,8 +1879,7 @@
 
         // --- Função para controlar a Sidebar ---
         function setupSidebar() {
-            const openBtn = document.getElementById('sidebar-open-btn');
-            const closeBtn = document.getElementById('sidebar-close-btn');
+            const toggleBtn = document.getElementById('sidebar-toggle-btn');
             const overlay = document.getElementById('sidebar-overlay');
             const body = document.body;
 
@@ -1889,11 +1887,8 @@
                 body.classList.toggle('sidebar-open');
             };
 
-            if (openBtn) {
-                openBtn.addEventListener('click', toggleSidebar);
-            }
-            if (closeBtn) {
-                closeBtn.addEventListener('click', toggleSidebar);
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleSidebar);
             }
             if (overlay) {
                 overlay.addEventListener('click', toggleSidebar);
