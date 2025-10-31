@@ -2059,7 +2059,7 @@
                     document.getElementById('pauses-sidebar-content').classList.remove('hidden');
                     document.getElementById('tabulations-sidebar-content').classList.add('hidden');
 
-                    if (originalData.length > 0) updateDashboard();
+                    // if (originalData.length > 0) updateDashboard(); // REMOVED FOR TEST
                 } else {
                     // Show Tabulations, Hide Pauses
                     els.main.pausesDashboardContent.classList.add('hidden');
@@ -2071,7 +2071,7 @@
                     document.getElementById('pauses-sidebar-content').classList.add('hidden');
                     document.getElementById('tabulations-sidebar-content').classList.remove('hidden');
 
-                    updateCallTabulationsDashboard();
+                    // updateCallTabulationsDashboard(); // REMOVED FOR TEST
                 }
             }
 
