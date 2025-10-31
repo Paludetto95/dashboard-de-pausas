@@ -108,6 +108,9 @@
 
 
         /* --- 4. Menu Lateral Expansível --- */
+        #main-content {
+            transition: margin-left 0.3s ease-in-out;
+        }
         #sidebar {
             transition: left 0.3s ease-in-out;
             left: -20rem; /* Esconde a sidebar (largura w-80 = 20rem) */
@@ -115,19 +118,21 @@
         body.sidebar-open #sidebar {
             left: 0; /* Mostra a sidebar */
         }
-        body.sidebar-open #sidebar-overlay {
-            display: none; /* Esconde o overlay por padrão */
-        }
-        @media (max-width: 1023px) { /* Em telas pequenas, mostra o overlay quando a sidebar está aberta */
+
+        /* Overlay for small screens */
+        @media (max-width: 1023px) {
             body.sidebar-open #sidebar-overlay {
                 display: block;
             }
         }
-        body.sidebar-open #main-content {
-            margin-left: 0; /* Garante que não há margin-left por padrão */
-            position: relative; /* Necessário para z-index funcionar */
-            z-index: 10; /* Garante que o main-content fique abaixo da sidebar */
+
+        /* Pushing content on large screens */
+        @media (min-width: 1024px) {
+            body.sidebar-open #main-content {
+                margin-left: 20rem;
+            }
         }
+
         #sidebar-toggle-btn {
             z-index: 50;
             transition: left 0.3s ease-in-out;
@@ -140,11 +145,6 @@
         }
         body.sidebar-open #sidebar-toggle-btn .close-icon {
             display: block;
-        }
-        @media (max-width: 1023px) { /* Para telas menores, a sidebar ocupa a tela toda */
-            body.sidebar-open #main-content {
-                margin-left: 0; /* Não empurra o conteúdo em telas pequenas */
-            }
         }
         
         .tab-button.active {
