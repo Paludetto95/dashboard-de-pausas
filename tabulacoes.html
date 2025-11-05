@@ -435,8 +435,578 @@
     </div>
 
 
-    <script>
-        // Script para a página de tabulações
-    </script>
-</body>
+            <script>
+                // --- Configuração Global ---
+                const columnAliasesCallTabulations = {
+                    'NR_LEAD': ['NR. LEAD', 'NR.LEAD', 'NR LEAD', 'NR_LEAD', 'LEAD'],
+                    'DATA_HORA_TABULACAO': ['DATA/HORA TABULAÇÃO', 'DATA/HORA_TABULACAO', 'DATA HORA TABULACAO', 'DATA_HORA_TABULACAO', 'DATA', 'HORA', 'DATA E HORA'],
+                    'TIPO_AGENDA': ['TIPO AGENDA (SALVOU)', 'TIPO_AGENDA', 'AGENDA'],
+                    'TABULADO_COMO': ['TABULADO COMO', 'TABULADO_COMO', 'STATUS'],
+                    'CATEGORIA_TABULACAO': ['CATEGORIA TABULAÇÃO', 'CATEGORIA_TABULACAO', 'CATEGORIA'],
+                    'OPERADOR': ['OPERADOR', 'CONSULTOR', 'NOME DO OPERADOR', 'NOME OPERADOR'],
+                    'COD_LOTE': ['CÓD. LOTE', 'COD. LOTE', 'COD LOTE', 'COD_LOTE', 'LOTE ID'],
+                    'LOTE': ['LOTE', 'DESCRICAO LOTE'],
+                    'NOME_CLIENTE': ['NOME DO CLIENTE', 'NOME_CLIENTE', 'CLIENTE'],
+                    'DATA_IMPORTACAO': ['DATA IMPORTAÇÃO', 'DATA_IMPORTACAO', 'IMPORTACAO'],
+                    'CPF_CNPJ': ['CPF / CNPJ', 'CPF/CNPJ', 'CPF_CNPJ', 'DOCUMENTO'],
+                    'COD_CLIENTE': ['CÓD. CLIENTE', 'COD. CLIENTE', 'COD CLIENTE', 'COD_CLIENTE', 'ID CLIENTE'],
+                    'TELEFONE': ['TELEFONE', 'FONE'],
+                    'ORIGEM_TABULACAO': ['ORIGEM TABULAÇÃO', 'ORIGEM_TABULACAO', 'ORIGEM'],
+                    'ORIGEM_POPUP': ['ORIGEM POPUP', 'ORIGEM_POPUP'],
+                    'GRUPO_USUARIO': ['GRUPO USUÁRIO', 'GRUPO_USUARIO'],
+                    'INFORMACAO_ATENDIMENTO': ['INFORMAÇÃO DO ATENDIMENTO', 'INFORMACAO_ATENDIMENTO'],
+                };
+    
+                // Objeto unificado para seletores do DOM
+                const els = {
+                    callTabulations: {
+                        dashboardContent: document.getElementById('call-tabulations-dashboard-content'),
+                        fileInput: document.getElementById('call-tabulations-csv-file-input'),
+                        fileUploadLabel: document.getElementById('call-tabulations-file-upload-label'),
+                        fileStatus: document.getElementById('call-tabulations-file-status'),
+                        tableContainer: document.getElementById('call-tabulations-detail-table'),
+                        filters: {
+                            operator: document.getElementById('tabulation-operator-filter'),
+                            type: document.getElementById('tabulation-type-filter'),
+                            category: document.getElementById('tabulation-category-filter'),
+                            startDate: document.getElementById('tabulation-start-date-filter'),
+                            endDate: document.getElementById('tabulation-end-date-filter'),
+                        },
+                        buttons: {
+                            clearFilters: document.getElementById('clear-tabulation-filters-btn'),
+                        }
+                    }
+                };
+    
+                let callTabulationsOriginalData = [];
+                let callTabulationsFilteredData = [];
+                let callTabulationsTable = null;
+    
+                let charts = {
+                    tabulationOperatorTotal: null,
+                    tabulationTypeTotal: null,
+                    tabulationCategoryTotal: null,
+                    tabulationTypeDistribution: null
+                };
+    
+                // --- Funções Utilitárias ---
+                function debounce(func, delay) {
+                    let timeout;
+                    return function(...args) {
+                        const context = this;
+                        clearTimeout(timeout);
+                        timeout = setTimeout(() => func.apply(context, args), delay);
+                    };
+                }
+    
+                function normalizeHeader(str) {
+                    if (typeof str !== 'string') return '';
+                    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+                }
+    
+                function normalizeDataString(str) {
+                    if (!str) return 'Não informado';
+                    return str.trim().replace(/\s+/g, ' ');
+                }
+    
+                function parseDateTimeRobust(dateTimeStr) {
+                    if (!dateTimeStr || typeof dateTimeStr !== 'string' || dateTimeStr.trim() === '' || dateTimeStr.includes('#########') || dateTimeStr.includes('#')) { return null; }
+                    let cleanStr = dateTimeStr.trim().replace(/^"|"$/g, '');
+                    let date = new Date(cleanStr);
+                    if (!isNaN(date.getTime())) return date;
+                    const brRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
+                    const match = cleanStr.match(brRegex);
+                    if (match) {
+                        const day = parseInt(match[1], 10);
+                        const month = parseInt(match[2], 10) - 1;
+                        const year = parseInt(match[3], 10);
+                        const hour = parseInt(match[4], 10);
+                        const minute = parseInt(match[5], 10);
+                        const second = match[6] ? parseInt(match[6], 10) : 0;
+                        date = new Date(year, month, day, hour, minute, second);
+                        if (!isNaN(date.getTime())) return date;
+                    }
+                    return null;
+                }
+    
+                function formatDateToYYYYMMDD(date) {
+                    if (!date || isNaN(date.getTime())) return '';
+                    return date.toISOString().split('T')[0];
+                }
+    
+                function formatDateTimeDisplay(date) {
+                    if (!date || isNaN(date.getTime())) return '';
+                    return date.toLocaleString('pt-BR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                }
+    
+                function splitCsvLine(line, delimiter) {
+                    const regex = new RegExp(`${delimiter}(?=(?:(?:[^"]*"){2})*[^\"]*$)`);
+                    let values = line.split(regex);
+                    values = values.map(val => {
+                        let trimmed = val.trim();
+                        if (trimmed.length > 1 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+                            trimmed = trimmed.substring(1, trimmed.length - 1);
+                            trimmed = trimmed.replace(/""/g, '"');
+                        }
+                        return trimmed;
+                    });
+                    return values;
+                }
+                
+                function abbreviateName(fullName, maxLength = 18) {
+                    if (typeof fullName !== 'string' || fullName.length <= maxLength) {
+                        return fullName;
+                    }
+                    const parts = fullName.trim().split(' ').filter(p => p.length > 0);
+                    if (parts.length > 1) {
+                        return `${parts[0]} ${parts[parts.length - 1]}`;
+                    }
+                    return fullName.substring(0, maxLength - 3) + '...';
+                }
+    
+                // --- Processamento de Dados ---
+                function detectDelimiter(firstLine) {
+                    const delimiters = [';', ',', '\t', '|'];
+                    let bestDelimiter = null;
+                    let maxCount = 0;
+                    delimiters.forEach(delim => {
+                        const count = firstLine.split(delim).length;
+                        if (count > maxCount) {
+                            maxCount = count;
+                            bestDelimiter = delim;
+                        }
+                    });
+                    return maxCount > 1 ? bestDelimiter : null;
+                }
+    
+                function mapHeaders(rawHeaders, aliases) {
+                    const headerMap = {};
+                    const normalize = (str) => str ? str.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
+    
+                    const normalizedRawHeaders = rawHeaders.map(normalize);
+                    console.log('Normalized Raw Headers:', normalizedRawHeaders);
+    
+                    for (const key in aliases) {
+                        const aliasList = aliases[key].map(normalize);
+                        let foundIndex = -1;
+    
+                        for (const alias of aliasList) {
+                            const index = normalizedRawHeaders.indexOf(alias);
+                            if (index !== -1) {
+                                foundIndex = index;
+                                break;
+                            }
+                        }
+    
+                        if (foundIndex !== -1) {
+                            headerMap[key] = rawHeaders[foundIndex];
+                        }
+                    }
+    
+                    console.log('Mapped Headers:', headerMap);
+                    return headerMap;
+                }
+    
+                function processCallTabulationsData(csvContent) {
+                    if (callTabulationsTable) {
+                        callTabulationsTable.destroy();
+                    }
+                    els.callTabulations.fileStatus.className = 'text-sm text-slate-400 mt-4';
+    
+                    if (!csvContent || !csvContent.trim()) {
+                        return handleCallTabulationsError('Arquivo vazio.');
+                    }
+    
+                    if (csvContent.charCodeAt(0) === 0xFEFF) {
+                        csvContent = csvContent.slice(1);
+                    }
+    
+                    const lines = csvContent.trim().split(/\r\n|\n|\r/);
+                    if (lines.length < 2) {
+                        return handleCallTabulationsError('Arquivo contém apenas cabeçalho ou está vazio.');
+                    }
+    
+                    const delimiter = detectDelimiter(lines[0]);
+                    if (!delimiter) {
+                        return handleCallTabulationsError('Não foi possível detectar o separador de colunas.');
+                    }
+                    
+                    let rawHeaders = splitCsvLine(lines[0], delimiter);
+                    let emptyCellOffset = 0;
+                    if (rawHeaders.length > 0 && rawHeaders[0].trim() === '') {
+                        rawHeaders = rawHeaders.slice(1);
+                        emptyCellOffset = 1;
+                    }
+    
+                    console.log('Raw Headers (Tabulações):', rawHeaders);
+                    const headerMap = mapHeaders(rawHeaders, columnAliasesCallTabulations);
+    
+                    const requiredHeaders = ['OPERADOR', 'DATA_HORA_TABULACAO', 'TABULADO_COMO', 'CATEGORIA_TABULACAO'];
+                    const missingHeaders = requiredHeaders.filter(h => !headerMap[h]);
+    
+                    if (missingHeaders.length > 0) {
+                         const missingNames = missingHeaders.map(k => columnAliasesCallTabulations[k].join(' ou ')).join('; \n');
+                         return handleCallTabulationsError(`Colunas não encontradas:\n${missingNames}.`);
+                    }
+    
+                    const headerIndexes = {};
+                    for(const key in headerMap) {
+                        const rawHeaderIndex = rawHeaders.indexOf(headerMap[key]);
+                        if (rawHeaderIndex !== -1) {
+                            headerIndexes[key] = rawHeaderIndex + emptyCellOffset;
+                        }
+                    }
+                    
+                    const getColumnValue = (key, values) => {
+                        if (headerIndexes[key] === undefined) return '';
+                        return values[headerIndexes[key]] || '';
+                    };
+    
+                    let ignoredRowsDetails = [];
+                    callTabulationsOriginalData = lines.slice(1).map((line, index) => {
+                        const currentLineNumber = index + 2;
+                        const values = splitCsvLine(line, delimiter);
+    
+                        if (values.length !== rawHeaders.length + emptyCellOffset) {
+                            ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Número de colunas diferente do cabeçalho', columnName: 'Linha Completa', columnValue: line.substring(0, 150) + (line.length > 150 ? '...' : '') });
+                            return null;
+                        }
+                        
+                        const dateRawValue = getColumnValue('DATA_HORA_TABULACAO', values);
+                        const dateObj = parseDateTimeRobust(dateRawValue);
+                        const operadorRawValue = getColumnValue('OPERADOR', values);
+                        const operador = normalizeDataString(operadorRawValue); // Validado aqui
+    
+                        if (!dateObj) {
+                            ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Data/Hora de Tabulação inválida', columnName: headerMap.DATA_HORA_TABULACAO, columnValue: dateRawValue });
+                            return null;
+                        }
+                        if (operador === 'Não informado' || operadorRawValue.trim() === '') {
+                            ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Nome do Operador não informado', columnName: headerMap.OPERADOR, columnValue: operadorRawValue });
+                            return null;
+                        }
+    
+                        // Mapeia todos os campos do alias
+                        const rowData = {
+                            DATA_HORA_TABULACAO_OBJ: dateObj,
+                            OPERADOR: operador // <-- *** CORREÇÃO APLICADA AQUI ***
+                        };
+                        
+                        for (const key in columnAliasesCallTabulations) {
+                            // Pula os campos que já processamos manualmente
+                            if (key !== 'DATA_HORA_TABULACAO' && key !== 'OPERADOR') { 
+                                rowData[key] = normalizeDataString(getColumnValue(key, values));
+                            }
+                        }
+    
+                        return rowData;
+    
+                    }).filter(row => row !== null);
+    
+                    if (callTabulationsOriginalData.length === 0) {
+                        if (ignoredRowsDetails.length > 0) showIgnoredRowsPopup(ignoredRowsDetails);
+                        return handleCallTabulationsError('Nenhuma linha de dados válida encontrada.');
+                    }
+    
+                    const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
+                    els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                    els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+    
+                    callTabulationsFilteredData = [...callTabulationsOriginalData];
+                    
+                    populateCallTabulationFilters();
+                    enableDashboardControls(true);
+    
+                    let statusMsg = `Sucesso! Carregados ${callTabulationsOriginalData.length} registros de tabulação.`;
+                    if (ignoredRowsDetails.length > 0) {
+                        statusMsg += ` (${ignoredRowsDetails.length} linhas ignoradas).`;
+                        showIgnoredRowsPopup(ignoredRowsDetails);
+                    }
+    
+                    els.callTabulations.fileStatus.textContent = statusMsg;
+                    els.callTabulations.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
+                    
+                    updateCallTabulationsDashboard();
+                }
+    
+                function handleCallTabulationsError(msg) {
+                    console.error(msg);
+                    els.callTabulations.fileStatus.textContent = `Erro: ${msg}`;
+                    els.callTabulations.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+                    callTabulationsOriginalData = [];
+                    callTabulationsFilteredData = [];
+                    enableDashboardControls(false);
+                    updateCallTabulationsDashboard();
+                }
+    
+                function enableDashboardControls(enable) {
+                    Object.values(els.callTabulations.filters).forEach(el => el.disabled = !enable);
+                    els.callTabulations.buttons.clearFilters.disabled = !enable;
+                }
+    
+                function updateCallTabulationsDashboard() {
+                    renderCallTabulationCharts();
+                    if (callTabulationsTable) {
+                        callTabulationsTable.destroy();
+                    }
+                    callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
+                        data: callTabulationsFilteredData,
+                        height: "500px",
+                        layout: "fitData",
+                        placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
+                        columns: [
+                            { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 150 },
+                            { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input" },
+                            { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input" },
+                            { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                        ],
+                        locale: "pt-br",
+                        langs: {
+                            "pt-br": {
+                                "headerFilters": {
+                                    "default": "filtrar...",
+                                }
+                            }
+                        }
+                    });
+                }
+    
+                function renderCallTabulationCharts() {
+                    const operatorData = aggregateTabulationData('OPERADOR');
+                    const operatorLabels = Object.keys(operatorData).sort((a, b) => operatorData[b] - operatorData[a]);
+                    const abbreviatedOperatorLabels = operatorLabels.map(name => abbreviateName(name));
+                    createChart(
+                        'total-tabulations-operator-chart',
+                        'tabulationOperatorTotal',
+                        'bar',
+                        abbreviatedOperatorLabels,
+                        operatorLabels.map(k => operatorData[k]),
+                        'Total de Tabulações',
+                        'rgba(167, 139, 250, 0.7)',
+                        operatorLabels,
+                        'count'
+                    );
+    
+                    const typeData = aggregateTabulationData('TABULADO_COMO');
+                    const typeLabels = Object.keys(typeData).sort();
+                    createChart(
+                        'total-tabulations-type-chart',
+                        'tabulationTypeTotal',
+                        'bar',
+                        typeLabels,
+                        typeLabels.map(k => typeData[k]),
+                        'Total de Tabulações',
+                        'rgba(74, 222, 128, 0.7)',
+                        null,
+                        'count'
+                    );
+    
+                    const categoryData = aggregateTabulationData('CATEGORIA_TABULACAO');
+                    const categoryLabels = Object.keys(categoryData).sort();
+                    createChart(
+                        'total-tabulations-category-chart',
+                        'tabulationCategoryTotal',
+                        'bar',
+                        categoryLabels,
+                        categoryLabels.map(k => categoryData[k]),
+                        'Total de Tabulações',
+                        'rgba(250, 204, 21, 0.7)',
+                        null,
+                        'count'
+                    );
+    
+                    createChart(
+                        'tabulation-type-distribution-chart',
+                        'tabulationTypeDistribution',
+                        'doughnut',
+                        typeLabels,
+                        typeLabels.map(k => typeData[k]),
+                        'Distribuição de Tabulações',
+                        null,
+                        null,
+                        'count'
+                    );
+                }
+    
+                function aggregateTabulationData(key) {
+                    const agg = {};
+                    callTabulationsFilteredData.forEach(d => {
+                        const value = d[key] || 'Não informado';
+                        agg[value] = (agg[value] || 0) + 1;
+                    });
+                    return agg;
+                }
+    
+                function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min') {
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+                    if (charts[chartInstanceVar]) charts[chartInstanceVar].destroy();
+    
+                    const chartColors = {
+                        'doughnut': ['#60A5FA', '#4ADE80', '#FACC15', '#F87171', '#A78BFA', '#F472B6', '#9CA3AF'],
+                        'barDefault': 'rgba(96, 165, 250, 0.7)',
+                    };
+    
+                    const backgroundColor = type === 'doughnut' ? chartColors.doughnut : color || chartColors.barDefault;
+    
+                    const config = {
+                        type: type,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: label,
+                                data: data,
+                                backgroundColor: backgroundColor,
+                                borderColor: type === 'doughnut' ? '#252532' : 'transparent',
+                                borderWidth: type === 'doughnut' ? 0.6 : 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: type === 'doughnut',
+                                    position: 'right',
+                                    labels: { color: '#cbd5e1' }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        title: function(tooltipItems) {
+                                            if (fullLabels && tooltipItems.length > 0) {
+                                                const dataIndex = tooltipItems[0].dataIndex;
+                                                return fullLabels[dataIndex];
+                                            }
+                                            return tooltipItems[0].label;
+                                        },
+                                        label: function(context) {
+                                            let val = context.raw;
+                                            let lbl = (type === 'doughnut') ? context.label : '';
+                                            if (lbl) lbl += ': ';
+                                            if (type === 'doughnut') {
+                                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                                const perc = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+                                                if (tooltipUnit === 'min') {
+                                                    return `${lbl}${formatMinutesToHHMM(val)} (${perc})`;
+                                                } else {
+                                                    return `${lbl}${val} (${perc})`;
+                                                }
+                                            }
+                                            if (tooltipUnit === 'min') {
+                                                return `Duração: ${formatMinutesToHHMM(val)} (${val.toFixed(1)} min)`;
+                                            } else {
+                                                return `${label}: ${val}`;
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            scales: (type === 'bar') ? {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                    ticks: { color: '#94a3b8' }
+                                },
+                                x: {
+                                    grid: { color: 'transparent' },
+                                    ticks: { 
+                                        color: '#94a3b8',
+                                        maxRotation: 45,
+                                        minRotation: 0,
+                                        autoSkip: true,
+                                        maxTicksLimit: 10
+                                    }
+                                }
+                            } : {}
+                        }
+                    };
+    
+                    charts[chartInstanceVar] = new Chart(ctx, config);
+                }
+    
+                function setupSidebar() {
+                    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+                    const overlay = document.getElementById('sidebar-overlay');
+                    const body = document.body;
+    
+                    const toggleSidebar = () => {
+                        body.classList.toggle('sidebar-open');
+                    };
+    
+                    if (toggleBtn) {
+                        toggleBtn.addEventListener('click', toggleSidebar);
+                    }
+                    if (overlay) {
+                        overlay.addEventListener('click', toggleSidebar);
+                    }
+                }
+    
+                function setupCollapsibleSidebar() {
+                    const headers = document.querySelectorAll('#sidebar .collapsible-header');
+    
+                    headers.forEach(header => {
+                        header.addEventListener('click', () => {
+                            const content = header.nextElementSibling;
+                            const icon = header.querySelector('.chevron-icon');
+    
+                            // Fecha outros painéis abertos para funcionar como um accordion
+                            headers.forEach(otherHeader => {
+                                const otherContent = otherHeader.nextElementSibling;
+                                if (otherContent !== content && !otherContent.classList.contains('collapsed')) {
+                                    otherContent.classList.add('collapsed');
+                                    otherHeader.querySelector('.chevron-icon').classList.remove('rotated');
+                                }
+                            });
+    
+                            // Abre ou fecha o painel clicado
+                            content.classList.toggle('collapsed');
+                            icon.classList.toggle('rotated');
+                        });
+    
+                        // Inicia com o primeiro painel aberto e o resto fechado
+                        if (header.parentElement.parentElement.id !== 'tabulations-sidebar-content') {
+                             header.nextElementSibling.classList.add('collapsed');
+                        } else {
+                             header.querySelector('.chevron-icon').classList.add('rotated');
+                        }
+                    });
+                }
+    
+                function init() {
+                    setupSidebar();
+                    setupCollapsibleSidebar();
+    
+                    // Event listeners para o dashboard de Tabulações
+                    els.callTabulations.fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (!file) {
+                            els.callTabulations.fileUploadLabel.textContent = 'Escolher arquivo';
+                            return;
+                        }
+                        els.callTabulations.fileUploadLabel.textContent = file.name;
+                        els.callTabulations.fileStatus.textContent = `Lendo "${file.name}"...`;
+                        els.callTabulations.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+                        const reader = new FileReader();
+                        reader.onload = (evt) => processCallTabulationsData(evt.target.result);
+                        reader.onerror = () => handleCallTabulationsError('Falha ao ler o arquivo de tabulações.');
+                        reader.readAsText(file, 'UTF-8');
+                    });
+    
+                    els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
+                        if (callTabulationsOriginalData.length > 0) {
+                            const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
+                            els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                            els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                        }
+                        els.callTabulations.filters.operator.value = '';
+                        els.callTabulations.filters.type.value = '';
+                        els.callTabulations.filters.category.value = '';
+                        applyCallTabulationFilters();
+                    });
+    
+                    Object.values(els.callTabulations.filters).forEach(el => el.addEventListener('change', debounce(applyCallTabulationFilters, 300)));
+                }
+    
+                document.addEventListener('DOMContentLoaded', init);
+            </script>
+    </body>
 </html>
