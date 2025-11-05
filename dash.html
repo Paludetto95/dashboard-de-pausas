@@ -1333,7 +1333,9 @@
         }
 
         function processCallTabulationsData(csvContent) {
-            console.log('Iniciando processamento do CSV de tabulações...');
+            if (callTabulationsTable) {
+                callTabulationsTable.destroy();
+            }
             els.callTabulations.fileStatus.className = 'text-sm text-slate-400 mt-4';
             hideIgnoredRowsPopup('pauses'); // Esconde o modal de pausas, se estiver aberto
 
