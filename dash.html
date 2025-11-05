@@ -1455,31 +1455,29 @@
 
         function updateCallTabulationsDashboard() {
             renderCallTabulationCharts();
-            console.log("Updating call tabulations dashboard...");
             if (callTabulationsTable) {
-                callTabulationsTable.setData(callTabulationsFilteredData);
-            } else {
-                 callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
-                    data: callTabulationsFilteredData,
-                    height: "500px", // Adiciona scroll
-                    layout: "fitData", // Consistente com a outra tabela
-                    placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
-                    columns: [
-                        { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 150 },
-                        { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input" },
-                        { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input" },
-                        { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
-                    ],
-                    locale: "pt-br",
-                    langs: {
-                        "pt-br": {
-                            "headerFilters": {
-                                "default": "filtrar...",
-                            }
+                callTabulationsTable.destroy();
+            }
+            callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
+                data: callTabulationsFilteredData,
+                height: "500px",
+                layout: "fitData",
+                placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
+                columns: [
+                    { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 150 },
+                    { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input" },
+                    { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input" },
+                    { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                ],
+                locale: "pt-br",
+                langs: {
+                    "pt-br": {
+                        "headerFilters": {
+                            "default": "filtrar...",
                         }
                     }
-                });
-            }
+                }
+            });
         }
 
         // --- Renderização ---
@@ -1914,8 +1912,9 @@
         // --- Inicialização e Event Listeners ---
         function init() {
             setupSidebar();
-            setupCollapsibleSidebar(); // <-- ADICIONE ESTA LINHA
+            setupCollapsibleSidebar();
 
+            // Inicializa a tabela de pausas
             tabulatorTable = new Tabulator("#pause-detail-table", {
                 height: "500px",
                 layout: "fitData",
@@ -1969,61 +1968,54 @@
                 }
             });
 
+            // Event listeners para o dashboard de Pausas
             els.main.fileInput.addEventListener('change', (e) => {
                 hideIgnoredRowsPopup('pauses');
                 const file = e.target.files[0];
-                
                 if (!file) {
                     els.main.fileUploadLabel.textContent = 'Escolher arquivo';
                     return;
                 }
-
                 els.main.fileUploadLabel.textContent = file.name;
                 els.main.fileStatus.textContent = `Lendo "${file.name}"...`;
                 els.main.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
-
                 const reader = new FileReader();
                 reader.onload = (evt) => processData(evt.target.result);
                 reader.onerror = () => handleDataLoadError('Falha ao ler o arquivo.');
                 reader.readAsText(file, 'UTF-8');
             });
 
-            els.callTabulations.fileInput.addEventListener('change', (e) => {
-                //hideIgnoredRowsPopup('callTabulations');
-                const file = e.target.files[0];
-                if (!file) {
-                    els.callTabulations.fileStatus.textContent = 'Nenhum arquivo selecionado.';
-                    els.callTabulations.fileStatus.className = 'text-sm text-gray-500 mt-4';
-                    return;
-                }
-
-                els.callTabulations.fileStatus.textContent = `Lendo "${file.name}"...`;
-                els.callTabulations.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
-
-                const reader = new FileReader();
-                reader.onload = (evt) => processCallTabulationsData(evt.target.result);
-                reader.onerror = () => handleDataLoadError('Falha ao ler o arquivo de tabulações.'); // Reutiliza o handler principal
-                reader.readAsText(file, 'UTF-8');
-            });
-
             els.main.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
+            
             els.main.buttons.clearFilters.addEventListener('click', () => {
                 if (originalData.length > 0) {
                     const dates = originalData.map(d => d.DATA_INICIO_OBJ);
                     els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
                     els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
                 }
-                callTabulationsTable = null;
+                els.main.filters.consultant.value = '';
                 els.main.filters.pauseType.value = '';
                 applyFilters();
             });
 
             Object.values(els.main.filters).forEach(el => el.addEventListener('change', debounce(applyFilters, 300)));
-            
-            els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
-            els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
 
-            // Event listeners para tabulações
+            // Event listeners para o dashboard de Tabulações
+            els.callTabulations.fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    els.callTabulations.fileUploadLabel.textContent = 'Escolher arquivo';
+                    return;
+                }
+                els.callTabulations.fileUploadLabel.textContent = file.name;
+                els.callTabulations.fileStatus.textContent = `Lendo "${file.name}"...`;
+                els.callTabulations.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+                const reader = new FileReader();
+                reader.onload = (evt) => processCallTabulationsData(evt.target.result);
+                reader.onerror = () => handleCallTabulationsError('Falha ao ler o arquivo de tabulações.');
+                reader.readAsText(file, 'UTF-8');
+            });
+
             els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
                 if (callTabulationsOriginalData.length > 0) {
                     const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
@@ -2038,7 +2030,11 @@
 
             Object.values(els.callTabulations.filters).forEach(el => el.addEventListener('change', debounce(applyCallTabulationFilters, 300)));
 
-            // Outros botões
+            // Navegação entre Tabs
+            els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
+            els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
+
+            // Outros botões e modais
             els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
             els.main.buttons.closeAi.addEventListener('click', () => els.main.ai.section.classList.add('hidden'));
             els.main.ignoredRowsModal.closeBtn.addEventListener('click', () => hideIgnoredRowsPopup('pauses'));
