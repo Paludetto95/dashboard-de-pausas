@@ -1895,6 +1895,22 @@
             });
         }
         
+        function showDashboard(dashboardType) {
+            const isPauses = dashboardType === 'pauses';
+
+            // Botões de Tab
+            els.main.tabPausasBtn.classList.toggle('active', isPauses);
+            els.main.tabCallTabulationsBtn.classList.toggle('active', !isPauses);
+            
+            // Conteúdo do Dashboard Principal
+            els.main.pausesDashboardContent.classList.toggle('hidden', !isPauses);
+            els.callTabulations.dashboardContent.classList.toggle('hidden', isPauses);
+
+            // Conteúdo da Sidebar
+            document.getElementById('pauses-sidebar-content').classList.toggle('hidden', !isPauses);
+            document.getElementById('tabulations-sidebar-content').classList.toggle('hidden', isPauses);
+        }
+
         // --- Inicialização e Event Listeners ---
         function init() {
             setupSidebar();
@@ -1997,7 +2013,47 @@
                     els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
                     els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
                 }
-                els.main.filters.consultant.value = '';
+                callTabulationsTable = null;
+                els.main.filters.pauseType.value = '';
+                applyFilters();
+            });
+
+            Object.values(els.main.filters).forEach(el => el.addEventListener('change', debounce(applyFilters, 300)));
+            
+            els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
+            els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
+
+            // Event listeners para tabulações
+            els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
+                if (callTabulationsOriginalData.length > 0) {
+                    const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
+                    els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                    els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                }
+                els.callTabulations.filters.operator.value = '';
+                els.callTabulations.filters.type.value = '';
+                els.callTabulations.filters.category.value = '';
+                applyCallTabulationFilters();
+            });
+
+            Object.values(els.callTabulations.filters).forEach(el => el.addEventListener('change', debounce(applyCallTabulationFilters, 300)));
+
+            // Outros botões
+            els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
+            els.main.buttons.closeAi.addEventListener('click', () => els.main.ai.section.classList.add('hidden'));
+            els.main.ignoredRowsModal.closeBtn.addEventListener('click', () => hideIgnoredRowsPopup('pauses'));
+            els.main.ignoredRowsModal.overlay.addEventListener('click', (e) => {
+                if (e.target === els.main.ignoredRowsModal.overlay) {
+                    hideIgnoredRowsPopup('pauses');
+                }
+            });
+
+            // Inicia com o dashboard de pausas
+            showDashboard('pauses');
+        }
+
+        // --- Inicialização da Aplicação ---
+        document.addEventListener('DOMContentLoaded', init);
                 els.main.filters.pauseType.value = '';
                 applyFilters();
             });
