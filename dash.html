@@ -323,6 +323,54 @@
         .chevron-icon.rotated {
             transform: rotate(180deg);
         }
+
+        /* === ESTILOS PARA O DASHBOARD DE TABULAÇÕES === */
+        .kpi-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #475569;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -8px rgb(59 130 246 / 0.4);
+        }
+        .kpi-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .kpi-value {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: #3b82f6;
+            line-height: 1;
+        }
+        .chart-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #475569;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -352,7 +400,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <span>Carregar Dados</span>
+                            <span>Carregar Dados de Pausas</span>
                         </h2>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -361,30 +409,16 @@
                     <div class="collapsible-content">
                         <div class="flex flex-col gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV</label>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV de Pausas</label>
                                 <div class="flex justify-center">
-                                    <label id="file-upload-label" for="csv-file-input" class="w-full cursor-pointer px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out text-center">
+                                    <label id="file-upload-label" for="csv-file-input" class="w-full cursor-pointer px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out truncate text-center">
                                         Escolher arquivo
                                     </label>
-                                    <input type="file" id="csv-file-input" accept=".csv, .txt, .tsv" class="hidden"/>
+                                    <input type="file" id="csv-file-input" accept=".csv, .txt" class="hidden" />
                                 </div>
                             </div>
-
-                            <div id="periodo-inputs" class="space-y-3">
-                                <label class="block text-sm font-medium text-slate-300 text-left">Período</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="date" id="api-start-date" class="form-input-dark w-full" required>
-                                </div>
-                                 <div class="flex items-center gap-2">
-                                    <input type="date" id="api-end-date" class="form-input-dark w-full" required>
-                                </div>
-                            </div>
-                            
-                            <button id="load-argus-api-btn" class="!mt-5 w-full px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg shadow-md hover:bg-teal-700 transition duration-300 ease-in-out">
-                                Carregar via API (Argus)
-                            </button>
+                            <p id="file-status" class="text-sm text-slate-400 mt-4">Nenhum dado carregado.</p>
                         </div>
-                        <p id="file-status" class="text-sm text-slate-400 mt-4">Nenhum dado carregado.</p>
                     </div>
                 </div>
 
@@ -394,7 +428,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
                             </svg>
-                            <span>Filtros</span>
+                            <span>Filtros de Pausas</span>
                         </h2>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -408,29 +442,100 @@
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                             <div class="flex flex-col gap-1">
+                            <div class="flex flex-col gap-1">
                                 <label for="pause-type-filter" class="text-sm font-medium text-slate-300">Tipo de Pausa:</label>
                                 <select id="pause-type-filter" class="form-input-dark w-full" disabled>
                                     <option value="">Todos</option>
                                 </select>
                             </div>
-                             <div class="flex flex-col gap-1">
-                                <label for="start-date-filter" class="text-sm font-medium text-slate-300">Data Início:</label>
-                                <input type="date" id="start-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                            <div class="flex flex-col gap-1">
+                                <label for="supervisor-filter" class="text-sm font-medium text-slate-300">Supervisor:</label>
+                                <select id="supervisor-filter" class="form-input-dark w-full" disabled>
+                                    <option value="">Todos</option>
+                                </select>
                             </div>
-                             <div class="flex flex-col gap-1">
-                                <label for="end-date-filter" class="text-sm font-medium text-slate-300">Data Fim:</label>
-                                <input type="date" id="end-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                            <div class="flex flex-col gap-1">
+                                <label for="date-filter" class="text-sm font-medium text-slate-300">Data:</label>
+                                <input type="date" id="date-filter" class="form-input-dark w-full" disabled>
+                            </div>
+                            <button id="apply-filters-btn" class="btn-dark w-full" disabled>Aplicar Filtros</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabulations-sidebar-content" class="flex flex-col gap-4 hidden">
+                <div class="card collapsible-card">
+                    <div class="collapsible-header">
+                        <h2 class="text-2xl font-semibold text-slate-100 flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>Carregar Dados de Tabulações</span>
+                        </h2>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="flex flex-col gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-300 mb-2">Arquivo CSV de Tabulações</label>
+                                <div class="flex justify-center">
+                                    <label id="call-tabulations-file-upload-label" for="call-tabulations-csv-file-input" class="w-full cursor-pointer px-4 py-2 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out truncate text-center">
+                                        Escolher arquivo
+                                    </label>
+                                    <input type="file" id="call-tabulations-csv-file-input" accept=".csv, .txt, .tsv" class="hidden"/>
+                                </div>
+                            </div>
+                            <p id="call-tabulations-file-status" class="text-sm text-slate-400 mt-4">Nenhum dado carregado.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card collapsible-card">
+                    <div class="collapsible-header">
+                        <h2 class="text-2xl font-semibold text-slate-100 flex items-center gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                            <span>Filtros de Tabulações</span>
+                        </h2>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 chevron-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="flex flex-col gap-4">
+                            <div class="flex flex-col gap-1">
+                                <label for="tabulation-operator-filter" class="text-sm font-medium text-slate-300">Operador:</label>
+                                <select id="tabulation-operator-filter" class="form-input-dark w-full" disabled>
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label for="tabulation-type-filter" class="text-sm font-medium text-slate-300">Tipo de Tabulação:</label>
+                                <select id="tabulation-type-filter" class="form-input-dark w-full" disabled>
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label for="tabulation-category-filter" class="text-sm font-medium text-slate-300">Categoria:</label>
+                                <select id="tabulation-category-filter" class="form-input-dark w-full" disabled>
+                                    <option value="">Todas</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label for="call-tabulations-start-date-filter" class="text-sm font-medium text-slate-300">Data Início:</label>
+                                <input type="date" id="call-tabulations-start-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label for="call-tabulations-end-date-filter" class="text-sm font-medium text-slate-300">Data Fim:</label>
+                                <input type="date" id="call-tabulations-end-date-filter" class="form-input-dark w-full date-input" data-placeholder="dd/mm/aaaa" disabled required>
                             </div>
                         </div>
                         <div class="flex flex-col gap-4 mt-6">
-                            <button id="generate-ai-analysis-btn" class="w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                Gerar Análise com IA ✨
-                            </button>
-                            <button id="export-html-btn" onclick="exportarDadosParaHtml()" class="w-full px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                                Exportar para HTML
-                            </button>
-                            <button id="clear-filters-btn" class="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out" disabled>
+                            <button id="call-tabulations-clear-filters-btn" class="w-full px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 transition duration-300 ease-in-out" disabled>
                                 Limpar Filtros
                             </button>
                         </div>
@@ -523,6 +628,49 @@
                 </div>
             </div>
         </div>
+        <div id="call-tabulations-dashboard-content" class="hidden p-2 sm:p-4 md:p-6">
+            <!-- KPIs for Call Tabulations -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Total de Tabulações</h3>
+                    <p id="total-tabulations-kpi" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Operadores Únicos</h3>
+                    <p id="unique-operators-kpi" class="kpi-value">0</p>
+                </div>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Média de Tabulações por Dia</h3>
+                    <p id="avg-tabulations-day-kpi" class="kpi-value">0</p>
+                </div>
+            </div>
+        
+            <!-- Charts for Call Tabulations -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <div class="chart-card">
+                    <h3 class="chart-title">Total de Tabulações por Operador</h3>
+                    <canvas id="total-tabulations-operator-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Total de Tabulações por Tipo</h3>
+                    <canvas id="total-tabulations-type-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Total de Tabulações por Categoria</h3>
+                    <canvas id="total-tabulations-category-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3 class="chart-title">Distribuição de Tabulações por Tipo</h3>
+                    <canvas id="tabulation-type-distribution-chart"></canvas>
+                </div>
+            </div>
+        
+            <!-- Table for Call Tabulations -->
+            <div class="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                <h3 class="text-xl font-bold text-slate-200 mb-4">Detalhes das Tabulações</h3>
+                <div id="call-tabulations-detail-table"></div>
+            </div>
+        </div>
     </div>
 
 
@@ -555,22 +703,22 @@
 
         const columnAliasesCallTabulations = {
             'NR_LEAD': ['NR. LEAD', 'NR.LEAD', 'NR LEAD', 'NR_LEAD', 'LEAD'],
-            'DATA_HORA_TABULACAO': ['DATA/HORA TABULAÇÃO', 'DATA/HORA_TABULACAO', 'DATA HORA TABULACAO', 'DATA_HORA_TABULACAO', 'DATA', 'HORA', 'DATA E HORA'],
+            'DATA_HORA_TABULACAO': ['Data/Hora Tabulação', 'DATA/HORA TABULAÇÃO', 'DATA/HORA_TABULACAO', 'DATA HORA TABULACAO', 'DATA_HORA_TABULACAO', 'DATA', 'HORA', 'DATA E HORA'],
             'TIPO_AGENDA': ['TIPO AGENDA (SALVOU)', 'TIPO_AGENDA', 'AGENDA'],
-            'TABULADO_COMO': ['TABULADO COMO', 'TABULADO_COMO', 'STATUS'],
-            'CATEGORIA_TABULACAO': ['CATEGORIA TABULAÇÃO', 'CATEGORIA_TABULACAO', 'CATEGORIA'],
+            'TABULADO_COMO': ['Tabulado Como', 'TABULADO COMO', 'TABULADO_COMO', 'STATUS'],
+            'CATEGORIA_TABULACAO': ['Categoria Tabulação', 'CATEGORIA TABULAÇÃO', 'CATEGORIA_TABULACAO', 'CATEGORIA'],
             'OPERADOR': ['OPERADOR', 'CONSULTOR', 'NOME DO OPERADOR', 'NOME OPERADOR'],
-            'COD_LOTE': ['CÓD. LOTE', 'COD. LOTE', 'COD LOTE', 'COD_LOTE', 'LOTE ID'],
+            'COD_LOTE': ['Cód. Lote', 'CÓD. LOTE', 'COD. LOTE', 'COD LOTE', 'COD_LOTE', 'LOTE ID'],
             'LOTE': ['LOTE', 'DESCRICAO LOTE'],
-            'NOME_CLIENTE': ['NOME DO CLIENTE', 'NOME_CLIENTE', 'CLIENTE'],
-            'DATA_IMPORTACAO': ['DATA IMPORTAÇÃO', 'DATA_IMPORTACAO', 'IMPORTACAO'],
+            'NOME_CLIENTE': ['Nome do Cliente', 'NOME DO CLIENTE', 'NOME_CLIENTE', 'CLIENTE'],
+            'DATA_IMPORTACAO': ['Data Importação', 'DATA IMPORTAÇÃO', 'DATA_IMPORTACAO', 'IMPORTACAO'],
             'CPF_CNPJ': ['CPF / CNPJ', 'CPF/CNPJ', 'CPF_CNPJ', 'DOCUMENTO'],
-            'COD_CLIENTE': ['CÓD. CLIENTE', 'COD. CLIENTE', 'COD CLIENTE', 'COD_CLIENTE', 'ID CLIENTE'],
+            'COD_CLIENTE': ['Cód. Cliente', 'CÓD. CLIENTE', 'COD. CLIENTE', 'COD CLIENTE', 'COD_CLIENTE', 'ID CLIENTE'],
             'TELEFONE': ['TELEFONE', 'FONE'],
-            'ORIGEM_TABULACAO': ['ORIGEM TABULAÇÃO', 'ORIGEM_TABULACAO', 'ORIGEM'],
-            'ORIGEM_POPUP': ['ORIGEM POPUP', 'ORIGEM_POPUP'],
-            'GRUPO_USUARIO': ['GRUPO USUÁRIO', 'GRUPO_USUARIO'],
-            'INFORMACAO_ATENDIMENTO': ['INFORMAÇÃO DO ATENDIMENTO', 'INFORMACAO_ATENDIMENTO'],
+            'ORIGEM_TABULACAO': ['Origem Tabulação', 'ORIGEM TABULAÇÃO', 'ORIGEM_TABULACAO', 'ORIGEM'],
+            'ORIGEM_POPUP': ['Origem Popup', 'ORIGEM POPUP', 'ORIGEM_POPUP'],
+            'GRUPO_USUARIO': ['Grupo Usuário', 'GRUPO USUÁRIO', 'GRUPO_USUARIO'],
+            'INFORMACAO_ATENDIMENTO': ['Informação do Atendimento', 'INFORMAÇÃO DO ATENDIMENTO', 'INFORMACAO_ATENDIMENTO'],
         };
         
         const expectedDurations = {
@@ -595,7 +743,7 @@
                 fileInput: document.getElementById('csv-file-input'),
                 fileUploadLabel: document.getElementById('file-upload-label'),
                 fileStatus: document.getElementById('file-status'),
-                pauseDetailsTable: null,
+                pauseDetailsTable: null, // Será inicializado com o Tabulator
                 buttons: {
                     loadArgusApi: document.getElementById('load-argus-api-btn'),
                     generateAi: document.getElementById('generate-ai-analysis-btn'),
@@ -609,26 +757,28 @@
                     endDate: document.getElementById('end-date-filter'),
                 },
                 apiControls: {
-                    startDate: document.getElementById('api-start-date'),
-                    endDate: document.getElementById('api-end-date'),
+                    startDate: document.getElementById('argus-start-date'),
+                    endDate: document.getElementById('argus-end-date'),
+                    startTime: document.getElementById('argus-start-time'),
+                    endTime: document.getElementById('argus-end-time'),
                 },
                 kpis: {
                     totalPauses: document.getElementById('kpi-total-pauses'),
                     totalDuration: document.getElementById('kpi-total-global-pause'),
                     uniqueConsultants: document.getElementById('kpi-unique-consultants')
                 },
+                ignoredRowsModal: {
+                    overlay: document.getElementById('ignored-rows-modal-overlay'),
+                    modal: document.getElementById('ignored-rows-modal'),
+                    count: document.getElementById('ignored-rows-count'),
+                    list: document.getElementById('ignored-rows-list'),
+                    closeBtn: document.getElementById('close-ignored-rows-modal-btn'),
+                },
                 ai: {
                     section: document.getElementById('ai-analysis-section'),
+                    loading: document.getElementById('ai-analysis-loading'),
+                    placeholder: document.getElementById('ai-analysis-placeholder'),
                     content: document.getElementById('ai-analysis-content'),
-                    loading: document.getElementById('ai-loading-message'),
-                    placeholder: document.getElementById('ai-placeholder-message')
-                },
-                ignoredRowsModal: {
-                    modal: document.querySelector('#ignored-rows-modal-overlay .modal-content'),
-                    closeBtn: document.getElementById('close-ignored-rows-modal-btn'),
-                    overlay: document.getElementById('ignored-rows-modal-overlay'),
-                    count: document.getElementById('ignored-rows-count'),
-                    list: document.getElementById('ignored-rows-list')
                 }
             },
             callTabulations: {
@@ -637,17 +787,16 @@
                 fileUploadLabel: document.getElementById('call-tabulations-file-upload-label'),
                 fileStatus: document.getElementById('call-tabulations-file-status'),
                 tableContainer: document.getElementById('call-tabulations-detail-table'),
-                filters: {
-                     operator: document.getElementById('tabulation-operator-filter'),
-                     type: document.getElementById('tabulation-type-filter'),
-                     category: document.getElementById('tabulation-category-filter'),
-                     startDate: document.getElementById('tabulation-start-date-filter'),
-                     endDate: document.getElementById('tabulation-end-date-filter'),
-                },
                 buttons: {
-                    clearFilters: document.getElementById('clear-tabulation-filters-btn'),
+                    clearFilters: document.getElementById('call-tabulations-clear-filters-btn'),
+                },
+                filters: {
+                    operator: document.getElementById('operator-filter'),
+                    type: document.getElementById('tabulation-type-filter'),
+                    category: document.getElementById('tabulation-category-filter'),
+                    startDate: document.getElementById('call-tabulations-start-date-filter'),
+                    endDate: document.getElementById('call-tabulations-end-date-filter'),
                 }
-                // Adicionar seletores para KPIs e Modal de erros de tabulações se/quando forem implementados no HTML
             }
         };
 
@@ -860,7 +1009,7 @@
             for(const key in headerMap) {
                 const rawHeaderIndex = rawHeaders.indexOf(headerMap[key]);
                 if (rawHeaderIndex !== -1) {
-                    headerIndexes[key] = rawHeaderIndex + emptyCellOffset;
+                    headerIndexes[key] = rawHeaderIndex;
                 }
             }
 
@@ -868,7 +1017,11 @@
 
             originalData = lines.slice(1).map((line, index) => {
                 const currentLineNumber = index + 2;
-                const values = splitCsvLine(line, delimiter);
+                if (!line.trim()) return null;
+                let values = splitCsvLine(line, delimiter);
+                if (emptyCellOffset > 0) {
+                    values = values.slice(emptyCellOffset);
+                }
 
                 // A verificação de colunas deve considerar o offset da célula vazia
                 if (values.length !== rawHeaders.length + emptyCellOffset) {
@@ -919,13 +1072,20 @@
             }
 
             const dates = originalData.map(d => d.DATA_INICIO_OBJ);
-            els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-            els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+            if (els.main.filters.startDate) {
+                els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+            }
+            if (els.main.filters.endDate) {
+                els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+            }
 
             filteredData = [...originalData];
             populateFilters();
             enableDashboardControls(true);
-            document.getElementById('export-html-btn').disabled = false; // Habilitar botão de exportar
+            const exportButton = document.getElementById('export-html-btn');
+            if (exportButton) {
+                exportButton.disabled = false; // Habilitar botão de exportar
+            }
 
             let statusMsg = `Sucesso! Separador: [${delimiter === '\t' ? 'TAB' : delimiter}]. Carregados ${originalData.length} registros.`;
             if (ignoredRowsDetails.length > 0) {
@@ -1055,8 +1215,10 @@
 
         function handleCallTabulationsError(msg) {
             console.error(msg);
-            els.callTabulations.fileStatus.textContent = `Erro: ${msg}`;
-            els.callTabulations.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+            if (els.callTabulations.fileStatus) {
+                els.callTabulations.fileStatus.textContent = `Erro: ${msg}`;
+                els.callTabulations.fileStatus.className = 'text-sm text-red-400 mt-4 font-bold';
+            }
             callTabulationsOriginalData = [];
             callTabulationsFilteredData = [];
             enableDashboardControls(false, 'callTabulations');
@@ -1093,57 +1255,75 @@
             const categories = [...new Set(callTabulationsOriginalData.map(d => d.CATEGORIA_TABULACAO))].sort();
 
             const operatorFilter = els.callTabulations.filters.operator;
-            operatorFilter.innerHTML = '<option value="">Todos</option>';
-            operators.forEach(c => {
-                const option = document.createElement('option');
-                option.value = c;
-                option.textContent = c;
-                operatorFilter.appendChild(option);
-            });
+            if (operatorFilter) {
+                operatorFilter.innerHTML = '<option value="">Todos</option>';
+                operators.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c;
+                    option.textContent = c;
+                    operatorFilter.appendChild(option);
+                });
+            }
 
             const typeFilter = els.callTabulations.filters.type;
-            typeFilter.innerHTML = '<option value="">Todos</option>';
-            tabulationTypes.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t;
-                option.textContent = t;
-                typeFilter.appendChild(option);
-            });
+            if (typeFilter) {
+                typeFilter.innerHTML = '<option value="">Todos</option>';
+                tabulationTypes.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t;
+                    option.textContent = t;
+                    typeFilter.appendChild(option);
+                });
+            }
 
             const categoryFilter = els.callTabulations.filters.category;
-            categoryFilter.innerHTML = '<option value="">Todas</option>';
-            categories.forEach(t => {
-                const option = document.createElement('option');
-                option.value = t;
-                option.textContent = t;
-                categoryFilter.appendChild(option);
-            });
+            if (categoryFilter) {
+                categoryFilter.innerHTML = '<option value="">Todas</option>';
+                categories.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t;
+                    option.textContent = t;
+                    categoryFilter.appendChild(option);
+                });
+            }
         }
         
         function enableDashboardControls(enable, dashboardType = 'pauses') {
-             if (dashboardType === 'pauses') {
-                Object.values(els.main.filters).forEach(el => el.disabled = !enable);
-                els.main.buttons.clearFilters.disabled = !enable;
+            if (dashboardType === 'pauses') {
+                Object.values(els.main.filters).forEach(el => {
+                    if (el) el.disabled = !enable;
+                });
+                if (els.main.buttons.clearFilters) {
+                    els.main.buttons.clearFilters.disabled = !enable;
+                }
                 if (!enable) {
-                    els.main.buttons.generateAi.disabled = true;
-                    els.main.ai.section.classList.add('hidden');
+                    if (els.main.buttons.generateAi) {
+                        els.main.buttons.generateAi.disabled = true;
+                    }
+                    if (els.main.ai.section) {
+                        els.main.ai.section.classList.add('hidden');
+                    }
                 }
             } else if (dashboardType === 'callTabulations') {
-                Object.values(els.callTabulations.filters).forEach(el => el.disabled = !enable);
-                els.callTabulations.buttons.clearFilters.disabled = !enable;
+                Object.values(els.callTabulations.filters).forEach(el => {
+                    if (el) el.disabled = !enable;
+                });
+                if (els.callTabulations.buttons.clearFilters) {
+                    els.callTabulations.buttons.clearFilters.disabled = !enable;
+                }
             }
         }
 
         function applyFilters() {
-            const selConsultant = els.main.filters.consultant.value;
-            const selType = els.main.filters.pauseType.value;
+            const selConsultant = els.main.filters.consultant ? els.main.filters.consultant.value : '';
+            const selType = els.main.filters.pauseType ? els.main.filters.pauseType.value : '';
 
             let startDate = null, endDate = null;
-            if (els.main.filters.startDate.value) {
+            if (els.main.filters.startDate && els.main.filters.startDate.value) {
                 startDate = new Date(els.main.filters.startDate.value);
                 startDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0,0,0);
             }
-            if (els.main.filters.endDate.value) {
+            if (els.main.filters.endDate && els.main.filters.endDate.value) {
                 endDate = new Date(els.main.filters.endDate.value);
                 endDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999);
             }
@@ -1177,24 +1357,28 @@
             }
 
             const canUseAI = selConsultant && !selType;
-            els.main.buttons.generateAi.disabled = !canUseAI;
+            if (els.main.buttons.generateAi) {
+                els.main.buttons.generateAi.disabled = !canUseAI;
+            }
 
-            if (!canUseAI) els.main.ai.section.classList.add('hidden');
+            if (!canUseAI && els.main.ai.section) {
+                els.main.ai.section.classList.add('hidden');
+            }
 
             updateDashboard();
         }
 
         function applyCallTabulationFilters() {
-            const selOperator = els.callTabulations.filters.operator.value;
-            const selType = els.callTabulations.filters.type.value;
-            const selCategory = els.callTabulations.filters.category.value;
+            const selOperator = els.callTabulations.filters.operator ? els.callTabulations.filters.operator.value : '';
+            const selType = els.callTabulations.filters.type ? els.callTabulations.filters.type.value : '';
+            const selCategory = els.callTabulations.filters.category ? els.callTabulations.filters.category.value : '';
 
             let startDate = null, endDate = null;
-            if (els.callTabulations.filters.startDate.value) {
+            if (els.callTabulations.filters.startDate && els.callTabulations.filters.startDate.value) {
                 startDate = new Date(els.callTabulations.filters.startDate.value);
                 startDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0,0,0);
             }
-            if (els.callTabulations.filters.endDate.value) {
+            if (els.callTabulations.filters.endDate && els.callTabulations.filters.endDate.value) {
                 endDate = new Date(els.callTabulations.filters.endDate.value);
                 endDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999);
             }
@@ -1267,7 +1451,7 @@
             for(const key in headerMap) {
                 const rawHeaderIndex = rawHeaders.indexOf(headerMap[key]);
                 if (rawHeaderIndex !== -1) {
-                    headerIndexes[key] = rawHeaderIndex + emptyCellOffset;
+                    headerIndexes[key] = rawHeaderIndex;
                 }
             }
             
@@ -1323,8 +1507,12 @@
             }
 
             const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
-            els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-            els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+            if (els.callTabulations.filters.startDate) {
+                els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+            }
+            if (els.callTabulations.filters.endDate) {
+                els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+            }
 
             callTabulationsFilteredData = [...callTabulationsOriginalData];
             
@@ -1348,26 +1536,28 @@
             if (callTabulationsTable) {
                 callTabulationsTable.destroy();
             }
-            callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
-                data: callTabulationsFilteredData,
-                height: "500px",
-                layout: "fitData",
-                placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
-                columns: [
-                    { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 150 },
-                    { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input" },
-                    { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input" },
-                    { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
-                ],
-                locale: "pt-br",
-                langs: {
-                    "pt-br": {
-                        "headerFilters": {
-                            "default": "filtrar...",
+            if (els.callTabulations.tableContainer) {
+                callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
+                    data: callTabulationsFilteredData,
+                    height: "500px",
+                    layout: "fitData",
+                    placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
+                    columns: [
+                        { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 150 },
+                        { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input" },
+                        { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input" },
+                        { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                    ],
+                    locale: "pt-br",
+                    langs: {
+                        "pt-br": {
+                            "headerFilters": {
+                                "default": "filtrar...",
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         // --- Renderização ---
@@ -1378,12 +1568,19 @@
                 totalMin += d.DURACAO_MINUTES;
                 uniqueCons.add(d.CONSULTOR);
             });
-            animateValue(els.main.kpis.totalPauses, parseInt(els.main.kpis.totalPauses.innerText) || 0, filteredData.length, 500);
-            els.main.kpis.totalDuration.textContent = formatMinutesToHHMM(totalMin);
-            animateValue(els.main.kpis.uniqueConsultants, parseInt(els.main.kpis.uniqueConsultants.innerText) || 0, uniqueCons.size, 500);
+            if (els.main.kpis.totalPauses) {
+                animateValue(els.main.kpis.totalPauses, parseInt(els.main.kpis.totalPauses.innerText) || 0, filteredData.length, 500);
+            }
+            if (els.main.kpis.totalDuration) {
+                els.main.kpis.totalDuration.textContent = formatMinutesToHHMM(totalMin);
+            }
+            if (els.main.kpis.uniqueConsultants) {
+                animateValue(els.main.kpis.uniqueConsultants, parseInt(els.main.kpis.uniqueConsultants.innerText) || 0, uniqueCons.size, 500);
+            }
         }
 
         function animateValue(obj, start, end, duration) {
+            if (!obj) return;
             if (start === end) { obj.innerText = end; return; }
             let startTimestamp = null;
             const step = (timestamp) => {
@@ -1429,7 +1626,9 @@
         }
         
         function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min') {
-            const ctx = document.getElementById(canvasId).getContext('2d');
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             if (charts[chartInstanceVar]) charts[chartInstanceVar].destroy();
 
             const chartColors = {
@@ -1607,11 +1806,21 @@
             }
             const consultant = uniqueConsultants[0];
 
-            els.main.ai.section.classList.remove('hidden');
-            els.main.ai.placeholder.classList.add('hidden');
-            els.main.ai.loading.classList.remove('hidden');
-            els.main.ai.content.innerHTML = '';
-            els.main.ai.section.scrollIntoView({ behavior: 'smooth' });
+            if (els.main.ai.section) {
+                els.main.ai.section.classList.remove('hidden');
+            }
+            if (els.main.ai.placeholder) {
+                els.main.ai.placeholder.classList.add('hidden');
+            }
+            if (els.main.ai.loading) {
+                els.main.ai.loading.classList.remove('hidden');
+            }
+            if (els.main.ai.content) {
+                els.main.ai.content.innerHTML = '';
+            }
+            if (els.main.ai.section) {
+                els.main.ai.section.scrollIntoView({ behavior: 'smooth' });
+            }
 
             const totalPausas = filteredData.length;
             const totalMinutos = filteredData.reduce((sum, d) => sum + d.DURACAO_MINUTES, 0);
@@ -1687,12 +1896,18 @@
                 const aiText = data.candidates[0]?.content?.parts[0]?.text;
                 if (!aiText) throw new Error('Resposta da IA vazia ou malformada.');
                 const htmlText = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-                els.main.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;
+                if (els.main.ai.content) {
+                    els.main.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;
+                }
             } catch (error) {
                 console.error(error);
-                els.main.ai.content.innerHTML = `<p class="text-red-400 font-medium">Falha ao gerar análise. (${error.message})</p>`;
+                if (els.main.ai.content) {
+                    els.main.ai.content.innerHTML = `<p class="text-red-400 font-medium">Falha ao gerar análise. (${error.message})</p>`;
+                }
             } finally {
-                els.main.ai.loading.classList.add('hidden');
+                if (els.main.ai.loading) {
+                    els.main.ai.loading.classList.add('hidden');
+                }
             }
         }
 
@@ -1774,12 +1989,8 @@
                     icon.classList.toggle('rotated');
                 });
 
-                // Inicia com o primeiro painel aberto e o resto fechado
-                if (header.parentElement.parentElement.id !== 'pauses-sidebar-content') {
-                     header.nextElementSibling.classList.add('collapsed');
-                } else {
-                     header.querySelector('.chevron-icon').classList.add('rotated');
-                }
+                // Inicia com todos os painéis fechados
+                header.nextElementSibling.classList.add('collapsed');
             });
         }
         
@@ -1787,16 +1998,30 @@
             const isPauses = dashboardType === 'pauses';
 
             // Botões de Tab
-            els.main.tabPausasBtn.classList.toggle('active', isPauses);
-            els.main.tabCallTabulationsBtn.classList.toggle('active', !isPauses);
+            if (els.main.tabPausasBtn) {
+                els.main.tabPausasBtn.classList.toggle('active', isPauses);
+            }
+            if (els.main.tabCallTabulationsBtn) {
+                els.main.tabCallTabulationsBtn.classList.toggle('active', !isPauses);
+            }
             
             // Conteúdo do Dashboard Principal
-            els.main.pausesDashboardContent.classList.toggle('hidden', !isPauses);
-            els.callTabulations.dashboardContent.classList.toggle('hidden', isPauses);
+            if (els.main.pausesDashboardContent) {
+                els.main.pausesDashboardContent.classList.toggle('hidden', !isPauses);
+            }
+            if (els.callTabulations.dashboardContent) {
+                els.callTabulations.dashboardContent.classList.toggle('hidden', isPauses);
+            }
 
             // Conteúdo da Sidebar
-            document.getElementById('pauses-sidebar-content').classList.toggle('hidden', !isPauses);
-            document.getElementById('tabulations-sidebar-content').classList.toggle('hidden', isPauses);
+            const pausesSidebar = document.getElementById('pauses-sidebar-content');
+            const tabulationsSidebar = document.getElementById('tabulations-sidebar-content');
+            if (pausesSidebar) {
+                pausesSidebar.classList.toggle('hidden', !isPauses);
+            }
+            if (tabulationsSidebar) {
+                tabulationsSidebar.classList.toggle('hidden', isPauses);
+            }
         }
 
         // --- Inicialização e Event Listeners ---
@@ -1859,167 +2084,158 @@
             });
 
             // Event listeners para o dashboard de Pausas
-            els.main.fileInput.addEventListener('change', (e) => {
-                hideIgnoredRowsPopup('pauses');
-                const file = e.target.files[0];
-                if (!file) {
-                    els.main.fileUploadLabel.textContent = 'Escolher arquivo';
-                    return;
-                }
-                els.main.fileUploadLabel.textContent = file.name;
-                els.main.fileStatus.textContent = `Lendo "${file.name}"...`;
-                els.main.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
-                const reader = new FileReader();
-                reader.onload = (evt) => processData(evt.target.result);
-                reader.onerror = () => handleDataLoadError('Falha ao ler o arquivo.');
-                reader.readAsText(file, 'UTF-8');
-            });
-
-            els.main.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
-            
-            els.main.buttons.clearFilters.addEventListener('click', () => {
-                if (originalData.length > 0) {
-                    const dates = originalData.map(d => d.DATA_INICIO_OBJ);
-                    els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-                    els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
-                }
-                els.main.filters.consultant.value = '';
-                els.main.filters.pauseType.value = '';
-                applyFilters();
-            });
-
-            Object.values(els.main.filters).forEach(el => el.addEventListener('change', debounce(applyFilters, 300)));
-
-            // Event listeners para o dashboard de Tabulações
-            els.callTabulations.fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) {
-                    els.callTabulations.fileUploadLabel.textContent = 'Escolher arquivo';
-                    return;
-                }
-                els.callTabulations.fileUploadLabel.textContent = file.name;
-                els.callTabulations.fileStatus.textContent = `Lendo "${file.name}"...`;
-                els.callTabulations.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
-                const reader = new FileReader();
-                reader.onload = (evt) => processCallTabulationsData(evt.target.result);
-                reader.onerror = () => handleCallTabulationsError('Falha ao ler o arquivo de tabulações.');
-                reader.readAsText(file, 'UTF-8');
-            });
-
-            els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
-                if (callTabulationsOriginalData.length > 0) {
-                    const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
-                    els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-                    els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
-                }
-                els.callTabulations.filters.operator.value = '';
-                els.callTabulations.filters.type.value = '';
-                els.callTabulations.filters.category.value = '';
-                applyCallTabulationFilters();
-            });
-
-            Object.values(els.callTabulations.filters).forEach(el => el.addEventListener('change', debounce(applyCallTabulationFilters, 300)));
-
-            // Navegação entre Tabs
-            els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
-            els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
-
-            // Outros botões e modais
-            els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
-            els.main.buttons.closeAi.addEventListener('click', () => els.main.ai.section.classList.add('hidden'));
-            els.main.ignoredRowsModal.closeBtn.addEventListener('click', () => hideIgnoredRowsPopup('pauses'));
-            els.main.ignoredRowsModal.overlay.addEventListener('click', (e) => {
-                if (e.target === els.main.ignoredRowsModal.overlay) {
+            if (els.main.fileInput) {
+                els.main.fileInput.addEventListener('change', (e) => {
                     hideIgnoredRowsPopup('pauses');
-                }
-            });
+                    const file = e.target.files[0];
+                    if (!file) {
+                        if (els.main.fileUploadLabel) {
+                            els.main.fileUploadLabel.textContent = 'Escolher arquivo';
+                        }
+                        return;
+                    }
+                    if (els.main.fileUploadLabel) {
+                        els.main.fileUploadLabel.textContent = file.name;
+                    }
+                    if (els.main.fileStatus) {
+                        els.main.fileStatus.textContent = `Lendo "${file.name}"...`;
+                        els.main.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (evt) => processData(evt.target.result);
+                    reader.onerror = () => handleDataLoadError('Falha ao ler o arquivo.');
+                    reader.readAsText(file, 'UTF-8');
+                });
+            }
 
-            // Inicia com o dashboard de pausas
-            showDashboard('pauses');
-        }
-
-        // --- Inicialização da Aplicação ---
-        document.addEventListener('DOMContentLoaded', init);
-                els.main.filters.pauseType.value = '';
-                applyFilters();
-            });
-            els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
-            document.getElementById('floating-ai-btn').addEventListener('click', generateAIAnalysis);
-            els.main.buttons.closeAi.addEventListener('click', () => {
-                els.main.ai.section.classList.add('hidden');
-                els.main.ai.placeholder.classList.remove('hidden');
-                els.main.ai.content.innerHTML = '';
-            });
+            if (els.main.buttons.loadArgusApi) {
+                els.main.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
+            }
+            
+            if (els.main.buttons.clearFilters) {
+                els.main.buttons.clearFilters.addEventListener('click', () => {
+                    if (originalData.length > 0) {
+                        const dates = originalData.map(d => d.DATA_INICIO_OBJ);
+                        if (els.main.filters.startDate) {
+                            els.main.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                        }
+                        if (els.main.filters.endDate) {
+                            els.main.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                        }
+                    }
+                    if (els.main.filters.consultant) {
+                        els.main.filters.consultant.value = '';
+                    }
+                    if (els.main.filters.pauseType) {
+                        els.main.filters.pauseType.value = '';
+                    }
+                    applyFilters();
+                });
+            }
 
             const debouncedApplyFilters = debounce(applyFilters, 300);
-            Object.values(els.main.filters).forEach(filter => {
-                filter.addEventListener('change', debouncedApplyFilters);
-            });
+            if (els.main.filters) {
+                Object.values(els.main.filters).forEach(el => {
+                    if (el) {
+                        el.addEventListener('change', debouncedApplyFilters);
+                    }
+                });
+            }
+
+            // Event listeners para o dashboard de Tabulações
+            if (els.callTabulations.fileInput) {
+                els.callTabulations.fileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) {
+                        els.callTabulations.fileUploadLabel.textContent = 'Escolher arquivo';
+                        return;
+                    }
+                    els.callTabulations.fileUploadLabel.textContent = file.name;
+                    els.callTabulations.fileStatus.textContent = `Lendo "${file.name}"...`;
+                    els.callTabulations.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
+                    const reader = new FileReader();
+                    reader.onload = (evt) => processCallTabulationsData(evt.target.result);
+                    reader.onerror = () => handleCallTabulationsError('Falha ao ler o arquivo de tabulações.');
+                    reader.readAsText(file, 'UTF-8');
+                });
+            }
 
             const debouncedApplyCallTabulationFilters = debounce(applyCallTabulationFilters, 300);
-            Object.values(els.callTabulations.filters).forEach(filter => {
-                filter.addEventListener('change', debouncedApplyCallTabulationFilters);
-            });
+            if (els.callTabulations.filters) {
+                Object.values(els.callTabulations.filters).forEach(filter => {
+                    if (filter) {
+                        filter.addEventListener('change', debouncedApplyCallTabulationFilters);
+                    }
+                });
+            }
 
-            els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
-                if (callTabulationsOriginalData.length > 0) {
-                    const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
-                    els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
-                    els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
-                }
-                els.callTabulations.filters.operator.value = '';
-                els.callTabulations.filters.type.value = '';
-                els.callTabulations.filters.category.value = '';
-                applyCallTabulationFilters();
-            });
+            if (els.callTabulations.buttons.clearFilters) {
+                els.callTabulations.buttons.clearFilters.addEventListener('click', () => {
+                    if (callTabulationsOriginalData.length > 0) {
+                        const dates = callTabulationsOriginalData.map(d => d.DATA_HORA_TABULACAO_OBJ);
+                        els.callTabulations.filters.startDate.value = formatDateToYYYYMMDD(new Date(Math.min(...dates)));
+                        els.callTabulations.filters.endDate.value = formatDateToYYYYMMDD(new Date(Math.max(...dates)));
+                    }
+                    els.callTabulations.filters.operator.value = '';
+                    els.callTabulations.filters.type.value = '';
+                    els.callTabulations.filters.category.value = '';
+                    applyCallTabulationFilters();
+                });
+            }
 
-            els.main.ignoredRowsModal.closeBtn.addEventListener('click', () => hideIgnoredRowsPopup('pauses'));
-            els.main.ignoredRowsModal.overlay.addEventListener('click', (e) => {
-                if (e.target === els.main.ignoredRowsModal.overlay) hideIgnoredRowsPopup('pauses');
-            });
+            // Navegação entre Tabs
+            if (els.main.tabPausasBtn) {
+                els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
+            }
+            if (els.main.tabCallTabulationsBtn) {
+                els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
+            }
+
+            // Outros botões e modais
+            if (els.main.buttons.generateAi) {
+                els.main.buttons.generateAi.addEventListener('click', generateAIAnalysis);
+            }
+            const floatingAiBtn = document.getElementById('floating-ai-btn');
+            if (floatingAiBtn) {
+                floatingAiBtn.addEventListener('click', generateAIAnalysis);
+            }
+            if (els.main.buttons.closeAi) {
+                els.main.buttons.closeAi.addEventListener('click', () => {
+                    els.main.ai.section.classList.add('hidden');
+                    els.main.ai.placeholder.classList.remove('hidden');
+                    els.main.ai.content.innerHTML = '';
+                });
+            }
             
+            if (els.main.ignoredRowsModal.closeBtn) {
+                els.main.ignoredRowsModal.closeBtn.addEventListener('click', () => hideIgnoredRowsPopup('pauses'));
+            }
+            if (els.main.ignoredRowsModal.overlay) {
+                els.main.ignoredRowsModal.overlay.addEventListener('click', (e) => {
+                    if (e.target === els.main.ignoredRowsModal.overlay) {
+                        hideIgnoredRowsPopup('pauses');
+                    }
+                });
+            }
+
             enableDashboardControls(false, 'pauses');
             enableDashboardControls(false, 'callTabulations');
 
             const today = new Date();
-            els.main.apiControls.startDate.value = formatDateToYYYYMMDD(today);
-            els.main.apiControls.endDate.value = formatDateToYYYYMMDD(today);
-            els.main.apiControls.startTime.value = '00:00';
-            els.main.apiControls.endTime.value = '23:59';
-
-            function showDashboard(dashboardType) {
-                const isPauses = dashboardType === 'pauses';
-
-                if (isPauses) {
-                    // Show Pauses, Hide Tabulations
-                    els.main.pausesDashboardContent.classList.remove('hidden');
-                    els.callTabulations.dashboardContent.classList.add('hidden');
-
-                    els.main.tabPausasBtn.classList.add('active');
-                    els.main.tabCallTabulationsBtn.classList.remove('active');
-
-                    document.getElementById('pauses-sidebar-content').classList.remove('hidden');
-                    document.getElementById('tabulations-sidebar-content').classList.add('hidden');
-
-                    // if (originalData.length > 0) updateDashboard(); // REMOVED FOR TEST
-                } else {
-                    // Show Tabulations, Hide Pauses
-                    els.main.pausesDashboardContent.classList.add('hidden');
-                    els.callTabulations.dashboardContent.classList.remove('hidden');
-
-                    els.main.tabPausasBtn.classList.remove('active');
-                    els.main.tabCallTabulationsBtn.classList.add('active');
-
-                    document.getElementById('pauses-sidebar-content').classList.add('hidden');
-                    document.getElementById('tabulations-sidebar-content').classList.remove('hidden');
-
-                    // updateCallTabulationsDashboard(); // REMOVED FOR TEST
-                }
+            if (els.main.apiControls.startDate) {
+                els.main.apiControls.startDate.value = formatDateToYYYYMMDD(today);
+            }
+            if (els.main.apiControls.endDate) {
+                els.main.apiControls.endDate.value = formatDateToYYYYMMDD(today);
+            }
+            if (els.main.apiControls.startTime) {
+                els.main.apiControls.startTime.value = '00:00';
+            }
+            if (els.main.apiControls.endTime) {
+                els.main.apiControls.endTime.value = '23:59';
             }
 
-            els.main.tabPausasBtn.addEventListener('click', () => showDashboard('pauses'));
-            els.main.tabCallTabulationsBtn.addEventListener('click', () => showDashboard('call-tabulations'));
-
+            // Inicia com o dashboard de pausas
             showDashboard('pauses');
         }
 
@@ -2067,6 +2283,7 @@
             document.body.removeChild(link);
         }
 
+        // --- Inicialização da Aplicação ---
         document.addEventListener('DOMContentLoaded', init);
     </script>
     <button id="floating-ai-btn" class="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out transform hover:scale-110">
