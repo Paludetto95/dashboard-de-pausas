@@ -357,6 +357,7 @@
             border: 1px solid #475569;
             border-radius: 12px;
             padding: 1.5rem;
+            overflow: hidden; /* evita esticar para fora do card */
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
         .chart-title {
@@ -371,6 +372,8 @@
             height: 300px;
             width: 100%;
         }
+        /* Limita altura de canvas para evitar esticamento exagerado */
+        .chart-card canvas { max-height: 320px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -720,6 +723,11 @@
             'GRUPO_USUARIO': ['Grupo Usuário', 'GRUPO USUÁRIO', 'GRUPO_USUARIO'],
             'INFORMACAO_ATENDIMENTO': ['Informação do Atendimento', 'INFORMAÇÃO DO ATENDIMENTO', 'INFORMACAO_ATENDIMENTO'],
         };
+        // Aliases extras para maior compatibilidade com variações de cabeçalho
+        columnAliasesCallTabulations['DATA_HORA_TABULACAO'].push('DATA HORA', 'DATA/HORA', 'DATA_HORA', 'DATA HORA TABULAÇÃO', 'DATA HORA TABULACAO', 'DT TABULAÇÃO', 'DT TABULACAO', 'DT/HORA');
+        columnAliasesCallTabulations['TABULADO_COMO'].push('STATUS FINAL', 'TABULAÇÃO', 'TABULACAO', 'RESULTADO');
+        columnAliasesCallTabulations['CATEGORIA_TABULACAO'].push('CATEGORIA FINAL', 'CATEGORIA DO STATUS', 'CLASSE');
+        columnAliasesCallTabulations['OPERADOR'].push('USUÁRIO', 'USUARIO', 'ATENDENTE', 'AGENTE', 'OPERADOR(A)', 'NOME DO ATENDENTE', 'NOME AGENTE', 'NOME CONSULTOR');
         
         const expectedDurations = {
             'Almoço': { minutes: 60, tolerance: 3 },
@@ -919,6 +927,7 @@
 
         // --- Processamento de Dados ---
         function detectDelimiter(firstLine) {
+            // Não considerar espaço como delimitador para evitar detecções falsas
             const delimiters = [';', ',', '\t', '|'];
             let bestDelimiter = null;
             let maxCount = 0;
@@ -934,29 +943,39 @@
 
         function mapHeaders(rawHeaders, aliases) {
             const headerMap = {};
-            const normalize = (str) => str ? str.trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '') : '';
+            const normalize = (str) => str ? str.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : '';
 
             const normalizedRawHeaders = rawHeaders.map(normalize);
-            console.log('Normalized Raw Headers:', normalizedRawHeaders);
 
             for (const key in aliases) {
-                const aliasList = aliases[key].map(normalize);
-                let foundIndex = -1;
-
+                const aliasList = aliases[key];
+                let found = false;
+                // Match exato primeiro
                 for (const alias of aliasList) {
-                    const index = normalizedRawHeaders.indexOf(alias);
-                    if (index !== -1) {
-                        foundIndex = index;
+                    const normalizedAlias = normalize(alias);
+                    const headerIndex = normalizedRawHeaders.indexOf(normalizedAlias);
+                    if (headerIndex !== -1) {
+                        headerMap[key] = rawHeaders[headerIndex];
+                        found = true;
                         break;
                     }
                 }
-
-                if (foundIndex !== -1) {
-                    headerMap[key] = rawHeaders[foundIndex];
+                // Fallback: correspondência parcial
+                if (!found) {
+                    for (let i = 0; i < normalizedRawHeaders.length && !found; i++) {
+                        const hdr = normalizedRawHeaders[i];
+                        for (const alias of aliasList) {
+                            const normalizedAlias = normalize(alias);
+                            if (hdr.includes(normalizedAlias) || normalizedAlias.includes(hdr)) {
+                                headerMap[key] = rawHeaders[i];
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
-
-            console.log('Mapped Headers:', headerMap);
+            
             return headerMap;
         }
 
@@ -996,7 +1015,10 @@
             console.log('Raw Headers from CSV (after potential trim):', rawHeaders);
             const headerMap = mapHeaders(rawHeaders, COLUMN_ALIASES);
 
-            const requiredHeaders = ['GRUPO_OPERACIONAL', 'OPERADOR', 'ESTADO', 'DESCRICAO_PAUSA', 'DATA_INICIO', 'TEMPO_PAUSA', 'INICIO_LIVRE', 'SEGUNDOS_EM_LIVRE'];
+            // Cabeçalhos mínimos necessários para funcionamento do dashboard de pausas
+            // Tornamos opcionais campos como GRUPO_OPERACIONAL, ESTADO, INICIO_LIVRE, SEGUNDOS_EM_LIVRE e DATA_FIM,
+            // pois não são usados nos KPIs/gráficos principais.
+            const requiredHeaders = ['OPERADOR', 'DESCRICAO_PAUSA', 'DATA_INICIO', 'TEMPO_PAUSA'];
             const missingHeaders = requiredHeaders.filter(h => !headerMap[h]);
 
             if (missingHeaders.length > 0) {
@@ -1024,7 +1046,7 @@
                 }
 
                 // A verificação de colunas deve considerar o offset da célula vazia
-                if (values.length !== rawHeaders.length + emptyCellOffset) {
+                if (values.length < rawHeaders.length) {
                     ignoredRowsDetails.push({ lineNumber: currentLineNumber, reason: 'Número de colunas diferente do cabeçalho', columnName: 'Linha Completa', columnValue: line.substring(0, 150) + (line.length > 150 ? '...' : '') });
                     return null;
                 }
@@ -1188,7 +1210,10 @@
                 filteredData = [...originalData];
                 populateFilters();
                 enableDashboardControls(true);
-                document.getElementById('export-html-btn').disabled = false; // Habilitar botão de exportar
+                const exportBtn = document.getElementById('export-html-btn');
+                if (exportBtn) {
+                    exportBtn.disabled = false; // Habilitar botão de exportar
+                }
                 els.main.fileStatus.textContent = `Sucesso! ${originalData.length} registros carregados via API Argus.`;
                 els.main.fileStatus.className = 'text-sm text-green-400 mt-4 font-medium';
                 updateDashboard();
@@ -1209,7 +1234,10 @@
             originalData = [];
             filteredData = [];
             enableDashboardControls(false);
-            document.getElementById('export-html-btn').disabled = true;
+            const exportBtnErr = document.getElementById('export-html-btn');
+            if (exportBtnErr) {
+                exportBtnErr.disabled = true;
+            }
             updateDashboard();
         }
 
@@ -1439,7 +1467,7 @@
             console.log('Raw Headers (Tabulações):', rawHeaders);
             const headerMap = mapHeaders(rawHeaders, columnAliasesCallTabulations);
 
-            const requiredHeaders = ['OPERADOR', 'DATA_HORA_TABULACAO', 'TABULADO_COMO', 'CATEGORIA_TABULACAO'];
+            const requiredHeaders = ['OPERADOR', 'DATA_HORA_TABULACAO', 'TABULADO_COMO'];
             const missingHeaders = requiredHeaders.filter(h => !headerMap[h]);
 
             if (missingHeaders.length > 0) {
@@ -1652,7 +1680,15 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    resizeDelay: 100,
+                    elements: {
+                        bar: { maxBarThickness: 28 }
+                    },
+                    layout: {
+                        padding: { left: 8, right: 8 }
+                    },
                     plugins: {
                         legend: {
                             display: type === 'doughnut',
