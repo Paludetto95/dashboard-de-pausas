@@ -799,11 +799,16 @@
                     clearFilters: document.getElementById('call-tabulations-clear-filters-btn'),
                 },
                 filters: {
-                    operator: document.getElementById('operator-filter'),
+                    operator: document.getElementById('tabulation-operator-filter'),
                     type: document.getElementById('tabulation-type-filter'),
                     category: document.getElementById('tabulation-category-filter'),
                     startDate: document.getElementById('call-tabulations-start-date-filter'),
                     endDate: document.getElementById('call-tabulations-end-date-filter'),
+                },
+                kpis: {
+                    total: document.getElementById('total-tabulations-kpi'),
+                    uniqueOperators: document.getElementById('unique-operators-kpi'),
+                    avgPerDay: document.getElementById('avg-tabulations-day-kpi'),
                 }
             }
         };
@@ -923,6 +928,37 @@
                 return `${parts[0]} ${parts[parts.length - 1]}`;
             }
             return fullName.substring(0, maxLength - 3) + '...';
+        }
+
+        // Abrevia rótulos longos para legendas de gráficos (ex.: tabulações)
+        function abbreviateLabel(text, maxLength = 18) {
+            if (typeof text !== 'string') return text;
+            const t = text.trim();
+            if (t.length <= maxLength) return t;
+            const known = {
+                'CLIENTE NAO SE ENCONTRA': 'CLT. NAO ENCONTRA',
+                'CLIENTE NÃO SE ENCONTRA': 'CLT. NÃO ENCONTRA',
+                'EXCESSO DE TENTATIVA': 'EXC. TENTATIVA',
+                'NAO CONSEGUI REVERTER': 'NAO REVERTEU',
+                'NÃO CONSEGUI REVERTER': 'NÃO REVERTEU',
+                'QUASE FECHEI (RETORNAR)': 'QUASE FECHOU (RET)',
+                'SEM TELEFONES PARA DISCAR': 'SEM TEL. P/ DISCAR',
+                'PROPOSTA ENVIADA': 'PROP. ENVIADA',
+                'LIGACAO MUDA': 'LIG. MUDA',
+                'LIGAÇÃO MUDA': 'LIG. MUDA',
+                'CAIXA POSTAL': 'CX. POSTAL',
+                'CLIENTE DESLIGOU': 'CLT. DESLIGOU',
+                'EM NEGOCIACAO': 'NEGOCIACAO',
+                'EM NEGOCIAÇÃO': 'NEGOCIAÇÃO',
+                'IDADE MAXIMA': 'IDADE MÁX.',
+                'IDADE MÁXIMA': 'IDADE MÁX.'
+            };
+            const upper = t.toUpperCase();
+            if (known[upper]) return known[upper];
+            const words = t.split(/\s+/).filter(Boolean).map(w => w.length > 8 ? (w.slice(0, 5) + '.') : w);
+            let out = words.join(' ');
+            if (out.length > maxLength) out = out.slice(0, maxLength - 1) + '…';
+            return out;
         }
 
         // --- Processamento de Dados ---
@@ -1560,6 +1596,7 @@
         }
 
         function updateCallTabulationsDashboard() {
+            renderCallTabulationKPIs();
             renderCallTabulationCharts();
             if (callTabulationsTable) {
                 callTabulationsTable.destroy();
@@ -1604,6 +1641,28 @@
             }
             if (els.main.kpis.uniqueConsultants) {
                 animateValue(els.main.kpis.uniqueConsultants, parseInt(els.main.kpis.uniqueConsultants.innerText) || 0, uniqueCons.size, 500);
+            }
+        }
+
+        function renderCallTabulationKPIs() {
+            const total = callTabulationsFilteredData.length;
+            const uniqueOps = new Set(callTabulationsFilteredData.map(d => d.OPERADOR)).size;
+            const dayKeys = new Set(callTabulationsFilteredData.map(d => {
+                const dt = d.DATA_HORA_TABULACAO_OBJ || parseDateTimeRobust(d.DATA_HORA_TABULACAO);
+                if (!dt) return null;
+                return new Date(dt).toISOString().slice(0, 10);
+            }).filter(Boolean));
+            const days = dayKeys.size || 1;
+            const avgPerDay = total / days;
+
+            if (els.callTabulations.kpis && els.callTabulations.kpis.total) {
+                animateValue(els.callTabulations.kpis.total, parseInt(els.callTabulations.kpis.total.innerText) || 0, total, 500);
+            }
+            if (els.callTabulations.kpis && els.callTabulations.kpis.uniqueOperators) {
+                animateValue(els.callTabulations.kpis.uniqueOperators, parseInt(els.callTabulations.kpis.uniqueOperators.innerText) || 0, uniqueOps, 500);
+            }
+            if (els.callTabulations.kpis && els.callTabulations.kpis.avgPerDay) {
+                els.callTabulations.kpis.avgPerDay.textContent = avgPerDay.toFixed(1);
             }
         }
 
@@ -1692,8 +1751,8 @@
                     plugins: {
                         legend: {
                             display: type === 'doughnut',
-                            position: 'right',
-                            labels: { color: '#cbd5e1' }
+                            position: type === 'doughnut' ? 'bottom' : 'right',
+                            labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12, padding: 12 }
                         },
                         tooltip: {
                             callbacks: {
@@ -1736,10 +1795,14 @@
                             grid: { color: 'transparent' },
                             ticks: { 
                                 color: '#94a3b8',
-                                maxRotation: 45,
+                                maxRotation: 60,
                                 minRotation: 0,
-                                autoSkip: true,
-                                maxTicksLimit: 10
+                                autoSkip: false,
+                                font: { size: 10 },
+                                callback: (value, index) => {
+                                    const lbl = (config.data && config.data.labels) ? config.data.labels[index] : value;
+                                    return abbreviateLabel(lbl, 22);
+                                }
                             }
                         }
                     } : {}
@@ -1794,6 +1857,7 @@
 
             const typeData = aggregateTabulationData('TABULADO_COMO');
             const typeLabels = Object.keys(typeData).sort();
+            const abbreviatedTypeLabelsForLegend = typeLabels.map(lbl => abbreviateLabel(lbl));
             createChart(
                 'total-tabulations-type-chart',
                 'tabulationTypeTotal',
@@ -1824,11 +1888,11 @@
                 'tabulation-type-distribution-chart',
                 'tabulationTypeDistribution',
                 'doughnut',
-                typeLabels,
+                abbreviatedTypeLabelsForLegend,
                 typeLabels.map(k => typeData[k]),
                 'Distribuição de Tabulações',
                 null,
-                null,
+                typeLabels,
                 'count'
             );
         }
