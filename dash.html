@@ -22,12 +22,36 @@
             --highlight-secondary-purple: #E040FB;
             --status-success: #00C853;
             --status-danger: #D50000;
+            /* Glassmorphism tokens */
+            --glass-bg: rgba(17, 24, 39, 0.28);
+            --glass-border: rgba(255, 255, 255, 0.14);
+            --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.30);
+            --glass-blur: blur(14px) saturate(120%);
+            --glass-radius: 14px;
+            /* Background image overlay */
+            --dashboard-bg-image: url('800x600_como-a-analise-de-dados-pode-enriquecer-a-apresentacao-de-resultados-393-9915.png');
+            --dashboard-bg-opacity: 1; /* opacidade total do overlay composto */
+            --dashboard-bg-darkness: 0.68; /* ~20% mais claro que 0.85 */
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--bg-main);
+            background: linear-gradient(180deg, #0f1117 0%, #1C1C24 40%, #121318 100%);
             color: var(--text-secondary);
+        }
+
+        /* Overlay do background com 80% de opacidade */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            /* Camadas: preto por cima da imagem para escurecer fortemente */
+            background-image: linear-gradient(rgba(0,0,0,var(--dashboard-bg-darkness)), rgba(0,0,0,var(--dashboard-bg-darkness))), var(--dashboard-bg-image);
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+            opacity: var(--dashboard-bg-opacity);
+            pointer-events: none;
         }
 
         /* --- 2. Tipografia e Hierarquia --- */
@@ -61,16 +85,24 @@
 
         /* --- 3. Componentes e Layout --- */
         .card {
-            background-color: var(--bg-container);
-            padding: 2rem;
-            border-radius: 1.5rem;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            padding: 1.25rem;
+            border-radius: var(--glass-radius);
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
         #sidebar .card {
-             background-color: #2D2D3A;
+             background: var(--glass-bg);
+             backdrop-filter: var(--glass-blur);
+             -webkit-backdrop-filter: var(--glass-blur);
+             border: 1px solid var(--glass-border);
+             box-shadow: var(--glass-shadow);
              text-align: center;
         }
 
@@ -146,6 +178,76 @@
         body.sidebar-open #sidebar-toggle-btn .close-icon {
             display: block;
         }
+
+        /* --- Visual compacto do menu lateral (apenas ícones), inspirado na referência --- */
+        #sidebar { width: 20rem; }
+        body.sidebar-open #sidebar { width: 20rem; }
+        body.sidebar-open.sidebar-collapsed #sidebar { width: 6rem; }
+
+        /* Ajusta deslocamento do conteúdo e do botão quando colapsado */
+        @media (min-width: 1024px) {
+            body.sidebar-open.sidebar-collapsed #main-content { margin-left: 6rem; }
+        }
+        body.sidebar-open.sidebar-collapsed #sidebar-toggle-btn { left: 6.5rem; }
+
+        /* Collapsed: esconde textos e conteúdo das seções, centra os ícones */
+        body.sidebar-collapsed #sidebar .collapsible-content { display: none; }
+        body.sidebar-collapsed #sidebar .collapsible-header span { display: none; }
+        body.sidebar-collapsed #sidebar .collapsible-header { justify-content: center; padding: 0.75rem; }
+        body.sidebar-collapsed #sidebar .collapsible-header svg.h-6.w-6 { height: 22px; width: 22px; }
+        body.sidebar-collapsed #sidebar .card.collapsible-card { border-radius: 12px; margin: 6px 0; }
+
+        /* Pílula e realce para itens do menu */
+        #sidebar .collapsible-header { border-radius: 10px; }
+        #sidebar .collapsible-header:hover { background-color: #1a2236; }
+
+        /* --- Menu da referência (expandido e compacto) --- */
+        #sidebar .sidebar-search {
+            margin: 0.5rem 0 1rem 0;
+            background-color: #131a2a;
+            border: 1px solid #2a344a;
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            display: flex; align-items: center; gap: 0.5rem;
+            color: #94a3b8;
+        }
+        #sidebar .sidebar-search input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #cbd5e1;
+            width: 100%;
+        }
+        #sidebar .menu-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+        #sidebar .menu-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        #sidebar .menu-item:hover { background-color: #1a2236; }
+        #sidebar .menu-item.active { background-color: #eef2ff; color: #0f172a; }
+        #sidebar .menu-item .icon { width: 20px; height: 20px; }
+
+        /* Compacto: só ícones, centralizados */
+        body.sidebar-collapsed #sidebar .sidebar-search { display: none; }
+        body.sidebar-collapsed #sidebar .menu-item { justify-content: center; }
+        body.sidebar-collapsed #sidebar .menu-item span { display: none; }
+        body.sidebar-collapsed #sidebar .menu-item { padding: 10px; }
+
+        /* Topbar interna da sidebar (marca e botão de recolher) */
+        .sidebar-topbar { padding: 0.5rem 0.25rem; }
+        .sidebar-brand { color: #e2e8f0; font-weight: 600; letter-spacing: 0.02em; }
+        .sidebar-icon-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            height: 36px; width: 36px; border-radius: 10px;
+            background-color: #2D2D3A; color: #cbd5e1;
+            border: 1px solid #444459;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .sidebar-icon-btn:hover { background-color: #404052; transform: translateY(-1px); }
         
         .tab-button.active {
             background-color: var(--highlight-primary) !important;
@@ -156,10 +258,11 @@
         /* --- Elementos Específicos do Dashboard --- */
         .chart-container {
             position: relative;
-            height: 300px;
             width: 100%;
+            height: 340px; /* base */
         }
-        @media (min-width: 768px) { .chart-container { height: 350px; } }
+        @media (min-width: 768px) { .chart-container { height: 360px; } }
+        .chart-container canvas { height: 100% !important; width: 100% !important; display: block; }
 
         .form-input-dark {
             display: block;
@@ -187,12 +290,17 @@
         .modal-overlay {
             position: fixed; inset: 0px; display: flex;
             justify-content: center; align-items: center;
-            z-index: 1000; background-color: rgba(0, 0, 0, 0.8);
+            z-index: 1000; background-color: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
             transition: opacity 0.3s ease-in-out;
         }
         .modal-content {
-            background-color: var(--bg-container); padding: 2rem;
-            border-radius: 1rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            background: var(--glass-bg); padding: 1.25rem;
+            border-radius: var(--glass-radius);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
             max-width: 42rem; width: 90%; max-height: 80%;
             overflow-y: auto; position: relative;
         }
@@ -220,17 +328,27 @@
 
         /* --- Estilos da Tabela (Tabulator) --- */
         .tabulator {
-            border: none; background-color:#252532;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: var(--glass-shadow);
         }
         .tabulator .tabulator-header {
-            background-color: var(--bg-container) !important;
-            border-bottom: 1px solid #4A4A58 !important;
+            background: rgba(30, 41, 59, 0.35) !important;
+            backdrop-filter: blur(6px) !important;
+            border-bottom: 1px solid var(--glass-border) !important;
         }
         .tabulator .tabulator-col, .tabulator .tabulator-col-content {
              background-color: transparent !important;
+             /* Padroniza overflow de títulos/headers */
+             white-space: nowrap;
+             text-overflow: ellipsis;
+             overflow: hidden;
         }
         .tabulator .tabulator-col-title {
             color: var(--text-secondary) !important; font-weight: 500;
+            white-space: nowrap; text-overflow: ellipsis; overflow: hidden;
         }
         .tabulator .tabulator-header .tabulator-header-filter input {
             background-color: #1C1C24 !important; color: var(--text-main) !important;
@@ -242,6 +360,9 @@
         }
         .tabulator .tabulator-tableHolder {
             background-color: #1C1C24 !important;
+            /* Scroll consistente quando conteúdo excede o container */
+            overflow: auto !important;
+            overscroll-behavior: contain;
         }
         .tabulator .tabulator-placeholder span { color: white !important; }
         .tabulator .tabulator-row {
@@ -254,6 +375,10 @@
             color: var(--text-main) !important;
             border-right: 1px solid #2D2D3A !important;
             padding: 12px 10px !important;
+            /* Padroniza overflow das células */
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
         }
         .tabulator .tabulator-cell:last-of-type { border-right: none !important; }
         
@@ -272,51 +397,58 @@
         
         /* Ajusta o fundo da sidebar para se destacar mais */
         #sidebar {
-            background-color: #1F1F2B; /* Um tom mais escuro */
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-right: 1px solid var(--glass-border);
         }
         
         /* Remove o padding padrão do card e ajusta a aparência */
         #sidebar .card.collapsible-card {
             padding: 0;
-            background-color: #2D2D3A;
+            background: transparent;
             overflow: hidden; /* Essencial para a animação de altura */
             width: 100%;
         }
 
-        /* Estiliza o cabeçalho clicável da seção */
+        /* Cabeçalho da seção: agora não é interativo (sem expandir/recolher) */
         .collapsible-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 1.25rem; /* Espaçamento interno do cabeçalho */
-            cursor: pointer;
+            padding: 0.85rem 1rem; /* estilo mais compacto */
+            cursor: default;
+            pointer-events: none; /* desativa clique para evitar comportamento de accordion */
             width: 100%;
-            transition: background-color 0.2s ease;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+            border-radius: 10px;
         }
 
         .collapsible-header:hover {
-            background-color: #3a3a4a;
+            background-color: rgba(26, 34, 54, 0.35);
+            backdrop-filter: blur(6px);
         }
         
-        /* Estiliza o conteúdo que será mostrado/escondido */
+        /* Conteúdo das seções: sempre visível (sem comportamento de colapso) */
         .collapsible-content {
-            padding: 0 1.25rem 1.25rem 1.25rem; /* Padding apenas no conteúdo */
-            max-height: 1000px; /* Altura máxima grande para caber o conteúdo */
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+            padding: 0 1.25rem 1.25rem 1.25rem;
+            max-height: none;
+            overflow: visible;
+            transition: none;
         }
         
-        /* Estado recolhido: esconde o conteúdo com uma animação suave */
+        /* Estado recolhido (sem efeito) */
         .collapsible-content.collapsed {
-            max-height: 0;
+            max-height: none;
             padding-top: 0;
-            padding-bottom: 0;
+            padding-bottom: 1.25rem;
         }
 
         /* Ícone de seta */
         .chevron-icon {
             transition: transform 0.3s ease;
             color: var(--text-secondary);
+            display: none; /* oculta seta para não sugerir expandir/recolher */
         }
 
         /* Estado girado do ícone */
@@ -324,14 +456,160 @@
             transform: rotate(180deg);
         }
 
+        /* --- Janela flutuante de filtros --- */
+        #filters-float-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(2px);
+            z-index: 60;
+            display: none;
+        }
+        #filters-float-panel {
+            position: fixed;
+            top: 12%;
+            left: 18%;
+            width: 480px;
+            min-width: 340px;
+            height: auto; /* altura automática para remover scroll interno */
+            min-height: 280px;
+            /* Glassmorphism: painel translúcido e com blur */
+            background: rgba(17, 24, 39, 0.20); /* super leve, quase sem fundo */
+            backdrop-filter: blur(12px) saturate(120%);
+            -webkit-backdrop-filter: blur(12px) saturate(120%);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            border-radius: 16px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+            z-index: 70;
+            display: none;
+        }
+        #filters-float-panel .floating-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0.9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: transparent; /* sem fundo pesado */
+            cursor: move;
+            user-select: none;
+        }
+        #filters-float-panel .floating-title { font-weight: 600; letter-spacing: .01em; }
+        #filters-float-panel .floating-actions { display: flex; gap: .5rem; }
+        .floating-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: 10px;
+            background: rgba(255,255,255,0.08);
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.16);
+        }
+        #filters-float-panel .floating-content {
+            position: static; /* conteúdo segue o fluxo normal abaixo do cabeçalho */
+            padding: 0.75rem 0.9rem;
+            overflow: visible; /* sem scroll interno */
+        }
+        #filters-float-panel .floating-resizer {
+            position: absolute; right: 6px; bottom: 6px;
+            width: 16px; height: 16px;
+            border-right: 2px solid rgba(255,255,255,0.18);
+            border-bottom: 2px solid rgba(255,255,255,0.18);
+            cursor: nwse-resize;
+        }
+        /* Dentro da janela flutuante, reabilitar interação do cabeçalho da card p/ drag */
+        #filters-float-panel .collapsible-header { pointer-events: auto; cursor: default; }
+        /* Minimalismo dentro do painel: cards sem fundo pesado */
+        #filters-float-panel .card { background: transparent; box-shadow: none; border: none; padding: 0.5rem; }
+        #filters-float-panel .collapsible-header { background: transparent; padding: 0 0 0.5rem 0; border: none; }
+        #filters-float-panel .collapsible-content { padding: 0; }
+        /* Estado minimizado: mostra apenas o cabeçalho */
+        #filters-float-panel.minimized { height: 56px; width: 360px; }
+        #filters-float-panel.minimized .floating-content { display: none; }
+        #filters-float-panel.minimized .floating-resizer { display: none; }
+
+        /* --- Menu rápido flutuante minimalista --- */
+        .quick-menu {
+            position: fixed;
+            right: 16px; bottom: 16px;
+            z-index: 55;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        .quick-main {
+            width: 48px; height: 48px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 30% 30%, rgba(37,99,235,0.95), rgba(59,130,246,0.85));
+            color: #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.22);
+            cursor: pointer; transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .quick-main:hover { transform: scale(1.05); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
+        .quick-items { display: none; flex-direction: column; align-items: center; gap: 10px; }
+        .quick-menu.open .quick-items { display: flex; }
+        .quick-item {
+            width: 44px; height: 44px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.85);
+            color: #0f172a; box-shadow: 0 6px 14px rgba(0,0,0,0.20);
+            border: 1px solid rgba(255,255,255,0.28);
+            cursor: pointer; transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .quick-item:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
+        .quick-tooltip {
+            position: absolute; right: 56px;
+            background: rgba(17,24,39,0.80); color: #e2e8f0;
+            padding: 6px 8px; border-radius: 8px;
+            font-size: 12px; white-space: nowrap; pointer-events: none;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.16);
+            opacity: 0; transform: translateX(6px); transition: opacity .15s ease, transform .15s ease;
+        }
+        .quick-item:hover .quick-tooltip { opacity: 1; transform: translateX(0); }
+
+        @media (max-width: 768px) {
+            .quick-menu { right: 12px; bottom: 12px; gap: 8px; }
+            .quick-main { width: 44px; height: 44px; }
+            .quick-item { width: 40px; height: 40px; }
+            .quick-tooltip { right: 52px; }
+        }
+
+        /* Oculta botões flutuantes antigos (substituídos pelo menu rápido) */
+        #floating-ai-btn, #floating-filter-btn { display: none !important; }
+        /* --- Responsivo para Mobile --- */
+        @media (max-width: 768px) {
+            #filters-float-panel {
+                top: 12px;
+                left: 12px;
+                width: calc(100% - 24px);
+                min-width: 300px;
+                height: auto; /* ocupa o necessário sem scroll interno */
+                border-radius: 14px;
+            }
+            #filters-float-panel .floating-header {
+                padding: 0.65rem 0.8rem;
+            }
+            #filters-float-panel .floating-content {
+                padding: 0.65rem 0.8rem;
+            }
+            #filters-float-panel .floating-resizer { display: none; }
+            #filters-float-panel.minimized {
+                width: calc(100% - 24px);
+                height: 56px;
+            }
+            /* Ajustes gerais para compactar cards e gráficos no mobile */
+            .card { padding: 0.75rem; }
+            .chart-container { height: 300px; }
+            .chart-container canvas { height: 100% !important; }
+        }
+
         /* === ESTILOS PARA O DASHBOARD DE TABULAÇÕES === */
         .kpi-card {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border: 1px solid #475569;
-            border-radius: 12px;
-            padding: 1.5rem;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--glass-radius);
+            padding: 1.25rem;
             text-align: center;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            box-shadow: var(--glass-shadow);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .kpi-card:hover {
@@ -353,12 +631,14 @@
             line-height: 1;
         }
         .chart-card {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            border: 1px solid #475569;
-            border-radius: 12px;
-            padding: 1.5rem;
-            overflow: hidden; /* evita esticar para fora do card */
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--glass-radius);
+            padding: 1.25rem;
+            /* Removido overflow: hidden para evitar corte da legenda em gráficos altos */
+            box-shadow: var(--glass-shadow);
         }
         .chart-title {
             font-size: 1.125rem;
@@ -369,11 +649,11 @@
         }
         .chart-container {
             position: relative;
-            height: 300px;
             width: 100%;
+            height: 360px;
         }
-        /* Limita altura de canvas para evitar esticamento exagerado */
-        .chart-card canvas { max-height: 320px; }
+        /* Canvas deve preencher o container para manter alinhamento */
+        .chart-container canvas { height: 100% !important; width: 100% !important; display: block; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -393,11 +673,35 @@
 
     <!-- INÍCIO DO MENU LATERAL CORRIGIDO -->
     <aside id="sidebar" class="fixed top-0 h-full w-80 bg-gray-900 z-40 overflow-y-auto p-4">
-        
-        <div class="flex flex-col gap-4 mt-8 lg:mt-0">
+        <!-- Barra superior interna da sidebar: marca e botão de recolher -->
+        <div class="sidebar-topbar flex items-center justify-between">
+            <span class="sidebar-brand">Code4education</span>
+            <button id="sidebar-collapse-btn" class="sidebar-icon-btn" title="Recolher/Expandir menu">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16M10 6l-4 6 4 6" />
+                </svg>
+            </button>
+            <button id="sidebar-filter-btn" class="sidebar-icon-btn ml-2" title="Abrir Filtros">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+            </button>
+        </div>
+        <div class="sidebar-inner">
+            <ul class="menu-list">
+                <li id="menu-upload-pauses-btn" class="menu-item active">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v12H4zM12 8l-3 3h2v3h2v-3h2z"/></svg>
+                    <span>Upload Pausas</span>
+                </li>
+                <li id="menu-upload-tabs-btn" class="menu-item">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v12H4zM12 8l-3 3h2v3h2v-3h2z"/></svg>
+                    <span>Upload Tabulações</span>
+                </li>
+            </ul>
+            <div id="sidebar-functional-blocks" class="flex flex-col gap-4 mt-2 lg:mt-0 hidden">
             <!-- PAUSES CONTROLS -->
             <div id="pauses-sidebar-content" class="flex flex-col gap-4">
-                <div class="card collapsible-card">
+                <div id="pauses-upload-card" class="card collapsible-card">
                     <div class="collapsible-header">
                         <h2 class="text-2xl font-semibold text-slate-100 flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -425,7 +729,7 @@
                     </div>
                 </div>
 
-                <div class="card collapsible-card">
+                <div id="pauses-filters-card" class="card collapsible-card">
                     <div class="collapsible-header">
                         <h2 class="text-2xl font-semibold text-slate-100 flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -452,16 +756,13 @@
                                 </select>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label for="supervisor-filter" class="text-sm font-medium text-slate-300">Supervisor:</label>
-                                <select id="supervisor-filter" class="form-input-dark w-full" disabled>
-                                    <option value="">Todos</option>
-                                </select>
+                                <label for="start-date-filter" class="text-sm font-medium text-slate-300">Data Início:</label>
+                                <input type="date" id="start-date-filter" class="form-input-dark w-full" disabled>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label for="date-filter" class="text-sm font-medium text-slate-300">Data:</label>
-                                <input type="date" id="date-filter" class="form-input-dark w-full" disabled>
+                                <label for="end-date-filter" class="text-sm font-medium text-slate-300">Data Fim:</label>
+                                <input type="date" id="end-date-filter" class="form-input-dark w-full" disabled>
                             </div>
-                            <button id="apply-filters-btn" class="btn-dark w-full" disabled>Aplicar Filtros</button>
                         </div>
                     </div>
                 </div>
@@ -496,7 +797,7 @@
                     </div>
                 </div>
 
-                <div class="card collapsible-card">
+                <div id="tabulations-filters-card" class="card collapsible-card">
                     <div class="collapsible-header">
                         <h2 class="text-2xl font-semibold text-slate-100 flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -677,7 +978,29 @@
     </div>
 
 
-</main>
+    </main>
+
+    <!-- Overlay e Janela Flutuante de Filtros -->
+    <div id="filters-float-overlay"></div>
+    <div id="filters-float-panel" aria-modal="true" role="dialog">
+        <div class="floating-header">
+            <span class="floating-title">Filtros</span>
+            <div class="floating-actions">
+                <button id="filters-float-minimize-btn" class="floating-btn" title="Minimizar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
+                    </svg>
+                </button>
+                <button id="filters-float-close-btn" class="floating-btn" title="Fechar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="filters-float-content" class="floating-content"></div>
+        <div class="floating-resizer" aria-hidden="true"></div>
+    </div>
 
     <div id="ignored-rows-modal-overlay" class="modal-overlay hidden">
         <div class="modal-content">
@@ -1605,13 +1928,14 @@
                 callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
                     data: callTabulationsFilteredData,
                     height: "500px",
-                    layout: "fitData",
+                    layout: "fitColumns",
+                    tooltips: true,
                     placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
                     columns: [
-                        { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 150 },
-                        { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input" },
-                        { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input" },
-                        { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                        { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 160, tooltip: true },
+                        { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input", width: 220, tooltip: true },
+                        { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input", width: 220, tooltip: true },
+                        { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()), tooltip: (cell) => formatDateTimeDisplay(cell.getValue()) },
                     ],
                     locale: "pt-br",
                     langs: {
@@ -1725,6 +2049,8 @@
 
             const backgroundColor = type === 'doughnut' ? chartColors.doughnut : color || chartColors.barDefault;
 
+            // Altura do canvas é controlada pelo container via CSS; evitar setar inline
+
             const config = {
                 type: type,
                 data: {
@@ -1739,20 +2065,21 @@
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    aspectRatio: 2,
+                    maintainAspectRatio: false,
                     resizeDelay: 100,
                     elements: {
                         bar: { maxBarThickness: 28 }
                     },
                     layout: {
-                        padding: { left: 8, right: 8 }
+                        padding: { left: 8, right: 8, top: 4, bottom: 8 }
                     },
+                    // Melhor proporção para doughnut com legenda inferior
+                    cutout: (type === 'doughnut') ? '62%' : undefined,
                     plugins: {
                         legend: {
                             display: type === 'doughnut',
                             position: type === 'doughnut' ? 'bottom' : 'right',
-                            labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12, padding: 12 }
+                            labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12, padding: 10 }
                         },
                         tooltip: {
                             callbacks: {
@@ -1795,9 +2122,9 @@
                             grid: { color: 'transparent' },
                             ticks: { 
                                 color: '#94a3b8',
-                                maxRotation: 60,
+                                maxRotation: 0,
                                 minRotation: 0,
-                                autoSkip: false,
+                                autoSkip: true,
                                 font: { size: 10 },
                                 callback: (value, index) => {
                                     const lbl = (config.data && config.data.labels) ? config.data.labels[index] : value;
@@ -2052,6 +2379,7 @@
         function setupSidebar() {
             const toggleBtn = document.getElementById('sidebar-toggle-btn');
             const overlay = document.getElementById('sidebar-overlay');
+            const collapseBtn = document.getElementById('sidebar-collapse-btn');
             const body = document.body;
 
             const toggleSidebar = () => {
@@ -2064,6 +2392,26 @@
             if (overlay) {
                 overlay.addEventListener('click', toggleSidebar);
             }
+
+            // Alterna modo colapsado (visual com ícones)
+            if (collapseBtn) {
+                collapseBtn.addEventListener('click', () => {
+                    body.classList.toggle('sidebar-collapsed');
+                });
+            }
+
+            const setActiveMenuById = (id) => {
+                const items = document.querySelectorAll('#sidebar .menu-item');
+                items.forEach(i => i.classList.remove('active'));
+                const el = document.getElementById(id);
+                if (el) el.classList.add('active');
+            };
+
+            const mup = document.getElementById('menu-upload-pauses-btn');
+            if (mup) mup.addEventListener('click', () => { if (els && els.main && els.main.fileInput) els.main.fileInput.click(); setActiveMenuById('menu-upload-pauses-btn'); });
+
+            const mut = document.getElementById('menu-upload-tabs-btn');
+            if (mut) mut.addEventListener('click', () => { if (els && els.callTabulations && els.callTabulations.fileInput) els.callTabulations.fileInput.click(); setActiveMenuById('menu-upload-tabs-btn'); });
         }
 
         // --- Função para controlar a Sidebar Recolhível ---
@@ -2092,6 +2440,159 @@
                 // Inicia com todos os painéis fechados
                 header.nextElementSibling.classList.add('collapsed');
             });
+        }
+
+        // --- Janela Flutuante de Filtros ---
+        function setupFloatingFiltersPanel() {
+            const overlay = document.getElementById('filters-float-overlay');
+            const panel = document.getElementById('filters-float-panel');
+            const content = document.getElementById('filters-float-content');
+            const closeBtn = document.getElementById('filters-float-close-btn');
+            const minimizeBtn = document.getElementById('filters-float-minimize-btn');
+            const filterBtn = document.getElementById('sidebar-filter-btn');
+            const floatingFilterBtn = document.getElementById('floating-filter-btn');
+            const resizer = panel.querySelector('.floating-resizer');
+            const header = panel.querySelector('.floating-header');
+
+            let currentCard = null;
+            let placeholder = null;
+
+            function showPanelForCurrentTab() {
+                const isPauses = !els.main.pausesDashboardContent.classList.contains('hidden');
+                const card = document.getElementById(isPauses ? 'pauses-filters-card' : 'tabulations-filters-card');
+                if (!card || !content) return;
+                // cria um marcador para restaurar posição
+                placeholder = document.createElement('div');
+                placeholder.style.display = 'none';
+                card.parentNode.insertBefore(placeholder, card);
+                content.appendChild(card);
+                currentCard = card;
+                panel.style.display = 'block';
+                panel.classList.remove('minimized');
+            }
+
+            function closePanel() {
+                if (currentCard && placeholder) {
+                    placeholder.parentNode.insertBefore(currentCard, placeholder);
+                    placeholder.remove();
+                    placeholder = null;
+                    currentCard = null;
+                }
+                panel.style.display = 'none';
+            }
+
+            // Drag behavior
+            (function enableDrag() {
+                let isDragging = false;
+                let startX = 0, startY = 0;
+                let panelX = 0, panelY = 0;
+                header.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    const rect = panel.getBoundingClientRect();
+                    panelX = rect.left;
+                    panelY = rect.top;
+                    document.body.style.userSelect = 'none';
+                });
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    panel.style.left = Math.max(0, panelX + dx) + 'px';
+                    panel.style.top = Math.max(0, panelY + dy) + 'px';
+                });
+                window.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        document.body.style.userSelect = '';
+                    }
+                });
+            })();
+
+            // Resize behavior
+            (function enableResize() {
+                let isResizing = false;
+                let startX = 0, startY = 0;
+                let startW = 0, startH = 0;
+                resizer.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    const rect = panel.getBoundingClientRect();
+                    startW = rect.width;
+                    startH = rect.height;
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                window.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    const newW = Math.max(360, startW + dx);
+                    const newH = Math.max(280, startH + dy);
+                    panel.style.width = newW + 'px';
+                    panel.style.height = newH + 'px';
+                });
+                window.addEventListener('mouseup', () => { isResizing = false; });
+            })();
+
+            // Wire buttons (sem overlay; toggle abre/fecha)
+            const togglePanel = () => {
+                if (panel.style.display === 'block') { closePanel(); } else { showPanelForCurrentTab(); }
+            };
+            if (filterBtn) { filterBtn.addEventListener('click', togglePanel); }
+            if (floatingFilterBtn) { floatingFilterBtn.addEventListener('click', togglePanel); }
+            if (closeBtn) { closeBtn.addEventListener('click', closePanel); }
+            if (minimizeBtn) {
+                minimizeBtn.addEventListener('click', () => {
+                    if (panel.style.display !== 'block') { showPanelForCurrentTab(); }
+                    panel.classList.toggle('minimized');
+                });
+            }
+        }
+
+        // --- Menu Rápido Flutuante ---
+        function setupQuickMenu() {
+            const menu = document.getElementById('quick-menu');
+            const mainBtn = document.getElementById('quick-main-btn');
+            const mainIcon = document.getElementById('quick-main-icon');
+            const filterBtn = document.getElementById('quick-filter-btn');
+            const aiBtn = document.getElementById('quick-ai-btn');
+            const legacyFilterBtn = document.getElementById('floating-filter-btn');
+            const legacyAiBtn = document.getElementById('floating-ai-btn');
+
+            if (!menu || !mainBtn) return;
+
+            function setIcon(open) {
+                if (!mainIcon) return;
+                mainIcon.innerHTML = open
+                    ? '<path d="M5 5l14 14M19 5L5 19"/>'
+                    : '<path d="M12 5v14M5 12h14"/>';
+            }
+
+            mainBtn.addEventListener('click', () => {
+                const isOpen = menu.classList.toggle('open');
+                setIcon(isOpen);
+            });
+
+            if (filterBtn) {
+                filterBtn.addEventListener('click', () => {
+                    // Reusa o handler original do botão de filtros
+                    if (legacyFilterBtn) legacyFilterBtn.click();
+                });
+            }
+
+            if (aiBtn) {
+                aiBtn.addEventListener('click', () => {
+                    // Chama a função existente de análise IA
+                    if (typeof generateAIAnalysis === 'function') {
+                        generateAIAnalysis();
+                    } else if (legacyAiBtn) {
+                        legacyAiBtn.click();
+                    }
+                });
+            }
         }
         
         function showDashboard(dashboardType) {
@@ -2128,6 +2629,8 @@
         function init() {
             setupSidebar();
             setupCollapsibleSidebar();
+            setupFloatingFiltersPanel();
+            setupQuickMenu();
 
             // Inicializa a tabela de pausas
             tabulatorTable = new Tabulator("#pause-detail-table", {
@@ -2386,9 +2889,30 @@
         // --- Inicialização da Aplicação ---
         document.addEventListener('DOMContentLoaded', init);
     </script>
-    <button id="floating-ai-btn" class="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out transform hover:scale-110">
+        <!-- Menu rápido flutuante minimalista -->
+        <div id="quick-menu" class="quick-menu">
+            <button id="quick-main-btn" class="quick-main" aria-label="Menu rápido">
+                <svg id="quick-main-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <div class="quick-items">
+                <button id="quick-filter-btn" class="quick-item" aria-label="Abrir filtros">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18M7 12h10M10 20h4"/></svg>
+                    <span class="quick-tooltip">Filtros</span>
+                </button>
+                <button id="quick-ai-btn" class="quick-item" aria-label="Análise IA">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09A1.65 1.65 0 009 3.09V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.09a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09A1.65 1.65 0 0019.91 11H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    <span class="quick-tooltip">Análise IA</span>
+                </button>
+            </div>
+        </div>
+        <button id="floating-ai-btn" class="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 p-4 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-all duration-300 ease-in-out transform hover:scale-110">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+    </button>
+        <button id="floating-filter-btn" class="fixed bottom-4 right-20 md:bottom-6 md:right-24 z-50 p-4 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-all duration-300 ease-in-out transform hover:scale-110" title="Filtros">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
         </svg>
     </button>
 </body>
