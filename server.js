@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const handler = require('./api/dados-argus.mjs').default;
+const geminiKeyHandler = require('./api/gemini-key.js');
 
 const app = express();
 const PORT = 3000; // A porta em que nosso proxy vai rodar
@@ -104,3 +105,7 @@ app.listen(PORT, () => {
     console.log('Seu painel HTML agora deve fazer requisições para este endereço.');
     console.log(`Servindo arquivos estáticos de: ${__dirname}`);
 });
+
+// Endpoint para obter a chave da API Gemini
+app.options('/api/gemini-key', geminiKeyHandler);
+app.get('/api/gemini-key', geminiKeyHandler);

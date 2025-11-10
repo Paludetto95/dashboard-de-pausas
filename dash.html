@@ -2404,25 +2404,52 @@
                 if (!window.geminiApiKey) {
                     const response = await fetch('/api/gemini-key');
                     if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'Falha ao obter a chave da API Gemini do servidor.');
+                        const errorText = await response.text();
+                        let errorJson = {};
+                        try { errorJson = JSON.parse(errorText); } catch {}
+                        throw new Error(errorJson.error || `Falha ao obter a chave da API Gemini do servidor. (${response.status})`);
                     }
-                    const data = await response.json();
-                    window.geminiApiKey = data.apiKey;
+                    const keyText = await response.text();
+                    let keyJson = {};
+                    try { keyJson = JSON.parse(keyText); } catch {
+                        throw new Error('Resposta inválida do servidor de chave (não-JSON).');
+                    }
+                    window.geminiApiKey = keyJson.apiKey;
                 }
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${window.geminiApiKey}`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error?.message || `Erro API IA: ${response.status}`);
+                const modelsToTry = ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', 'gemini-1.5-flash'];
+                let aiText = '';
+                let lastError = null;
+                for (const model of modelsToTry) {
+                    try {
+                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${window.geminiApiKey}`;
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                        });
+                        const respText = await response.text();
+                        if (!response.ok) {
+                            let errorJson = {};
+                            try { errorJson = JSON.parse(respText); } catch {}
+                            const msg = errorJson.error?.message || `Erro API IA (${model}): ${response.status} (${respText.slice(0,120)})`;
+                            throw new Error(msg);
+                        }
+                        let dataObj = null;
+                        try { dataObj = JSON.parse(respText); } catch {
+                            throw new Error(`Resposta não-JSON do modelo (${model}). Trecho: ${respText.slice(0,120)}`);
+                        }
+                        aiText = dataObj.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                        if (aiText) {
+                            break;
+                        } else {
+                            lastError = new Error('Resposta da IA vazia ou malformada.');
+                        }
+                    } catch (err) {
+                        lastError = err;
+                        // tenta próximo modelo
+                    }
                 }
-                const data = await response.json();
-                const aiText = data.candidates[0]?.content?.parts[0]?.text;
-                if (!aiText) throw new Error('Resposta da IA vazia ou malformada.');
+                if (!aiText) throw lastError || new Error('Falha ao gerar análise. Modelos indisponíveis.');
                 const htmlText = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
                 if (els.main.ai.content) {
                     els.main.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;
