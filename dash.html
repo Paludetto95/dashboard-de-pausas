@@ -426,6 +426,28 @@
             background-color: #4A4A58; border-radius: 5px; border: 2px solid #1C1C24;
         }
 
+        /* Efeito de escurecimento/blur para gráficos quando há seleção */
+        canvas.chart-blur-darken {
+            filter: blur(1.6px) brightness(0.72);
+        }
+
+        /* Tooltip HTML acima do overlay */
+        .chart-tooltip {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10; /* acima do overlay (z-index:2) */
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #e5e7eb;
+            font-size: 12px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.45);
+            transform: translate(-50%, -110%);
+            white-space: nowrap;
+        }
+        .chart-tooltip .title { font-weight: 700; color: #e2e8f0; margin-bottom: 2px; }
+        .chart-tooltip .body { color: #cbd5e1; }
+
         /* === NOVAS REGRAS PARA SIDEBAR RECOLHÍVEL E ESTILO REFINADO === */
         
         /* Ajusta o fundo da sidebar para se destacar mais */
@@ -2078,20 +2100,33 @@
             return avgs;
         }
         
-        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = 'rgba(255,255,255,0.9)') {
+        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = '#F59E0B') {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             if (charts[chartInstanceVar]) charts[chartInstanceVar].destroy();
 
             const chartColors = {
-                'doughnut': ['#60A5FA', '#4ADE80', '#FACC15', '#F87171', '#A78BFA', '#F472B6', '#9CA3AF'],
-                'barDefault': 'rgba(96, 165, 250, 0.7)',
+                'barDefault': '#2563EB',
             };
 
-            let backgroundColor = type === 'doughnut' ? chartColors.doughnut : color || chartColors.barDefault;
-            if (type === 'bar' && Array.isArray(labels) && labels.length > 0) {
-                if (highlightIndex !== null && highlightIndex >= 0) {
+            const generateWheelColors = (n) => {
+                const count = Math.max(1, n || 0);
+                const step = 360 / count;
+                const colors = [];
+                for (let i = 0; i < count; i++) {
+                    const hue = Math.round((i * step) % 360);
+                    colors.push(`hsl(${hue}, 95%, 45%)`);
+                }
+                return colors;
+            };
+
+            let backgroundColor;
+            if (type === 'doughnut') {
+                backgroundColor = generateWheelColors(Array.isArray(labels) ? labels.length : 0);
+            } else {
+                backgroundColor = color || chartColors.barDefault;
+                if (Array.isArray(labels) && labels.length > 0 && highlightIndex !== null && highlightIndex >= 0) {
                     backgroundColor = labels.map((_, idx) => idx === highlightIndex ? highlightColor : (color || chartColors.barDefault));
                 }
             }
@@ -2107,7 +2142,8 @@
                         data: data,
                         backgroundColor: backgroundColor,
                         borderColor: type === 'doughnut' ? '#252532' : 'transparent',
-                        borderWidth: type === 'doughnut' ? 0.6 : 1
+                        borderWidth: type === 'doughnut' ? 1.2 : 1,
+                        hoverOffset: type === 'doughnut' ? 8 : 0
                     }]
                 },
                 options: {
@@ -2129,6 +2165,7 @@
                             labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12, padding: 10 }
                         },
                         tooltip: {
+                            enabled: (chartInstanceVar === 'consultantTotal') ? false : true,
                             callbacks: {
                                 title: function(tooltipItems) {
                                     if (fullLabels && tooltipItems.length > 0) {
@@ -2156,6 +2193,32 @@
                                         return `${label}: ${val}`;
                                     }
                                 }
+                            },
+                            external: function(context) {
+                                // Apenas para o gráfico de consultor: renderiza o tooltip como HTML acima do overlay
+                                if (chartInstanceVar !== 'consultantTotal') return;
+                                const { chart, tooltip } = context;
+                                let tooltipEl = chart.canvas.parentNode.querySelector('.chart-tooltip');
+                                if (!tooltipEl) {
+                                    tooltipEl = document.createElement('div');
+                                    tooltipEl.className = 'chart-tooltip';
+                                    chart.canvas.parentNode.style.position = 'relative';
+                                    chart.canvas.parentNode.appendChild(tooltipEl);
+                                }
+                                if (tooltip.opacity === 0) {
+                                    tooltipEl.style.opacity = '0';
+                                    return;
+                                }
+                                const title = (tooltip.title && tooltip.title.length) ? tooltip.title.join(' ') : '';
+                                const body = tooltip.body ? tooltip.body.map(b => b.lines).flat().join('\n') : '';
+                                tooltipEl.innerHTML = `<div class="title">${title}</div><div class="body">${body}</div>`;
+                                const canvasRect = chart.canvas.getBoundingClientRect();
+                                const parentRect = chart.canvas.parentNode.getBoundingClientRect();
+                                const left = tooltip.caretX + (canvasRect.left - parentRect.left);
+                                const top = tooltip.caretY + (canvasRect.top - parentRect.top);
+                                tooltipEl.style.left = left + 'px';
+                                tooltipEl.style.top = top + 'px';
+                                tooltipEl.style.opacity = '1';
                             }
                         }
                     },
@@ -2194,7 +2257,114 @@
                 }
             };
 
-            charts[chartInstanceVar] = new Chart(ctx, config);
+            const chart = new Chart(ctx, config);
+            charts[chartInstanceVar] = chart;
+
+            // Efeito de blur/escurecimento para gráfico de consultores com seleção ativa
+            if (chartInstanceVar === 'consultantTotal') {
+                let overlayCanvas = document.getElementById(`${canvasId}-overlay`);
+                const ensureOverlay = () => {
+                    if (!overlayCanvas) {
+                        overlayCanvas = document.createElement('canvas');
+                        overlayCanvas.id = `${canvasId}-overlay`;
+                        overlayCanvas.style.position = 'absolute';
+                        overlayCanvas.style.top = '0';
+                        overlayCanvas.style.left = '0';
+                        overlayCanvas.style.pointerEvents = 'none';
+                        overlayCanvas.style.zIndex = '2';
+                        canvas.style.zIndex = '1';
+                        overlayCanvas.style.willChange = 'filter, opacity, transform';
+                        canvas.parentElement.style.position = 'relative';
+                        canvas.parentElement.appendChild(overlayCanvas);
+                    }
+                    // Sincroniza tamanho com base
+                    overlayCanvas.width = canvas.width;
+                    overlayCanvas.height = canvas.height;
+                    // Sincroniza dimensões visuais para evitar desalinhamento em alta densidade de pixels
+                    overlayCanvas.style.width = canvas.style.width;
+                    overlayCanvas.style.height = canvas.style.height;
+                };
+
+                const applyBlurHighlight = () => {
+                    ensureOverlay();
+                    const octx = overlayCanvas.getContext('2d');
+                    octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                    if (highlightIndex !== null && highlightIndex >= 0) {
+                        const meta = chart.getDatasetMeta(0);
+                        const el = meta && meta.data && meta.data[highlightIndex];
+                        const area = chart.chartArea || { left: 0, right: overlayCanvas.width, top: 0, bottom: overlayCanvas.height };
+                        // Geometria robusta via escalas
+                        const ds = chart.data.datasets[0];
+                        const val = Array.isArray(ds.data) ? ds.data[highlightIndex] : ds.data;
+                        const yScale = chart.scales && chart.scales['y'];
+                        const xScale = chart.scales && chart.scales['x'];
+                        let base = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(0) : area.bottom;
+                        let top = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(val) : (el && el.y) || area.top;
+                        let height = Math.abs(base - top);
+                        top = Math.min(top, base);
+                        // Centro X e largura
+                        let x = (el && el.x) || (xScale && typeof xScale.getPixelForTick === 'function' ? xScale.getPixelForTick(highlightIndex) : (area.left + area.right) / 2);
+                        let width = (el && el.width) || ((area.right - area.left) / Math.max(1, labels.length) * 0.7);
+                        const left = x - width / 2;
+                        // Aumenta a largura para destacar (efeito "pop")
+                        const scaleFactor = 1.12; // 12% mais larga
+                        const scaledWidth = width * scaleFactor;
+                        const scaledLeft = x - scaledWidth / 2;
+
+                            // 1) Escurece apenas a área do gráfico (chartArea), preservando números/eixos fora
+                            octx.save();
+                            octx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+                            octx.fillRect(area.left, area.top, area.right - area.left, area.bottom - area.top);
+                            // 2) Recorta (remove) a área da barra selecionada (com largura ampliada) para mantê-la nítida
+                            octx.globalCompositeOperation = 'destination-out';
+                            octx.fillRect(scaledLeft, top, scaledWidth, height);
+                            octx.restore();
+
+                            // 3) Preenche a barra inteira com efeito "neon" (glow)
+                            let selectedColor = chart.data.datasets[0].backgroundColor;
+                            if (Array.isArray(selectedColor)) selectedColor = selectedColor[highlightIndex] || highlightColor;
+
+                            // Passo A: preenchimento principal nítido (barra inteira) com leve sombra para "lift"
+                            octx.save();
+                            // Garante que nada saia da área do gráfico
+                            octx.beginPath();
+                            octx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
+                            octx.clip();
+                            octx.globalCompositeOperation = 'source-over';
+                            octx.fillStyle = selectedColor || highlightColor;
+                            octx.globalAlpha = 0.95;
+                            // Sombra para efeito de destaque do fundo
+                            octx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+                            octx.shadowBlur = 10;
+                            octx.shadowOffsetX = 0;
+                            octx.shadowOffsetY = 6;
+                            octx.fillRect(scaledLeft, top, scaledWidth, height);
+                            octx.restore();
+
+                            // Passo B: brilho ao redor (neon) cobrindo toda a barra
+                            octx.save();
+                            octx.globalCompositeOperation = 'lighter';
+                            octx.fillStyle = selectedColor || highlightColor;
+                            octx.globalAlpha = 0.35;
+                            octx.shadowColor = selectedColor || highlightColor;
+                            octx.shadowBlur = 24;
+                            octx.shadowOffsetX = 0;
+                            octx.shadowOffsetY = 0;
+                            octx.fillRect(scaledLeft, top, scaledWidth, height);
+                            octx.restore();
+                    } else {
+                        // Sem seleção: limpa overlay e oculta
+                        octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                        overlayCanvas.style.display = 'none';
+                    }
+                };
+
+                // Aplica após layout para garantir que chartArea já existe
+                requestAnimationFrame(() => {
+                    overlayCanvas && (overlayCanvas.style.display = '');
+                    applyBlurHighlight();
+                });
+            }
         }
 
         function renderCharts() {
@@ -2210,7 +2380,7 @@
                 abbreviatedLabels,
                 consLabels.map(k => consData[k]), 
                 'Total Duração', 
-                'rgba(167, 139, 250, 0.7)',
+                '#1D4ED8',
                 consLabels,
                 'min',
                 (idx) => {
@@ -2224,7 +2394,7 @@
                     renderCharts();
                 },
                 selectedIndex,
-                'rgba(250, 204, 21, 0.9)'
+                '#F59E0B'
             );
             // Demais gráficos usam dataset conforme seleção atual de consultor
             const selectionDataset = dashboardSelection.consultant 
@@ -2233,11 +2403,11 @@
 
             const typeData = aggregateData('TIPO', selectionDataset);
             const typeLabels = Object.keys(typeData).sort();
-            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', 'rgba(74, 222, 128, 0.7)', null, 'min');
+            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', '#22C55E', null, 'min');
 
             const typeAvgData = aggregateAverage('TIPO', selectionDataset);
             const avgChartData = typeLabels.map(type => typeAvgData[type] || 0);
-            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', 'rgba(250, 204, 21, 0.7)', null, 'min');
+            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', '#F59E0B', null, 'min');
 
             createChart('pause-type-distribution-chart', 'typeDistribution', 'doughnut', typeLabels, typeLabels.map(k => typeData[k]), 'Distribuição', null, null, 'min');
         }
@@ -2253,7 +2423,7 @@
                 abbreviatedOperatorLabels,
                 operatorLabels.map(k => operatorData[k]),
                 'Total de Tabulações',
-                'rgba(167, 139, 250, 0.7)',
+                '#7C3AED',
                 operatorLabels,
                 'count'
             );
@@ -2268,7 +2438,7 @@
                 typeLabels,
                 typeLabels.map(k => typeData[k]),
                 'Total de Tabulações',
-                'rgba(74, 222, 128, 0.7)',
+                '#22C55E',
                 null,
                 'count'
             );
@@ -2282,7 +2452,7 @@
                 categoryLabels,
                 categoryLabels.map(k => categoryData[k]),
                 'Total de Tabulações',
-                'rgba(250, 204, 21, 0.7)',
+                '#F59E0B',
                 null,
                 'count'
             );
