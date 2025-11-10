@@ -1216,7 +1216,13 @@
         };
 
         // Seleção dinâmica para cross-filter em Pausas
-        let dashboardSelection = { consultant: null };
+        let dashboardSelection = { 
+            consultant: null,
+            pauseType: null,
+            tabOperator: null,
+            tabType: null,
+            tabCategory: null
+        };
 
         // --- Funções Utilitárias ---
         function debounce(func, delay) {
@@ -2078,9 +2084,10 @@
             return agg;
         }
 
-        function aggregateTabulationData(key) {
+        function aggregateTabulationData(key, dataset) {
+            const source = dataset || callTabulationsFilteredData;
             const agg = {};
-            callTabulationsFilteredData.forEach(d => {
+            source.forEach(d => {
                 const value = d[key] || 'Não informado';
                 agg[value] = (agg[value] || 0) + 1;
             });
@@ -2121,9 +2128,22 @@
                 return colors;
             };
 
+            // Mapeamento de cor estável por rótulo (tipo/operador/categoria)
+            const stableColorForKey = (key, sat = 95, light = 45) => {
+                if (!key) return `hsl(0, ${sat}%, ${light}%)`;
+                // Hash simples (djb2) para distribuir o hue de forma estável
+                let hash = 5381;
+                for (let i = 0; i < key.length; i++) {
+                    hash = ((hash << 5) + hash) + key.charCodeAt(i);
+                }
+                const hue = Math.abs(hash) % 360;
+                return `hsl(${hue}, ${sat}%, ${light}%)`;
+            };
+
             let backgroundColor;
             if (type === 'doughnut') {
-                backgroundColor = generateWheelColors(Array.isArray(labels) ? labels.length : 0);
+                const getLabelForIndex = (idx) => (Array.isArray(fullLabels) ? fullLabels[idx] : labels[idx]);
+                backgroundColor = labels.map((_, idx) => stableColorForKey(getLabelForIndex(idx)));
             } else {
                 backgroundColor = color || chartColors.barDefault;
                 if (Array.isArray(labels) && labels.length > 0 && highlightIndex !== null && highlightIndex >= 0) {
@@ -2150,6 +2170,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     resizeDelay: 100,
+                    interaction: { mode: 'nearest', intersect: true },
                     elements: {
                         bar: { maxBarThickness: 28 }
                     },
@@ -2244,6 +2265,9 @@
                             }
                         }
                     } : {},
+                    onHover: (evt, elements) => {
+                        try { canvas.style.cursor = (onSelect && elements && elements.length > 0) ? 'pointer' : 'default'; } catch(e) {}
+                    },
                     onClick: (evt, elements) => {
                         if (!onSelect) return;
                         if (elements && elements.length > 0) {
@@ -2368,8 +2392,9 @@
         }
 
         function renderCharts() {
-            // Gráfico de consultores sempre usa o conjunto filtrado geral
-            const consData = aggregateData('CONSULTOR', filteredData);
+            // Dataset do gráfico de consultores: aplica filtro por tipo de pausa (se houver), mas não por consultor
+            const consultantChartDataset = filteredData.filter(d => !dashboardSelection.pauseType || d.TIPO === dashboardSelection.pauseType);
+            const consData = aggregateData('CONSULTOR', consultantChartDataset);
             const consLabels = Object.keys(consData).sort((a, b) => consData[b] - consData[a]);
             const abbreviatedLabels = consLabels.map(name => abbreviateName(name));
             const selectedIndex = dashboardSelection.consultant ? consLabels.indexOf(dashboardSelection.consultant) : null;
@@ -2397,25 +2422,100 @@
                 '#F59E0B'
             );
             // Demais gráficos usam dataset conforme seleção atual de consultor
-            const selectionDataset = dashboardSelection.consultant 
-                ? filteredData.filter(d => d.CONSULTOR === dashboardSelection.consultant)
-                : filteredData;
+            const selectionDataset = filteredData.filter(d => {
+                const matchConsultant = !dashboardSelection.consultant || d.CONSULTOR === dashboardSelection.consultant;
+                const matchPauseType = !dashboardSelection.pauseType || d.TIPO === dashboardSelection.pauseType;
+                return matchConsultant && matchPauseType;
+            });
 
             const typeData = aggregateData('TIPO', selectionDataset);
             const typeLabels = Object.keys(typeData).sort();
-            createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', '#22C55E', null, 'min');
+            const selectedTypeIndex = dashboardSelection.pauseType ? typeLabels.indexOf(dashboardSelection.pauseType) : null;
+            createChart(
+                'total-pause-type-chart', 
+                'typeTotal', 
+                'bar', 
+                typeLabels, 
+                typeLabels.map(k => typeData[k]), 
+                'Total Duração', 
+                '#22C55E', 
+                null, 
+                'min',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.pauseType = null;
+                    } else {
+                        const clickedType = typeLabels[idx];
+                        dashboardSelection.pauseType = (dashboardSelection.pauseType === clickedType) ? null : clickedType;
+                    }
+                    renderCharts();
+                },
+                selectedTypeIndex,
+                '#F59E0B'
+            );
 
             const typeAvgData = aggregateAverage('TIPO', selectionDataset);
             const avgChartData = typeLabels.map(type => typeAvgData[type] || 0);
-            createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', '#F59E0B', null, 'min');
+            createChart(
+                'average-pause-type-chart', 
+                'typeAverage', 
+                'bar', 
+                typeLabels, 
+                avgChartData, 
+                'Média Duração', 
+                '#F59E0B', 
+                null, 
+                'min',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.pauseType = null;
+                    } else {
+                        const clickedType = typeLabels[idx];
+                        dashboardSelection.pauseType = (dashboardSelection.pauseType === clickedType) ? null : clickedType;
+                    }
+                    renderCharts();
+                },
+                selectedTypeIndex,
+                '#F59E0B'
+            );
 
-            createChart('pause-type-distribution-chart', 'typeDistribution', 'doughnut', typeLabels, typeLabels.map(k => typeData[k]), 'Distribuição', null, null, 'min');
+            createChart(
+                'pause-type-distribution-chart', 
+                'typeDistribution', 
+                'doughnut', 
+                typeLabels, 
+                typeLabels.map(k => typeData[k]), 
+                'Distribuição', 
+                null, 
+                null, 
+                'min',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.pauseType = null;
+                    } else {
+                        const clickedType = typeLabels[idx];
+                        dashboardSelection.pauseType = (dashboardSelection.pauseType === clickedType) ? null : clickedType;
+                    }
+                    renderCharts();
+                },
+                selectedTypeIndex,
+                '#F59E0B'
+            );
         }
 
         function renderCallTabulationCharts() {
-            const operatorData = aggregateTabulationData('OPERADOR');
+            // Aplica seleção global
+            const selectionTabDataset = callTabulationsFilteredData.filter(d => {
+                const matchOperator = !dashboardSelection.tabOperator || d.OPERADOR === dashboardSelection.tabOperator;
+                const matchType = !dashboardSelection.tabType || d.TABULADO_COMO === dashboardSelection.tabType;
+                const matchCategory = !dashboardSelection.tabCategory || d.CATEGORIA_TABULACAO === dashboardSelection.tabCategory;
+                return matchOperator && matchType && matchCategory;
+            });
+
+            const operatorData = aggregateTabulationData('OPERADOR', selectionTabDataset);
             const operatorLabels = Object.keys(operatorData).sort((a, b) => operatorData[b] - operatorData[a]);
             const abbreviatedOperatorLabels = operatorLabels.map(name => abbreviateName(name));
+            const selectedOperatorIndex = dashboardSelection.tabOperator ? operatorLabels.indexOf(dashboardSelection.tabOperator) : null;
             createChart(
                 'total-tabulations-operator-chart',
                 'tabulationOperatorTotal',
@@ -2425,12 +2525,24 @@
                 'Total de Tabulações',
                 '#7C3AED',
                 operatorLabels,
-                'count'
+                'count',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.tabOperator = null;
+                    } else {
+                        const clickedOperator = operatorLabels[idx];
+                        dashboardSelection.tabOperator = (dashboardSelection.tabOperator === clickedOperator) ? null : clickedOperator;
+                    }
+                    renderCallTabulationCharts();
+                },
+                selectedOperatorIndex,
+                '#F59E0B'
             );
 
-            const typeData = aggregateTabulationData('TABULADO_COMO');
+            const typeData = aggregateTabulationData('TABULADO_COMO', selectionTabDataset);
             const typeLabels = Object.keys(typeData).sort();
             const abbreviatedTypeLabelsForLegend = typeLabels.map(lbl => abbreviateLabel(lbl));
+            const selectedTypeIndex = dashboardSelection.tabType ? typeLabels.indexOf(dashboardSelection.tabType) : null;
             createChart(
                 'total-tabulations-type-chart',
                 'tabulationTypeTotal',
@@ -2440,11 +2552,23 @@
                 'Total de Tabulações',
                 '#22C55E',
                 null,
-                'count'
+                'count',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.tabType = null;
+                    } else {
+                        const clickedType = typeLabels[idx];
+                        dashboardSelection.tabType = (dashboardSelection.tabType === clickedType) ? null : clickedType;
+                    }
+                    renderCallTabulationCharts();
+                },
+                selectedTypeIndex,
+                '#F59E0B'
             );
 
-            const categoryData = aggregateTabulationData('CATEGORIA_TABULACAO');
+            const categoryData = aggregateTabulationData('CATEGORIA_TABULACAO', selectionTabDataset);
             const categoryLabels = Object.keys(categoryData).sort();
+            const selectedCategoryIndex = dashboardSelection.tabCategory ? categoryLabels.indexOf(dashboardSelection.tabCategory) : null;
             createChart(
                 'total-tabulations-category-chart',
                 'tabulationCategoryTotal',
@@ -2454,7 +2578,18 @@
                 'Total de Tabulações',
                 '#F59E0B',
                 null,
-                'count'
+                'count',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.tabCategory = null;
+                    } else {
+                        const clickedCategory = categoryLabels[idx];
+                        dashboardSelection.tabCategory = (dashboardSelection.tabCategory === clickedCategory) ? null : clickedCategory;
+                    }
+                    renderCallTabulationCharts();
+                },
+                selectedCategoryIndex,
+                '#F59E0B'
             );
 
             createChart(
@@ -2466,7 +2601,18 @@
                 'Distribuição de Tabulações',
                 null,
                 typeLabels,
-                'count'
+                'count',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.tabType = null;
+                    } else {
+                        const clickedType = typeLabels[idx];
+                        dashboardSelection.tabType = (dashboardSelection.tabType === clickedType) ? null : clickedType;
+                    }
+                    renderCallTabulationCharts();
+                },
+                selectedTypeIndex,
+                '#F59E0B'
             );
         }
 
