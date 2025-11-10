@@ -52,6 +52,7 @@
             background-repeat: no-repeat;
             opacity: var(--dashboard-bg-opacity);
             pointer-events: none;
+            z-index: -1; /* garante que fique atrás do conteúdo */
         }
 
         /* --- 2. Tipografia e Hierarquia --- */
@@ -238,21 +239,47 @@
         body.sidebar-collapsed #sidebar .menu-item { padding: 10px; }
 
         /* Topbar interna da sidebar (marca e botão de recolher) */
-        .sidebar-topbar { padding: 0.5rem 0.25rem; }
+        .sidebar-topbar { padding: 0.5rem 0.25rem; display: flex; align-items: center; }
+        /* Posição dinâmica do botão: esquerda quando recolhida, direita quando expandida */
+        body.sidebar-collapsed #sidebar .sidebar-topbar { justify-content: flex-start; }
+        body.sidebar-open:not(.sidebar-collapsed) #sidebar .sidebar-topbar { justify-content: flex-end; }
         .sidebar-brand { color: #e2e8f0; font-weight: 600; letter-spacing: 0.02em; }
         .sidebar-icon-btn {
             display: inline-flex; align-items: center; justify-content: center;
+
+            
             height: 36px; width: 36px; border-radius: 10px;
             background-color: #2D2D3A; color: #cbd5e1;
             border: 1px solid #444459;
             transition: background-color 0.2s ease, transform 0.2s ease;
         }
         .sidebar-icon-btn:hover { background-color: #404052; transform: translateY(-1px); }
+        /* Estilo minimalista para o botão Voltar na topbar */
+        #sidebar-collapse-btn {
+            background-color: rgba(17,24,39,0.28);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: #e2e8f0;
+            box-shadow: none;
+        }
+        #sidebar-collapse-btn:hover { background-color: rgba(17,24,39,0.36); }
         
+        /* Botões de navegação de abas */
+        .tab-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 12px;
+            transition: background-color .2s ease, filter .2s ease, transform .2s ease;
+            will-change: transform, filter;
+        }
+        .tab-button:hover { filter: brightness(1.08); }
+        .tab-button:focus { outline: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.25) inset; }
         .tab-button.active {
             background-color: var(--highlight-primary) !important;
-            filter: brightness(1.1);
-            transform: translateY(-2px);
+            filter: brightness(1.06);
+            transform: translateY(0); /* evita corte por overflow */
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.25) inset;
         }
 
         /* --- Elementos Específicos do Dashboard --- */
@@ -271,20 +298,26 @@
             font-size: 1rem;
             line-height: 1.5rem;
             border-radius: 0.5rem;
-            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            border-width: 0px;
-            background-color: #2D2D3A;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: var(--glass-shadow);
             color: var(--text-main);
+            transition: filter .2s ease, box-shadow .2s ease;
         }
+        .form-input-dark:hover { filter: brightness(1.04); }
         .form-input-dark:focus {
             outline: 2px solid transparent;
             outline-offset: 2px;
             --tw-ring-color: var(--highlight-primary);
             box-shadow: 0 0 0 2px var(--tw-ring-color);
         }
+        .form-input-dark::placeholder { color: var(--text-secondary); opacity: 0.75; }
         .form-input-dark:disabled {
-            background-color: #334155;
-            opacity: 0.6;
+            background: rgba(30,41,59,0.22);
+            border-color: rgba(255,255,255,0.1);
+            opacity: 0.65;
         }
         
         .modal-overlay {
@@ -474,13 +507,14 @@
             height: auto; /* altura automática para remover scroll interno */
             min-height: 280px;
             /* Glassmorphism: painel translúcido e com blur */
-            background: rgba(17, 24, 39, 0.20); /* super leve, quase sem fundo */
-            backdrop-filter: blur(12px) saturate(120%);
-            -webkit-backdrop-filter: blur(12px) saturate(120%);
+            /* Dark glass mais marcado */
+            background: rgba(17, 24, 39, 0.45);
+            backdrop-filter: blur(14px) saturate(140%) brightness(0.90);
+            -webkit-backdrop-filter: blur(14px) saturate(140%) brightness(0.90);
             color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.22);
             border-radius: 16px;
-            box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+            box-shadow: 0 16px 36px rgba(0,0,0,0.45);
             z-index: 70;
             display: none;
         }
@@ -490,7 +524,8 @@
             justify-content: space-between;
             padding: 0.75rem 0.9rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
-            background: transparent; /* sem fundo pesado */
+            /* Cabeçalho acompanha o dark glass do painel */
+            background: rgba(17, 24, 39, 0.32);
             cursor: move;
             user-select: none;
         }
@@ -499,9 +534,9 @@
         .floating-btn {
             display: inline-flex; align-items: center; justify-content: center;
             width: 34px; height: 34px; border-radius: 10px;
-            background: rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.06);
             color: #e2e8f0;
-            border: 1px solid rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.20);
         }
         #filters-float-panel .floating-content {
             position: static; /* conteúdo segue o fluxo normal abaixo do cabeçalho */
@@ -521,10 +556,13 @@
         #filters-float-panel .card { background: transparent; box-shadow: none; border: none; padding: 0.5rem; }
         #filters-float-panel .collapsible-header { background: transparent; padding: 0 0 0.5rem 0; border: none; }
         #filters-float-panel .collapsible-content { padding: 0; }
-        /* Estado minimizado: mostra apenas o cabeçalho */
-        #filters-float-panel.minimized { height: 56px; width: 360px; }
+        /* Estado minimizado: mostra apenas o cabeçalho (compacto) */
+        #filters-float-panel.minimized { height: auto; width: auto; min-width: 0; }
         #filters-float-panel.minimized .floating-content { display: none; }
         #filters-float-panel.minimized .floating-resizer { display: none; }
+        #filters-float-panel.minimized .floating-header { padding: 0.45rem 0.6rem; }
+        #filters-float-panel.minimized .floating-title { font-size: 0.95rem; }
+        #filters-float-panel.minimized .floating-actions .floating-btn { width: 28px; height: 28px; border-radius: 8px; }
 
         /* --- Menu rápido flutuante minimalista --- */
         .quick-menu {
@@ -534,7 +572,7 @@
             display: flex; flex-direction: column; align-items: center; gap: 10px;
         }
         .quick-main {
-            width: 48px; height: 48px; border-radius: 50%;
+            width: 68px; height: 68px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             background: radial-gradient(circle at 30% 30%, rgba(37,99,235,0.95), rgba(59,130,246,0.85));
             color: #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
@@ -545,7 +583,7 @@
         .quick-items { display: none; flex-direction: column; align-items: center; gap: 10px; }
         .quick-menu.open .quick-items { display: flex; }
         .quick-item {
-            width: 44px; height: 44px; border-radius: 50%;
+            width: 48px; height: 48px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             background: rgba(255,255,255,0.85);
             color: #0f172a; box-shadow: 0 6px 14px rgba(0,0,0,0.20);
@@ -554,7 +592,7 @@
         }
         .quick-item:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.22); }
         .quick-tooltip {
-            position: absolute; right: 56px;
+            position: absolute; right: 60px;
             background: rgba(17,24,39,0.80); color: #e2e8f0;
             padding: 6px 8px; border-radius: 8px;
             font-size: 12px; white-space: nowrap; pointer-events: none;
@@ -566,9 +604,9 @@
 
         @media (max-width: 768px) {
             .quick-menu { right: 12px; bottom: 12px; gap: 8px; }
-            .quick-main { width: 44px; height: 44px; }
-            .quick-item { width: 40px; height: 40px; }
-            .quick-tooltip { right: 52px; }
+            .quick-main { width: 62px; height: 62px; }
+            .quick-item { width: 44px; height: 44px; }
+            .quick-tooltip { right: 56px; }
         }
 
         /* Oculta botões flutuantes antigos (substituídos pelo menu rápido) */
@@ -656,17 +694,9 @@
         .chart-container canvas { height: 100% !important; width: 100% !important; display: block; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 sidebar-open sidebar-collapsed">
 
-    <!-- BOTÃO DE ALTERNÂNCIA DA SIDEBAR -->
-    <button id="sidebar-toggle-btn" class="fixed top-4 left-4 p-2 rounded-md text-white hover:bg-slate-700 transition-colors z-50">
-        <svg class="h-6 w-6 hamburger-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-        <svg class="h-6 w-6 close-icon hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-    </button>
+    <!-- BOTÃO DE ALTERNÂNCIA REMOVIDO: página inicia com menu recolhido -->
 
     <!-- OVERLAY PARA FECHAR A SIDEBAR EM TELAS PEQUENAS -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden"></div>
@@ -675,26 +705,26 @@
     <aside id="sidebar" class="fixed top-0 h-full w-80 bg-gray-900 z-40 overflow-y-auto p-4">
         <!-- Barra superior interna da sidebar: marca e botão de recolher -->
         <div class="sidebar-topbar flex items-center justify-between">
-            <span class="sidebar-brand">Code4education</span>
-            <button id="sidebar-collapse-btn" class="sidebar-icon-btn" title="Recolher/Expandir menu">
+            
+            <button id="sidebar-collapse-btn" class="sidebar-icon-btn" title="Expandir">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16M10 6l-4 6 4 6" />
-                </svg>
-            </button>
-            <button id="sidebar-filter-btn" class="sidebar-icon-btn ml-2" title="Abrir Filtros">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
             </button>
         </div>
         <div class="sidebar-inner">
             <ul class="menu-list">
                 <li id="menu-upload-pauses-btn" class="menu-item active">
-                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v12H4zM12 8l-3 3h2v3h2v-3h2z"/></svg>
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 4v16" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M15 4v16" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                     <span>Upload Pausas</span>
                 </li>
                 <li id="menu-upload-tabs-btn" class="menu-item">
-                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16v12H4zM12 8l-3 3h2v3h2v-3h2z"/></svg>
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 4h12a2 2 0 0 1 2 2v14l-8-4-8 4V6a2 2 0 0 1 2-2z" />
+                    </svg>
                     <span>Upload Tabulações</span>
                 </li>
             </ul>
@@ -704,8 +734,9 @@
                 <div id="pauses-upload-card" class="card collapsible-card">
                     <div class="collapsible-header">
                         <h2 class="text-2xl font-semibold text-slate-100 flex items-center gap-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 4v16" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M15 4v16" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                             <span>Carregar Dados de Pausas</span>
                         </h2>
@@ -854,14 +885,12 @@
 
     <main id="main-content">
         <div class="container mx-auto">
-            <h1 class="text-4xl font-extrabold text-white mb-4 text-center">
-                Dashboard de Análise
-            </h1>
+            
             <div class="flex justify-center mb-8 space-x-4">
-                <button id="tab-pauses-btn" class="tab-button active px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out">
+                <button id="tab-pauses-btn" class="tab-button active px-6 py-3 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out">
                     Pausas
                 </button>
-                <button id="tab-call-tabulations-btn" class="tab-button px-6 py-3 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition duration-300 ease-in-out">
+                <button id="tab-call-tabulations-btn" class="tab-button px-6 py-3 bg-slate-700 text-white font-semibold rounded-lg shadow-md hover:bg-slate-600 transition duration-300 ease-in-out">
                     Tabulações de Ligações
                 </button>
             </div>
@@ -869,17 +898,17 @@
             <div id="pauses-dashboard-content">
     
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="card">
-                    <p class="text-sm font-medium text-slate-400">Pausas Registradas</p>
-                    <p id="kpi-total-pauses" class="text-4xl font-bold text-blue-400 mt-2">0</p>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Pausas Registradas</h3>
+                    <p id="kpi-total-pauses" class="kpi-value">0</p>
                 </div>
-                <div class="card">
-                    <p class="text-sm font-medium text-slate-400">Total Global de Pausa</p>
-                    <p id="kpi-total-global-pause" class="text-4xl font-bold text-green-400 mt-2">00:00</p>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Total Global de Pausa</h3>
+                    <p id="kpi-total-global-pause" class="kpi-value">00:00</p>
                 </div>
-                <div class="card">
-                    <p class="text-sm font-medium text-slate-400">Consultores Únicos</p>
-                    <p id="kpi-unique-consultants" class="text-4xl font-bold text-purple-400 mt-2">0</p>
+                <div class="kpi-card">
+                    <h3 class="kpi-title">Consultores Únicos</h3>
+                    <p id="kpi-unique-consultants" class="kpi-value">0</p>
                 </div>
             </div>
     
@@ -900,26 +929,26 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="card">
-                        <h2 class="text-xl font-semibold text-slate-200 mb-4">Total de Duração por Consultor</h2>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Total de Duração por Consultor</h3>
                         <div class="chart-container">
                             <canvas id="total-pause-consultant-chart"></canvas>
                         </div>
                     </div>
-                    <div class="card">
-                        <h2 class="text-xl font-semibold text-slate-200 mb-4">Total de Duração por Tipo</h2>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Total de Duração por Tipo</h3>
                         <div class="chart-container">
                             <canvas id="total-pause-type-chart"></canvas>
                         </div>
                     </div>
-                    <div class="card">
-                        <h2 class="text-xl font-semibold text-slate-200 mb-4">Média de Duração por Tipo</h2>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Média de Duração por Tipo</h3>
                         <div class="chart-container">
                             <canvas id="average-pause-type-chart"></canvas>
                         </div>
                     </div>
-                    <div class="card">
-                        <h2 class="text-xl font-semibold text-slate-200 mb-4">Distribuição do Tempo por Tipo</h2>
+                    <div class="chart-card">
+                        <h3 class="chart-title">Distribuição do Tempo por Tipo</h3>
                         <div class="chart-container">
                             <canvas id="pause-type-distribution-chart"></canvas>
                         </div>
@@ -951,22 +980,30 @@
         
             <!-- Charts for Call Tabulations -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                <div class="chart-card">
-                    <h3 class="chart-title">Total de Tabulações por Operador</h3>
+            <div class="chart-card">
+                <h3 class="chart-title">Total de Tabulações por Operador</h3>
+                <div class="chart-container">
                     <canvas id="total-tabulations-operator-chart"></canvas>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">Total de Tabulações por Tipo</h3>
+            </div>
+            <div class="chart-card">
+                <h3 class="chart-title">Total de Tabulações por Tipo</h3>
+                <div class="chart-container">
                     <canvas id="total-tabulations-type-chart"></canvas>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">Total de Tabulações por Categoria</h3>
+            </div>
+            <div class="chart-card">
+                <h3 class="chart-title">Total de Tabulações por Categoria</h3>
+                <div class="chart-container">
                     <canvas id="total-tabulations-category-chart"></canvas>
                 </div>
-                <div class="chart-card">
-                    <h3 class="chart-title">Distribuição de Tabulações por Tipo</h3>
+            </div>
+            <div class="chart-card">
+                <h3 class="chart-title">Distribuição de Tabulações por Tipo</h3>
+                <div class="chart-container">
                     <canvas id="tabulation-type-distribution-chart"></canvas>
                 </div>
+            </div>
             </div>
         
             <!-- Table for Call Tabulations -->
@@ -1156,6 +1193,9 @@
             tabulationTypeDistribution: null
         };
 
+        // Seleção dinâmica para cross-filter em Pausas
+        let dashboardSelection = { consultant: null };
+
         // --- Funções Utilitárias ---
         function debounce(func, delay) {
             let timeout;
@@ -1243,14 +1283,14 @@
         }
         
         function abbreviateName(fullName, maxLength = 18) {
-            if (typeof fullName !== 'string' || fullName.length <= maxLength) {
-                return fullName;
-            }
-            const parts = fullName.trim().split(' ').filter(p => p.length > 0);
-            if (parts.length > 1) {
-                return `${parts[0]} ${parts[parts.length - 1]}`;
-            }
-            return fullName.substring(0, maxLength - 3) + '...';
+            if (typeof fullName !== 'string') return fullName;
+            const normalized = fullName.trim().replace(/\s+/g, ' ');
+            const parts = normalized.split(' ').filter(p => p.length > 0);
+            const first = parts[0] || normalized;
+            // Mostrar somente o primeiro nome; ocultar sobrenomes
+            if (first.length <= maxLength) return first;
+            // Se o primeiro nome for muito longo, cortar mantendo apenas ele
+            return first.substring(0, maxLength);
         }
 
         // Abrevia rótulos longos para legendas de gráficos (ex.: tabulações)
@@ -1743,7 +1783,7 @@
                 filteredAveragesForComparison[type] = totals[type] / counts[type];
             }
 
-            const canUseAI = selConsultant && !selType;
+            const canUseAI = filteredData.length > 0;
             if (els.main.buttons.generateAi) {
                 els.main.buttons.generateAi.disabled = !canUseAI;
             }
@@ -2007,9 +2047,10 @@
             window.requestAnimationFrame(step);
         }
 
-        function aggregateData(key) {
+        function aggregateData(key, dataset) {
+            const source = dataset || filteredData;
             const agg = {};
-            filteredData.forEach(d => {
+            source.forEach(d => {
                 agg[d[key]] = (agg[d[key]] || 0) + d.DURACAO_MINUTES;
             });
             return agg;
@@ -2024,10 +2065,11 @@
             return agg;
         }
 
-        function aggregateAverage(key) {
+        function aggregateAverage(key, dataset) {
+            const source = dataset || filteredData;
             const totals = {};
             const counts = {};
-            filteredData.forEach(d => {
+            source.forEach(d => {
                 totals[d[key]] = (totals[d[key]] || 0) + d.DURACAO_MINUTES;
                 counts[d[key]] = (counts[d[key]] || 0) + 1;
             });
@@ -2036,7 +2078,7 @@
             return avgs;
         }
         
-        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min') {
+        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = 'rgba(255,255,255,0.9)') {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
@@ -2047,7 +2089,12 @@
                 'barDefault': 'rgba(96, 165, 250, 0.7)',
             };
 
-            const backgroundColor = type === 'doughnut' ? chartColors.doughnut : color || chartColors.barDefault;
+            let backgroundColor = type === 'doughnut' ? chartColors.doughnut : color || chartColors.barDefault;
+            if (type === 'bar' && Array.isArray(labels) && labels.length > 0) {
+                if (highlightIndex !== null && highlightIndex >= 0) {
+                    backgroundColor = labels.map((_, idx) => idx === highlightIndex ? highlightColor : (color || chartColors.barDefault));
+                }
+            }
 
             // Altura do canvas é controlada pelo container via CSS; evitar setar inline
 
@@ -2122,17 +2169,28 @@
                             grid: { color: 'transparent' },
                             ticks: { 
                                 color: '#94a3b8',
-                                maxRotation: 0,
-                                minRotation: 0,
-                                autoSkip: true,
-                                font: { size: 10 },
+                                // Mostrar todas as legendas e rotacionar para caber melhor
+                                autoSkip: false,
+                                maxRotation: 60,
+                                minRotation: 45,
+                                font: { size: 11 },
                                 callback: (value, index) => {
-                                    const lbl = (config.data && config.data.labels) ? config.data.labels[index] : value;
-                                    return abbreviateLabel(lbl, 22);
+                                    // Usar rótulos abreviados no eixo; manter completos apenas no tooltip
+                                    return (config.data && config.data.labels) ? config.data.labels[index] : value;
                                 }
                             }
                         }
-                    } : {}
+                    } : {},
+                    onClick: (evt, elements) => {
+                        if (!onSelect) return;
+                        if (elements && elements.length > 0) {
+                            const idx = elements[0].index;
+                            onSelect(idx);
+                        } else {
+                            // Clique em área vazia limpa a seleção
+                            onSelect(null);
+                        }
+                    }
                 }
             };
 
@@ -2140,9 +2198,11 @@
         }
 
         function renderCharts() {
-            const consData = aggregateData('CONSULTOR');
+            // Gráfico de consultores sempre usa o conjunto filtrado geral
+            const consData = aggregateData('CONSULTOR', filteredData);
             const consLabels = Object.keys(consData).sort((a, b) => consData[b] - consData[a]);
             const abbreviatedLabels = consLabels.map(name => abbreviateName(name));
+            const selectedIndex = dashboardSelection.consultant ? consLabels.indexOf(dashboardSelection.consultant) : null;
             createChart(
                 'total-pause-consultant-chart', 
                 'consultantTotal', 
@@ -2152,14 +2212,30 @@
                 'Total Duração', 
                 'rgba(167, 139, 250, 0.7)',
                 consLabels,
-                'min'
+                'min',
+                (idx) => {
+                    if (idx === null) {
+                        dashboardSelection.consultant = null;
+                    } else {
+                        const clickedConsultant = consLabels[idx];
+                        dashboardSelection.consultant = (dashboardSelection.consultant === clickedConsultant) ? null : clickedConsultant;
+                    }
+                    // Re-render para aplicar filtro nos demais gráficos
+                    renderCharts();
+                },
+                selectedIndex,
+                'rgba(250, 204, 21, 0.9)'
             );
+            // Demais gráficos usam dataset conforme seleção atual de consultor
+            const selectionDataset = dashboardSelection.consultant 
+                ? filteredData.filter(d => d.CONSULTOR === dashboardSelection.consultant)
+                : filteredData;
 
-            const typeData = aggregateData('TIPO');
+            const typeData = aggregateData('TIPO', selectionDataset);
             const typeLabels = Object.keys(typeData).sort();
             createChart('total-pause-type-chart', 'typeTotal', 'bar', typeLabels, typeLabels.map(k => typeData[k]), 'Total Duração', 'rgba(74, 222, 128, 0.7)', null, 'min');
 
-            const typeAvgData = aggregateAverage('TIPO');
+            const typeAvgData = aggregateAverage('TIPO', selectionDataset);
             const avgChartData = typeLabels.map(type => typeAvgData[type] || 0);
             createChart('average-pause-type-chart', 'typeAverage', 'bar', typeLabels, avgChartData, 'Média Duração', 'rgba(250, 204, 21, 0.7)', null, 'min');
 
@@ -2226,12 +2302,9 @@
 
         // --- Integração IA (Gemini) ---
         async function generateAIAnalysis() {
-            const uniqueConsultants = [...new Set(filteredData.map(d => d.CONSULTOR))];
-            if (uniqueConsultants.length !== 1) {
-                console.log("AI Analysis skipped: not exactly one consultant selected.");
-                return;
-            }
-            const consultant = uniqueConsultants[0];
+            const isPauses = !els.main.pausesDashboardContent.classList.contains('hidden');
+            const pausesData = filteredData;
+            const tabData = callTabulationsFilteredData;
 
             if (els.main.ai.section) {
                 els.main.ai.section.classList.remove('hidden');
@@ -2249,55 +2322,83 @@
                 els.main.ai.section.scrollIntoView({ behavior: 'smooth' });
             }
 
-            const totalPausas = filteredData.length;
-            const totalMinutos = filteredData.reduce((sum, d) => sum + d.DURACAO_MINUTES, 0);
+            let prompt = '';
+            if (isPauses) {
+                const totalPausas = pausesData.length;
+                const totalMinutos = pausesData.reduce((sum, d) => sum + d.DURACAO_MINUTES, 0);
+                const uniqueConsultants = [...new Set(pausesData.map(d => d.CONSULTOR))];
 
-            const typeStats = {};
-            filteredData.forEach(d => {
-                if(!typeStats[d.TIPO]) typeStats[d.TIPO] = { total: 0, count: 0 };
-                typeStats[d.TIPO].total += d.DURACAO_MINUTES;
-                typeStats[d.TIPO].count++;
-            });
+                const typeStats = {};
+                pausesData.forEach(d => {
+                    if(!typeStats[d.TIPO]) typeStats[d.TIPO] = { total: 0, count: 0 };
+                    typeStats[d.TIPO].total += d.DURACAO_MINUTES;
+                    typeStats[d.TIPO].count++;
+                });
 
-            let dataText = `Consultor: ${consultant}\nPeríodo: ${els.main.filters.startDate.value} a ${els.main.filters.endDate.value}\nTotal Pausas: ${totalPausas}, Tempo Total: ${formatMinutesToHHMM(totalMinutos)}\n\nDetalhamento por Tipo:\n`;
-
-            for(const type in typeStats) {
-                const stats = typeStats[type];
-                const avg = stats.total / stats.count;
-                const contextAvg = filteredAveragesForComparison[type] || 0;
-                let statusDescription = '';
-                const expected = expectedDurations[type];
-                if (expected) {
-                    const lowerBound = expected.minutes - expected.tolerance;
-                    const upperBound = expected.minutes + expected.tolerance;
-                    if (avg >= lowerBound && avg <= upperBound) statusDescription = `(duração ideal: ${expected.minutes}min - Média OK)`;
-                    else if (avg < lowerBound) statusDescription = `(duração ideal: ${expected.minutes}min - Média Curta)`;
-                    else statusDescription = `(duração ideal: ${expected.minutes}min - Média Longa)`;
-                } else {
-                    const diffPerc = contextAvg > 0 ? ((avg - contextAvg) / contextAvg) * 100 : 0;
-                    if (diffPerc > 10) statusDescription = `(Média da Equipe: ${contextAvg.toFixed(1)}min, ACIMA da média da equipe +${diffPerc.toFixed(0)}%)`;
-                    else if (diffPerc < -10) statusDescription = `(Média da Equipe: ${contextAvg.toFixed(1)}min, ABAIXO da média da equipe ${diffPerc.toFixed(0)}%)`;
-                    else statusDescription = `(Média da Equipe: ${contextAvg.toFixed(1)}min, na média da equipe)`;
+                let dataText = `Período: ${els.main.filters.startDate.value} a ${els.main.filters.endDate.value}\nConsultores ativos: ${uniqueConsultants.length}\nTotal Pausas: ${totalPausas}, Tempo Total: ${formatMinutesToHHMM(totalMinutos)}\n\nDetalhamento por Tipo:\n`;
+                for(const type in typeStats) {
+                    const stats = typeStats[type];
+                    const avg = stats.total / stats.count;
+                    const contextAvg = filteredAveragesForComparison[type] || 0;
+                    let statusDescription = '';
+                    const expected = expectedDurations[type];
+                    if (expected) {
+                        const lowerBound = expected.minutes - expected.tolerance;
+                        const upperBound = expected.minutes + expected.tolerance;
+                        if (avg >= lowerBound && avg <= upperBound) statusDescription = `(ideal: ${expected.minutes}min - média OK)`;
+                        else if (avg < lowerBound) statusDescription = `(ideal: ${expected.minutes}min - média curta)`;
+                        else statusDescription = `(ideal: ${expected.minutes}min - média longa)`;
+                    } else {
+                        const diffPerc = contextAvg > 0 ? ((avg - contextAvg) / contextAvg) * 100 : 0;
+                        if (diffPerc > 10) statusDescription = `(Equipe: ${contextAvg.toFixed(1)}min, ACIMA +${diffPerc.toFixed(0)}%)`;
+                        else if (diffPerc < -10) statusDescription = `(Equipe: ${contextAvg.toFixed(1)}min, ABAIXO ${diffPerc.toFixed(0)}%)`;
+                        else statusDescription = `(Equipe: ${contextAvg.toFixed(1)}min, na média)`;
+                    }
+                    dataText += `- ${type}: ${stats.count}x, Total: ${formatMinutesToHHMM(stats.total)}, Média: ${avg.toFixed(1)}min ${statusDescription}.\n`;
                 }
-                dataText += `- ${type}: ${stats.count}x, Total: ${formatMinutesToHHMM(stats.total)}, Média: ${avg.toFixed(1)}min ${statusDescription}.\n`;
-            }
 
-            const prompt = `
-                Aja como um analista de performance sênior de call center. Analise os dados de pausas abaixo para o consultor.
-                As seguintes regras de negócio *fixas* devem ser consideradas como padrão da operação:
-                - Pausa para Almoço: 60 minutos (1 hora).
-                - Pausa para Café ou Intervalo: 15 minutos.
-                - Pausa para Banheiro: 10 minutos.
-                - Pausa para Negociação: 15 minutos.
-                - Cadastrando Proposta: 10 minutos.
-                Para outros tipos de pausas não listados acima, compare a média do consultor com a média geral da equipe no período filtrado para identificar desvios.
-                Dados:\n${dataText}\n
-                Instruções:
-                1. Crie um resumo executivo curto (máx 3 linhas) sobre o comportamento de pausas do consultor, mantendo tom profissional.
-                2. Destaque 1 ponto positivo e 1 ponto de atenção principal.
-                3. Dê 2 sugestões práticas e diretas para o gestor aplicar com este consultor.
-                Use formatação Markdown (negrito para destaques). Seja conciso.
-            `;
+                // Se um único consultor estiver filtrado, foque nele; caso contrário, análise geral
+                const selConsult = els.main.filters.consultant ? els.main.filters.consultant.value : '';
+                const focusText = selConsult ? `Consultor focado: ${selConsult}\n` : '';
+                prompt = `
+                    Aja como um analista de performance sênior de call center. Analise os dados de pausas abaixo.
+                    Regras operacionais padrão (referências):
+                    - Almoço: 60 min; Café/Intervalo: 15 min; Banheiro: 10 min; Negociação: 15 min; Cadastrando Proposta: 10 min.
+                    Use a média da equipe como referência para tipos não listados.
+                    ${focusText}Dados:\n${dataText}\n
+                    Instruções:
+                    1. Crie um resumo executivo curto (máx 3 linhas) sobre pausas no período.
+                    2. Destaque 1 ponto positivo e 1 ponto de atenção principal.
+                    3. Dê 2 sugestões práticas para gestão do time (ou do consultor selecionado).
+                    Use formatação Markdown (negrito). Seja conciso.
+                `;
+            } else {
+                // Tabulações
+                const totalTabs = tabData.length;
+                const uniqueOps = [...new Set(tabData.map(d => d.OPERADOR))].length;
+                const typeAgg = {};
+                const catAgg = {};
+                tabData.forEach(d => {
+                    const t = d.TABULADO_COMO || 'Não informado';
+                    const c = d.CATEGORIA_TABULACAO || 'Não informado';
+                    typeAgg[t] = (typeAgg[t] || 0) + 1;
+                    catAgg[c] = (catAgg[c] || 0) + 1;
+                });
+                let dataText = `Período: ${els.callTabulations.filters.startDate.value} a ${els.callTabulations.filters.endDate.value}\nOperadores ativos: ${uniqueOps}\nTotal de Tabulações: ${totalTabs}\n\nPor Tipo:\n`;
+                Object.keys(typeAgg).sort().forEach(t => { dataText += `- ${t}: ${typeAgg[t]}\n`; });
+                dataText += `\nPor Categoria:\n`;
+                Object.keys(catAgg).sort().forEach(c => { dataText += `- ${c}: ${catAgg[c]}\n`; });
+
+                prompt = `
+                    Aja como um analista de qualidade de atendimento. Analise as tabulações (distribuição por tipo/categoria e operadores) e destaque padrões relevantes.
+                    Dados:\n${dataText}\n
+                    Instruções:
+                    1. Dê um resumo executivo (máx 3 linhas) do comportamento das tabulações.
+                    2. Aponte 1 insight positivo e 1 ponto de atenção.
+                    3. Sugira 2 ações para melhorar qualidade/consistência das tabulações.
+                    Use Markdown com negrito para destaques. Seja objetivo.
+                `;
+            }
 
             try {
                 if (!window.geminiApiKey) {
@@ -2382,6 +2483,18 @@
             const collapseBtn = document.getElementById('sidebar-collapse-btn');
             const body = document.body;
 
+            const updateCollapseBtnUI = () => {
+                if (!collapseBtn) return;
+                const isCollapsed = body.classList.contains('sidebar-collapsed');
+                // Atualiza título e ícone conforme estado
+                collapseBtn.title = isCollapsed ? 'Expandir' : 'Recolher';
+                const svg = collapseBtn.querySelector('svg path');
+                if (svg) {
+                    // Chevron right para Expandir; Chevron left para Recolher
+                    svg.setAttribute('d', isCollapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7');
+                }
+            };
+
             const toggleSidebar = () => {
                 body.classList.toggle('sidebar-open');
             };
@@ -2397,7 +2510,10 @@
             if (collapseBtn) {
                 collapseBtn.addEventListener('click', () => {
                     body.classList.toggle('sidebar-collapsed');
+                    updateCollapseBtnUI();
                 });
+                // Inicializa ícone/posição correta ao carregar
+                updateCollapseBtnUI();
             }
 
             const setActiveMenuById = (id) => {
@@ -2547,7 +2663,20 @@
             if (minimizeBtn) {
                 minimizeBtn.addEventListener('click', () => {
                     if (panel.style.display !== 'block') { showPanelForCurrentTab(); }
-                    panel.classList.toggle('minimized');
+                    const willMinimize = !panel.classList.contains('minimized');
+                    if (willMinimize) {
+                        // Guardar dimensões atuais definidas inline (por resize) e limpar para deixar o CSS da classe agir
+                        panel.dataset.prevWidth = panel.style.width || '';
+                        panel.dataset.prevHeight = panel.style.height || '';
+                        panel.classList.add('minimized');
+                        panel.style.width = '';
+                        panel.style.height = '';
+                    } else {
+                        // Restaurar dimensões anteriores ao minimizar
+                        panel.classList.remove('minimized');
+                        if (panel.dataset.prevWidth) { panel.style.width = panel.dataset.prevWidth; } else { panel.style.width = ''; }
+                        if (panel.dataset.prevHeight) { panel.style.height = panel.dataset.prevHeight; } else { panel.style.height = ''; }
+                    }
                 });
             }
         }
@@ -2558,6 +2687,7 @@
             const mainBtn = document.getElementById('quick-main-btn');
             const mainIcon = document.getElementById('quick-main-icon');
             const filterBtn = document.getElementById('quick-filter-btn');
+            const reportBtn = document.getElementById('quick-report-btn');
             const aiBtn = document.getElementById('quick-ai-btn');
             const legacyFilterBtn = document.getElementById('floating-filter-btn');
             const legacyAiBtn = document.getElementById('floating-ai-btn');
@@ -2580,6 +2710,20 @@
                 filterBtn.addEventListener('click', () => {
                     // Reusa o handler original do botão de filtros
                     if (legacyFilterBtn) legacyFilterBtn.click();
+                });
+            }
+
+            if (reportBtn) {
+                reportBtn.addEventListener('click', () => {
+                    // Gera/baixa o relatório de pausas em HTML, se disponível
+                    if (typeof exportarDadosParaHtml === 'function') {
+                        exportarDadosParaHtml();
+                    } else {
+                        // Como fallback, garante que o dashboard de Pausas está visível
+                        if (typeof showDashboard === 'function') {
+                            showDashboard('pauses');
+                        }
+                    }
                 });
             }
 
@@ -2892,15 +3036,22 @@
         <!-- Menu rápido flutuante minimalista -->
         <div id="quick-menu" class="quick-menu">
             <button id="quick-main-btn" class="quick-main" aria-label="Menu rápido">
-                <svg id="quick-main-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                <svg id="quick-main-icon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
             <div class="quick-items">
                 <button id="quick-filter-btn" class="quick-item" aria-label="Abrir filtros">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18M7 12h10M10 20h4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.586a1 1 0 0 1-.293.707l-6.414 6.414a1 1 0 0 0-.293.707V17l-4 4v-6.586a1 1 0 0 0-.293.707L3.293 7.293A1 1 0 0 1 3 6.586V4z"/></svg>
                     <span class="quick-tooltip">Filtros</span>
                 </button>
+                <button id="quick-report-btn" class="quick-item" aria-label="Relatório de Pausas">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14"/></svg>
+                    <span class="quick-tooltip">Relatório de Pausas</span>
+                </button>
                 <button id="quick-ai-btn" class="quick-item" aria-label="Análise IA">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09A1.65 1.65 0 009 3.09V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51h.09a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09A1.65 1.65 0 0019.91 11H20a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="2" y="2" width="20" height="20" rx="6" ry="6" stroke-width="2"/>
+                        <text x="12" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">IA</text>
+                    </svg>
                     <span class="quick-tooltip">Análise IA</span>
                 </button>
             </div>
