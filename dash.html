@@ -2107,6 +2107,18 @@
             return avgs;
         }
         
+        // Função global: mapeia um rótulo estável para uma cor HSL determinística
+        // Usada por múltiplos gráficos (barras e donut) para manter consistência.
+        function stableColorForKey(key, sat = 95, light = 45) {
+            if (!key) return `hsl(0, ${sat}%, ${light}%)`;
+            let hash = 5381;
+            for (let i = 0; i < key.length; i++) {
+                hash = ((hash << 5) + hash) + key.charCodeAt(i);
+            }
+            const hue = Math.abs(hash) % 360;
+            return `hsl(${hue}, ${sat}%, ${light}%)`;
+        }
+        
         function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = '#F59E0B') {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
@@ -2129,26 +2141,58 @@
             };
 
             // Mapeamento de cor estável por rótulo (tipo/operador/categoria)
-            const stableColorForKey = (key, sat = 95, light = 45) => {
-                if (!key) return `hsl(0, ${sat}%, ${light}%)`;
-                // Hash simples (djb2) para distribuir o hue de forma estável
-                let hash = 5381;
-                for (let i = 0; i < key.length; i++) {
-                    hash = ((hash << 5) + hash) + key.charCodeAt(i);
+            // Usa a função global acima para garantir acesso em todos os contextos.
+
+            // Utilitário: converter cor para HSL e torná-la mais "viva"
+            const parseColorToHsl = (input) => {
+                if (!input) return { h: 210, s: 85, l: 50 };
+                const hexMatch = /^#([0-9a-fA-F]{6})$/i.exec(input);
+                if (hexMatch) {
+                    const hex = hexMatch[1];
+                    const r = parseInt(hex.substr(0,2), 16) / 255;
+                    const g = parseInt(hex.substr(2,2), 16) / 255;
+                    const b = parseInt(hex.substr(4,2), 16) / 255;
+                    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+                    let h, s, l = (max + min) / 2;
+                    if (max === min) { h = 0; s = 0; }
+                    else {
+                        const d = max - min;
+                        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                        switch (max) {
+                            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                            case g: h = (b - r) / d + 2; break;
+                            case b: h = (r - g) / d + 4; break;
+                        }
+                        h /= 6;
+                    }
+                    return { h: Math.round(h*360), s: Math.round(s*100), l: Math.round(l*100) };
                 }
-                const hue = Math.abs(hash) % 360;
-                return `hsl(${hue}, ${sat}%, ${light}%)`;
+                const hslMatch = /^hsl\(\s*(\d+)\s*,\s*(\d+)\%\s*,\s*(\d+)\%\s*\)$/i.exec(input);
+                if (hslMatch) {
+                    return { h: parseInt(hslMatch[1],10), s: parseInt(hslMatch[2],10), l: parseInt(hslMatch[3],10) };
+                }
+                // Fallback: azul vivo
+                return { h: 210, s: 85, l: 50 };
+            };
+
+            const hslToCss = ({h,s,l}) => `hsl(${Math.max(0,Math.min(360,h))}, ${Math.max(0,Math.min(100,s))}%, ${Math.max(0,Math.min(100,l))}%)`;
+            const vividifyColor = (color, satBoost = 8, lightBoost = 6) => {
+                const hsl = parseColorToHsl(color);
+                hsl.s = Math.min(100, hsl.s + satBoost);
+                hsl.l = Math.min(100, hsl.l + lightBoost);
+                return hslToCss(hsl);
             };
 
             let backgroundColor;
-            if (type === 'doughnut') {
+            const useStableByLabel = (type === 'bar' && (color === 'stableByLabel' || color === 'stable'));
+            if (type === 'doughnut' || useStableByLabel) {
                 const getLabelForIndex = (idx) => (Array.isArray(fullLabels) ? fullLabels[idx] : labels[idx]);
                 backgroundColor = labels.map((_, idx) => stableColorForKey(getLabelForIndex(idx)));
             } else {
-                backgroundColor = color || chartColors.barDefault;
-                if (Array.isArray(labels) && labels.length > 0 && highlightIndex !== null && highlightIndex >= 0) {
-                    backgroundColor = labels.map((_, idx) => idx === highlightIndex ? highlightColor : (color || chartColors.barDefault));
-                }
+                // Para gráficos de barra, não alteramos a cor da barra selecionada aqui.
+                // O destaque visual será feito pelo overlay neon.
+                // Caso seja necessário mudar cor (ex.: Total por Tipo), passe um array em `color` no call site.
+                backgroundColor = Array.isArray(color) ? color : (color || chartColors.barDefault);
             }
 
             // Altura do canvas é controlada pelo container via CSS; evitar setar inline
@@ -2163,9 +2207,63 @@
                         backgroundColor: backgroundColor,
                         borderColor: type === 'doughnut' ? '#252532' : 'transparent',
                         borderWidth: type === 'doughnut' ? 1.2 : 1,
-                        hoverOffset: type === 'doughnut' ? 8 : 0
+                        hoverOffset: type === 'doughnut' ? 8 : 0,
+                        // Destacar o slice selecionado com pequeno "pop-out"
+                        offset: (type === 'doughnut') ? labels.map((_, idx) => (highlightIndex !== null && idx === highlightIndex) ? 12 : 0) : undefined
                     }]
                 },
+                // Plugins de efeito de seleção (glow em doughnut, overlay neon em barra)
+                plugins: (function(){
+                    const arr = [];
+                    if (type === 'doughnut') {
+                        const selectionGlow = {
+                            id: 'selectionGlow',
+                            afterDatasetsDraw(chart) {
+                                if (highlightIndex === null || highlightIndex < 0) return;
+                                try {
+                                    const meta = chart.getDatasetMeta(0);
+                                    const arc = meta && meta.data && meta.data[highlightIndex];
+                                    if (!arc) return;
+                                    const ds = chart.data.datasets[0];
+                                    let baseColor = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[highlightIndex] : ds.backgroundColor;
+                                    const glowColor = vividifyColor(baseColor || '#F59E0B');
+                                    const { x, y, startAngle, endAngle, outerRadius } = arc;
+                                    const ctx = chart.ctx;
+                                    ctx.save();
+                                    ctx.globalCompositeOperation = 'lighter';
+                                    ctx.strokeStyle = glowColor;
+                                    ctx.lineWidth = 10;
+                                    ctx.shadowColor = glowColor;
+                                    ctx.shadowBlur = 28;
+                                    ctx.shadowOffsetX = 0;
+                                    ctx.shadowOffsetY = 0;
+                                    ctx.beginPath();
+                                    ctx.arc(x, y, outerRadius + 6, startAngle, endAngle);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                } catch(e) {}
+                            }
+                        };
+                        arr.push(selectionGlow);
+                    }
+                    if (type === 'bar') {
+                        const barSelectionOverlay = {
+                            id: 'barSelectionOverlay',
+                            afterDatasetsDraw() {
+                                try {
+                                    // Aplica overlay sempre após desenhar as barras
+                                    // Não aplicar blur no canvas base para não ocultar rótulos do eixo.
+                                    // apply function defined below in the type==='bar' block
+                                    if (typeof applyBlurHighlight === 'function') {
+                                        applyBlurHighlight();
+                                    }
+                                } catch(e) {}
+                            }
+                        };
+                        arr.push(barSelectionOverlay);
+                    }
+                    return arr;
+                })(),
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -2284,8 +2382,28 @@
             const chart = new Chart(ctx, config);
             charts[chartInstanceVar] = chart;
 
-            // Efeito de blur/escurecimento para gráfico de consultores com seleção ativa
-            if (chartInstanceVar === 'consultantTotal') {
+            // Correção específica: garantir que o gráfico "Total por Tipo" atualize a cor
+            // para coincidir com o donut quando há um tipo selecionado.
+            if (chartInstanceVar === 'typeTotal') {
+                try {
+                    if (dashboardSelection && dashboardSelection.pauseType) {
+                        const selected = dashboardSelection.pauseType;
+                        const newColors = (labels && labels.length <= 1)
+                            ? stableColorForKey(labels[0])
+                            : labels.map(lbl => lbl === selected ? stableColorForKey(lbl) : '#22C55E');
+                        chart.data.datasets[0].backgroundColor = newColors;
+                        chart.update();
+                    }
+                } catch (e) {}
+            }
+
+            // Correção adicional: no gráfico de Consultores, force a atualização
+            // das cores para que somente a barra selecionada use a cor de destaque.
+            // Não alterar diretamente a cor das barras do gráfico de consultores;
+            // o efeito de seleção fica por conta do overlay.
+
+            // Efeito de blur/escurecimento com "neon" para gráficos de barra com seleção ativa
+            if (type === 'bar') {
                 let overlayCanvas = document.getElementById(`${canvasId}-overlay`);
                 const ensureOverlay = () => {
                     if (!overlayCanvas) {
@@ -2301,12 +2419,13 @@
                         canvas.parentElement.style.position = 'relative';
                         canvas.parentElement.appendChild(overlayCanvas);
                     }
-                    // Sincroniza tamanho com base
+                    // Sincroniza tamanho com base em pixels reais do canvas (alta densidade / zoom)
                     overlayCanvas.width = canvas.width;
                     overlayCanvas.height = canvas.height;
-                    // Sincroniza dimensões visuais para evitar desalinhamento em alta densidade de pixels
-                    overlayCanvas.style.width = canvas.style.width;
-                    overlayCanvas.style.height = canvas.style.height;
+                    // Sincroniza dimensões CSS visuais usando o tamanho real exibido
+                    const rect = canvas.getBoundingClientRect();
+                    overlayCanvas.style.width = `${Math.round(rect.width)}px`;
+                    overlayCanvas.style.height = `${Math.round(rect.height)}px`;
                 };
 
                 const applyBlurHighlight = () => {
@@ -2314,26 +2433,43 @@
                     const octx = overlayCanvas.getContext('2d');
                     octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                     if (highlightIndex !== null && highlightIndex >= 0) {
-                        const meta = chart.getDatasetMeta(0);
-                        const el = meta && meta.data && meta.data[highlightIndex];
-                        const area = chart.chartArea || { left: 0, right: overlayCanvas.width, top: 0, bottom: overlayCanvas.height };
-                        // Geometria robusta via escalas
-                        const ds = chart.data.datasets[0];
-                        const val = Array.isArray(ds.data) ? ds.data[highlightIndex] : ds.data;
-                        const yScale = chart.scales && chart.scales['y'];
-                        const xScale = chart.scales && chart.scales['x'];
-                        let base = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(0) : area.bottom;
-                        let top = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(val) : (el && el.y) || area.top;
-                        let height = Math.abs(base - top);
-                        top = Math.min(top, base);
-                        // Centro X e largura
-                        let x = (el && el.x) || (xScale && typeof xScale.getPixelForTick === 'function' ? xScale.getPixelForTick(highlightIndex) : (area.left + area.right) / 2);
-                        let width = (el && el.width) || ((area.right - area.left) / Math.max(1, labels.length) * 0.7);
-                        const left = x - width / 2;
-                        // Aumenta a largura para destacar (efeito "pop")
-                        const scaleFactor = 1.12; // 12% mais larga
-                        const scaledWidth = width * scaleFactor;
-                        const scaledLeft = x - scaledWidth / 2;
+                        // Garante visibilidade do overlay quando há seleção
+                        overlayCanvas.style.display = '';
+                        try {
+                            const meta = chart.getDatasetMeta(0);
+                            const area = chart.chartArea || { left: 0, right: overlayCanvas.width, top: 0, bottom: overlayCanvas.height };
+                            const count = (meta && meta.data) ? meta.data.length : 0;
+                            if (!count || highlightIndex < 0 || highlightIndex >= count) {
+                                overlayCanvas.style.display = 'none';
+                                return;
+                            }
+                            const el = meta.data[highlightIndex];
+                            // Geometria via escalas
+                            const ds = chart.data.datasets[0];
+                            const val = Array.isArray(ds.data) ? ds.data[highlightIndex] : ds.data;
+                            const yScale = chart.scales && chart.scales['y'];
+                            const xScale = chart.scales && chart.scales['x'];
+                            let base = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(0) : area.bottom;
+                            let top = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(val) : (el && typeof el.y === 'number' ? el.y : area.top);
+                            let height = Math.abs(base - top);
+                            top = Math.min(top, base);
+                            // Centro X e largura
+                            let x = (el && typeof el.x === 'number') 
+                                ? el.x 
+                                : (xScale && typeof xScale.getPixelForTick === 'function' 
+                                    ? xScale.getPixelForTick(highlightIndex) 
+                                    : (area.left + area.right) / 2);
+                            let width = (el && typeof el.width === 'number' && el.width > 0) 
+                                ? el.width 
+                                : Math.max(6, (area.right - area.left) / Math.max(1, count) * 0.7);
+                            // Aumenta a largura para destacar (efeito "pop")
+                            const scaleFactor = 1.12; // 12% mais larga
+                            let scaledWidth = width * scaleFactor;
+                            let scaledLeft = x - scaledWidth / 2;
+                            // Clamps para evitar estouro fora da área do gráfico
+                            const clampLeft = Math.max(area.left, scaledLeft);
+                            const clampRight = Math.min(area.right, scaledLeft + scaledWidth);
+                            const clampWidth = Math.max(0, clampRight - clampLeft);
 
                             // 1) Escurece apenas a área do gráfico (chartArea), preservando números/eixos fora
                             octx.save();
@@ -2341,12 +2477,13 @@
                             octx.fillRect(area.left, area.top, area.right - area.left, area.bottom - area.top);
                             // 2) Recorta (remove) a área da barra selecionada (com largura ampliada) para mantê-la nítida
                             octx.globalCompositeOperation = 'destination-out';
-                            octx.fillRect(scaledLeft, top, scaledWidth, height);
+                            octx.fillRect(clampLeft, top, clampWidth, height);
                             octx.restore();
 
                             // 3) Preenche a barra inteira com efeito "neon" (glow)
                             let selectedColor = chart.data.datasets[0].backgroundColor;
                             if (Array.isArray(selectedColor)) selectedColor = selectedColor[highlightIndex] || highlightColor;
+                            const vivid = vividifyColor(selectedColor || highlightColor);
 
                             // Passo A: preenchimento principal nítido (barra inteira) com leve sombra para "lift"
                             octx.save();
@@ -2355,27 +2492,31 @@
                             octx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
                             octx.clip();
                             octx.globalCompositeOperation = 'source-over';
-                            octx.fillStyle = selectedColor || highlightColor;
+                            octx.fillStyle = vivid;
                             octx.globalAlpha = 0.95;
                             // Sombra para efeito de destaque do fundo
                             octx.shadowColor = 'rgba(0, 0, 0, 0.55)';
                             octx.shadowBlur = 10;
                             octx.shadowOffsetX = 0;
                             octx.shadowOffsetY = 6;
-                            octx.fillRect(scaledLeft, top, scaledWidth, height);
+                            octx.fillRect(clampLeft, top, clampWidth, height);
                             octx.restore();
 
                             // Passo B: brilho ao redor (neon) cobrindo toda a barra
                             octx.save();
                             octx.globalCompositeOperation = 'lighter';
-                            octx.fillStyle = selectedColor || highlightColor;
+                            octx.fillStyle = vivid;
                             octx.globalAlpha = 0.35;
-                            octx.shadowColor = selectedColor || highlightColor;
+                            octx.shadowColor = vivid;
                             octx.shadowBlur = 24;
                             octx.shadowOffsetX = 0;
                             octx.shadowOffsetY = 0;
-                            octx.fillRect(scaledLeft, top, scaledWidth, height);
+                            octx.fillRect(clampLeft, top, clampWidth, height);
                             octx.restore();
+                        } catch (e) {
+                            // Em caso de erro de geometria, ocultar overlay para evitar bug visual
+                            overlayCanvas.style.display = 'none';
+                        }
                     } else {
                         // Sem seleção: limpa overlay e oculta
                         octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -2388,6 +2529,30 @@
                     overlayCanvas && (overlayCanvas.style.display = '');
                     applyBlurHighlight();
                 });
+
+                // Reaplica durante animação e após redimensionamentos para evitar falhas de desenho
+                try {
+                    chart.options.animation = Object.assign({}, chart.options.animation, {
+                        duration: (chart.options.animation && chart.options.animation.duration) || 350,
+                        onProgress: () => applyBlurHighlight(),
+                        onComplete: () => applyBlurHighlight()
+                    });
+                } catch(e) {}
+                // Ajusta em resize
+                try {
+                    const resizeObserver = new ResizeObserver(() => {
+                        ensureOverlay();
+                        applyBlurHighlight();
+                    });
+                    // Observar o próprio canvas para capturar mudanças de tamanho internas (zoom/dpr)
+                    resizeObserver.observe(canvas);
+                } catch(e) {
+                    // Fallback: escuta resize da janela
+                    window.addEventListener('resize', () => {
+                        ensureOverlay();
+                        applyBlurHighlight();
+                    });
+                }
             }
         }
 
@@ -2428,9 +2593,21 @@
                 return matchConsultant && matchPauseType;
             });
 
-            const typeData = aggregateData('TIPO', selectionDataset);
+            // Para o gráfico "Total por Tipo", não filtramos por tipo
+            // para manter todas as barras visíveis e destacar a selecionada.
+            const datasetForTypeBars = filteredData.filter(d => {
+                const matchConsultantOnly = !dashboardSelection.consultant || d.CONSULTOR === dashboardSelection.consultant;
+                return matchConsultantOnly; // ignora filtro por tipo aqui
+            });
+            const typeData = aggregateData('TIPO', datasetForTypeBars);
             const typeLabels = Object.keys(typeData).sort();
             const selectedTypeIndex = dashboardSelection.pauseType ? typeLabels.indexOf(dashboardSelection.pauseType) : null;
+            const barColorForType = (() => {
+                if (!dashboardSelection.pauseType) return '#22C55E';
+                if (typeLabels.length <= 1) return stableColorForKey(typeLabels[0]);
+                // Multi-barras: pinta somente a selecionada com a cor do donut
+                return typeLabels.map(lbl => lbl === dashboardSelection.pauseType ? stableColorForKey(lbl) : '#22C55E');
+            })();
             createChart(
                 'total-pause-type-chart', 
                 'typeTotal', 
@@ -2438,8 +2615,8 @@
                 typeLabels, 
                 typeLabels.map(k => typeData[k]), 
                 'Total Duração', 
-                '#22C55E', 
-                null, 
+                barColorForType, 
+                typeLabels, 
                 'min',
                 (idx) => {
                     if (idx === null) {
@@ -2466,15 +2643,7 @@
                 '#F59E0B', 
                 null, 
                 'min',
-                (idx) => {
-                    if (idx === null) {
-                        dashboardSelection.pauseType = null;
-                    } else {
-                        const clickedType = typeLabels[idx];
-                        dashboardSelection.pauseType = (dashboardSelection.pauseType === clickedType) ? null : clickedType;
-                    }
-                    renderCharts();
-                },
+                null,
                 selectedTypeIndex,
                 '#F59E0B'
             );
