@@ -1,11 +1,18 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const handler = require('./api/dados-argus.mjs').default;
+// Carrega handler .mjs apenas sob demanda para evitar erro de import ESM em CommonJS
+let handler = null;
+async function getArgusHandler(){
+  if(handler) return handler;
+  const mod = await import('./api/dados-argus.mjs');
+  handler = mod.default;
+  return handler;
+}
 const geminiKeyHandler = require('./api/gemini-key.js');
 
 const app = express();
-const PORT = 3000; // A porta em que nosso proxy vai rodar
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // Porta configurável via env
 
 // Middleware para permitir que o painel (rodando em outra porta/origem) se comunique com este proxy
 app.use(cors());
@@ -22,7 +29,8 @@ app.get('/', (req, res) => {
 app.post('/api/dados-argus', async (req, res) => {
     console.log('[Proxy] Requisição recebida para /api/dados-argus');
     try {
-        await handler(req, res);
+        const h = await getArgusHandler();
+        await h(req, res);
     } catch (error) {
         console.error('[Proxy] Erro ao processar requisição da API Argus:', error);
         res.status(500).json({ message: 'Erro interno no servidor proxy ao processar a requisição da API Argus.' });

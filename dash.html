@@ -10,6 +10,41 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator_bootstrap5.min.css" rel="stylesheet">
     <script type="text/javascript" src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script>
+        // Fallback de bibliotecas externas e aviso visual caso não carreguem
+        (function(){
+            function loadScript(src, cb){
+                var s = document.createElement('script');
+                s.src = src; s.async = true;
+                s.onload = function(){ try{ cb && cb(); }catch(e){} };
+                s.onerror = function(){ try{ cb && cb(new Error('fail')); }catch(e){} };
+                document.head.appendChild(s);
+            }
+            function loadCss(href){
+                var l = document.createElement('link');
+                l.rel = 'stylesheet'; l.href = href;
+                document.head.appendChild(l);
+            }
+            window.__libsReady = { chart: !!window.Chart, tabulator: !!window.Tabulator };
+            window.showLibWarning = function(msg){
+                var id = 'lib-warn-banner';
+                if (document.getElementById(id)) return;
+                var div = document.createElement('div');
+                div.id = id;
+                div.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#3b82f6;color:#fff;padding:8px 12px;font:500 14px Inter,system-ui;box-shadow:0 2px 10px rgba(0,0,0,0.35)';
+                div.textContent = msg || 'Algumas bibliotecas externas não carregaram. Verifique sua conexão.';
+                document.body.appendChild(div);
+                setTimeout(function(){ try{ div.remove(); }catch(e){} }, 8000);
+            };
+            if (!window.Chart) {
+                loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js', function(){ window.__libsReady.chart = !!window.Chart; if (!window.Chart) { window.showLibWarning('Chart.js não carregou. Gráficos serão limitados.'); } });
+            }
+            if (!window.Tabulator) {
+                loadCss('https://cdnjs.cloudflare.com/ajax/libs/tabulator/5.5.2/css/tabulator_bootstrap5.min.css');
+                loadScript('https://cdnjs.cloudflare.com/ajax/libs/tabulator/5.5.2/js/tabulator.min.js', function(){ window.__libsReady.tabulator = !!window.Tabulator; if (!window.Tabulator) { window.showLibWarning('Tabulator não carregou. Tabelas serão desativadas.'); } });
+            }
+        })();
+    </script>
     <style>
         /* --- 1. Paleta de Cores e Tema --- */
         :root {
@@ -319,6 +354,20 @@
             border-color: rgba(255,255,255,0.1);
             opacity: 0.65;
         }
+
+        /* Estilo escuro específico para dropdowns (select) dos filtros */
+        select.form-input-dark {
+            background-color: #0C0C12; /* preto profundo */
+            border-color: rgba(255,255,255,0.14);
+            color: #e5e7eb;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            box-shadow: none;
+        }
+        select.form-input-dark:hover { filter: brightness(1.06); }
+        select.form-input-dark:focus { box-shadow: 0 0 0 2px var(--highlight-primary); }
+        /* Lista de opções do dropdown */
+        select.form-input-dark option { background-color: #0C0C12; color: #e5e7eb; }
         
         .modal-overlay {
             position: fixed; inset: 0px; display: flex;
@@ -522,12 +571,12 @@
         }
         #filters-float-panel {
             position: fixed;
-            top: 12%;
-            left: 18%;
-            width: 480px;
-            min-width: 340px;
-            height: auto; /* altura automática para remover scroll interno */
-            min-height: 280px;
+            top: 10%;
+            left: 12%;
+            width: 270px;
+            min-width: 260px;
+            height: auto; /* altura automática */
+            min-height: 260px;
             /* Glassmorphism: painel translúcido e com blur */
             /* Dark glass mais marcado */
             background: rgba(17, 24, 39, 0.45);
@@ -539,31 +588,35 @@
             box-shadow: 0 16px 36px rgba(0,0,0,0.45);
             z-index: 70;
             display: none;
+            overflow: hidden; /* impede que conteúdo vaze para fora */
         }
         #filters-float-panel .floating-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.75rem 0.9rem;
+            padding: 0.6rem 0.75rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
             /* Cabeçalho acompanha o dark glass do painel */
             background: rgba(17, 24, 39, 0.32);
             cursor: move;
             user-select: none;
         }
-        #filters-float-panel .floating-title { font-weight: 600; letter-spacing: .01em; }
-        #filters-float-panel .floating-actions { display: flex; gap: .5rem; }
+        #filters-float-panel .floating-title { font-weight: 600; letter-spacing: .01em; font-size: .95rem; }
+        #filters-float-panel .floating-actions { display: flex; gap: .4rem; }
         .floating-btn {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 34px; height: 34px; border-radius: 10px;
+            width: 30px; height: 30px; border-radius: 9px;
             background: rgba(255,255,255,0.06);
             color: #e2e8f0;
             border: 1px solid rgba(255,255,255,0.20);
         }
         #filters-float-panel .floating-content {
             position: static; /* conteúdo segue o fluxo normal abaixo do cabeçalho */
-            padding: 0.75rem 0.9rem;
-            overflow: visible; /* sem scroll interno */
+            padding: 0.6rem 0.75rem;
+            /* altura será ajustada dinamicamente via JS; mantemos defaults seguros */
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         #filters-float-panel .floating-resizer {
             position: absolute; right: 6px; bottom: 6px;
@@ -575,16 +628,23 @@
         /* Dentro da janela flutuante, reabilitar interação do cabeçalho da card p/ drag */
         #filters-float-panel .collapsible-header { pointer-events: auto; cursor: default; }
         /* Minimalismo dentro do painel: cards sem fundo pesado */
-        #filters-float-panel .card { background: transparent; box-shadow: none; border: none; padding: 0.5rem; }
-        #filters-float-panel .collapsible-header { background: transparent; padding: 0 0 0.5rem 0; border: none; }
+        #filters-float-panel .card { background: transparent !important; box-shadow: none !important; border: none !important; padding: 0.4rem; width: 100%; align-items: stretch; }
+        #filters-float-panel .collapsible-header { background: transparent; padding: 0 0 0.35rem 0; border: none; }
+        #filters-float-panel .collapsible-header h2 { font-size: 1.1rem; line-height: 1.35rem; }
+        #filters-float-panel .collapsible-header svg { width: 18px; height: 18px; }
         #filters-float-panel .collapsible-content { padding: 0; }
         /* Estado minimizado: mostra apenas o cabeçalho (compacto) */
-        #filters-float-panel.minimized { height: auto; width: auto; min-width: 0; }
+        #filters-float-panel.minimized { height: auto; width: auto; min-width: 0; bottom: 16px; right: 92px; left: auto; top: auto; }
         #filters-float-panel.minimized .floating-content { display: none; }
         #filters-float-panel.minimized .floating-resizer { display: none; }
-        #filters-float-panel.minimized .floating-header { padding: 0.45rem 0.6rem; }
-        #filters-float-panel.minimized .floating-title { font-size: 0.95rem; }
-        #filters-float-panel.minimized .floating-actions .floating-btn { width: 28px; height: 28px; border-radius: 8px; }
+        #filters-float-panel.minimized .floating-header { padding: 0.4rem 0.55rem; cursor: pointer; }
+        #filters-float-panel.minimized .floating-title { font-size: 0.9rem; }
+        #filters-float-panel.minimized .floating-actions .floating-btn { width: 26px; height: 26px; border-radius: 8px; }
+        #filters-float-panel.minimized #filters-float-close-btn { display: none; }
+
+        /* Inputs mais compactos dentro do painel de filtros */
+        #filters-float-panel .form-input-dark { font-size: .92rem; padding: .4rem .7rem .4rem .6rem; border-radius: .45rem; }
+        #filters-float-panel label { font-size: .85rem; }
 
         /* --- Menu rápido flutuante minimalista --- */
         .quick-menu {
@@ -639,7 +699,7 @@
                 top: 12px;
                 left: 12px;
                 width: calc(100% - 24px);
-                min-width: 300px;
+                min-width: 260px;
                 height: auto; /* ocupa o necessário sem scroll interno */
                 border-radius: 14px;
             }
@@ -778,6 +838,14 @@
                                 </div>
                             </div>
                             <p id="file-status" class="text-sm text-slate-400 mt-4">Nenhum dado carregado.</p>
+                        </div>
+
+                        <div class="controls" style="display:flex;gap:12px;align-items:center;justify-content:space-between;margin:8px 0 0;">
+                            <input id="exp-search" type="text" placeholder="Buscar (consultor/tipo/data)..." style="flex:1;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;" />
+                            <div style="display:flex;gap:8px;">
+                                <button id="exp-clear" style="padding:8px 12px;border-radius:8px;background:#374151;color:#e5e7eb;border:1px solid var(--border);">Limpar filtros</button>
+                                <button id="exp-export-csv" style="padding:8px 12px;border-radius:8px;background:#1D4ED8;color:#fff;border:1px solid #163ea8;">Exportar CSV</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1116,6 +1184,7 @@
             'Café': { minutes: 15, tolerance: 2 },
             'Intervalo': { minutes: 15, tolerance: 2 },
             'Pausa Intervalo': { minutes: 15, tolerance: 2 },
+            'Pausa (intervalo)': { minutes: 15, tolerance: 2 },
             'Banheiro': { minutes: 10, tolerance: 3 },
             'Negociação': { minutes: 15, tolerance: 3 },
             'Em Negociação': { minutes: 15, tolerance: 3 },
@@ -1123,6 +1192,10 @@
             'Pesquisando Lead': { minutes: 5, tolerance: 2 },
             'Novo Lead': { minutes: 5, tolerance: 2 }
         };
+
+        // Faixa de datas ativa para Pausas (usada pelos gráficos que ignoram dimensão própria)
+        let currentPauseStartDate = null;
+        let currentPauseEndDate = null;
 
         // Objeto unificado para seletores do DOM
         const els = {
@@ -1272,17 +1345,19 @@
         function parseDateTimeRobust(dateTimeStr) {
             if (!dateTimeStr || typeof dateTimeStr !== 'string' || dateTimeStr.trim() === '' || dateTimeStr.includes('#########') || dateTimeStr.includes('#')) { return null; }
             let cleanStr = dateTimeStr.trim().replace(/^"|"$/g, '');
+            // Tenta primeiro o parser nativo (suporta ISO e alguns formatos locais)
             let date = new Date(cleanStr);
             if (!isNaN(date.getTime())) return date;
-            const brRegex = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/;
-            const match = cleanStr.match(brRegex);
+            // Aceita BR dd/mm/yyyy com ou sem horário
+            const brRegexOptionalTime = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/;
+            const match = cleanStr.match(brRegexOptionalTime);
             if (match) {
                 const day = parseInt(match[1], 10);
                 const month = parseInt(match[2], 10) - 1;
                 const year = parseInt(match[3], 10);
-                const hour = parseInt(match[4], 10);
-                const minute = parseInt(match[5], 10);
-                const second = match[6] ? parseInt(match[6], 10) : 0;
+                const hour = match[4] !== undefined ? parseInt(match[4], 10) : 0;
+                const minute = match[5] !== undefined ? parseInt(match[5], 10) : 0;
+                const second = match[6] !== undefined ? parseInt(match[6], 10) : 0;
                 date = new Date(year, month, day, hour, minute, second);
                 if (!isNaN(date.getTime())) return date;
             }
@@ -1290,7 +1365,11 @@
         }
         function formatDateToYYYYMMDD(date) {
             if (!date || isNaN(date.getTime())) return '';
-            return date.toISOString().split('T')[0];
+            // Formata YYYY-MM-DD em horário local para não deslocar o dia
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
         }
         function formatDateTimeDisplay(date) {
             if (!date || isNaN(date.getTime())) return '';
@@ -1588,7 +1667,7 @@
             els.main.fileStatus.textContent = 'Conectando ao servidor proxy...';
             els.main.fileStatus.className = 'text-sm text-blue-400 mt-4 animate-pulse';
 
-            const PROXY_URL = "http://localhost:3000/api/dados-argus";
+            const PROXY_URL = "/api/dados-argus";
             const payload = {};
             
             const startDate = els.main.apiControls.startDate.value;
@@ -1773,15 +1852,23 @@
             const selConsultant = els.main.filters.consultant ? els.main.filters.consultant.value : '';
             const selType = els.main.filters.pauseType ? els.main.filters.pauseType.value : '';
 
+            // Sincroniza seleção dos gráficos com os filtros atuais
+            dashboardSelection.consultant = selConsultant || null;
+            dashboardSelection.pauseType = selType || null;
+
             let startDate = null, endDate = null;
             if (els.main.filters.startDate && els.main.filters.startDate.value) {
                 startDate = new Date(els.main.filters.startDate.value);
-                startDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0,0,0);
+                startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0,0,0);
             }
             if (els.main.filters.endDate && els.main.filters.endDate.value) {
                 endDate = new Date(els.main.filters.endDate.value);
-                endDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999);
+                endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
             }
+
+            // Guarda a faixa para uso em gráficos (consultor ignora filtro de consultor)
+            currentPauseStartDate = startDate;
+            currentPauseEndDate = endDate;
 
             filteredData = originalData.filter(d => {
                 const matchConsultant = !selConsultant || d.CONSULTOR === selConsultant;
@@ -1831,11 +1918,11 @@
             let startDate = null, endDate = null;
             if (els.callTabulations.filters.startDate && els.callTabulations.filters.startDate.value) {
                 startDate = new Date(els.callTabulations.filters.startDate.value);
-                startDate = new Date(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate(), 0,0,0);
+                startDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate(), 0,0,0);
             }
             if (els.callTabulations.filters.endDate && els.callTabulations.filters.endDate.value) {
                 endDate = new Date(els.callTabulations.filters.endDate.value);
-                endDate = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate(), 23, 59, 59, 999);
+                endDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999);
             }
 
             callTabulationsFilteredData = callTabulationsOriginalData.filter(d => {
@@ -1993,27 +2080,32 @@
                 callTabulationsTable.destroy();
             }
             if (els.callTabulations.tableContainer) {
-                callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
-                    data: callTabulationsFilteredData,
-                    height: "500px",
-                    layout: "fitColumns",
-                    tooltips: true,
-                    placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
-                    columns: [
-                        { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 160, tooltip: true },
-                        { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input", width: 220, tooltip: true },
-                        { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input", width: 220, tooltip: true },
-                        { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()), tooltip: (cell) => formatDateTimeDisplay(cell.getValue()) },
-                    ],
-                    locale: "pt-br",
-                    langs: {
-                        "pt-br": {
-                            "headerFilters": {
-                                "default": "filtrar...",
+                if (typeof Tabulator === 'undefined') {
+                    if (typeof showLibWarning === 'function') showLibWarning('Tabulator não carregou. Tabela de Tabulações indisponível.');
+                    els.callTabulations.tableContainer.innerHTML = "<div class='p-3 text-slate-300'>Tabulator não carregou; verifique internet ou firewall. Você ainda pode usar filtros e exportar.</div>";
+                } else {
+                    callTabulationsTable = new Tabulator(els.callTabulations.tableContainer, {
+                        data: callTabulationsFilteredData,
+                        height: "500px",
+                        layout: "fitColumns",
+                        tooltips: true,
+                        placeholder: "Carregue um arquivo CSV para ver os dados de tabulação.",
+                        columns: [
+                            { title: "Operador", field: "OPERADOR", headerFilter: "input", width: 160, tooltip: true },
+                            { title: "Tabulado Como", field: "TABULADO_COMO", headerFilter: "input", width: 220, tooltip: true },
+                            { title: "Categoria", field: "CATEGORIA_TABULACAO", headerFilter: "input", width: 220, tooltip: true },
+                            { title: "Data", field: "DATA_HORA_TABULACAO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()), tooltip: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                        ],
+                        locale: "pt-br",
+                        langs: {
+                            "pt-br": {
+                                "headerFilters": {
+                                    "default": "filtrar...",
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
 
@@ -2110,19 +2202,31 @@
         // Função global: mapeia um rótulo estável para uma cor HSL determinística
         // Usada por múltiplos gráficos (barras e donut) para manter consistência.
         function stableColorForKey(key, sat = 95, light = 45) {
-            if (!key) return `hsl(0, ${sat}%, ${light}%)`;
+            if (!key) return 'hsl(0, ' + sat + '%, ' + light + '%)';
             let hash = 5381;
             for (let i = 0; i < key.length; i++) {
                 hash = ((hash << 5) + hash) + key.charCodeAt(i);
             }
             const hue = Math.abs(hash) % 360;
-            return `hsl(${hue}, ${sat}%, ${light}%)`;
+            return 'hsl(' + hue + ', ' + sat + '%, ' + light + '%)';
         }
         
         function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = '#F59E0B') {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
+            // Fallback simples quando Chart.js não está disponível
+            if (typeof Chart === 'undefined') {
+                try {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '14px Inter, system-ui, sans-serif';
+                    const msg = 'Chart.js não carregou; gráficos desativados. Verifique sua conexão.';
+                    ctx.fillText(msg, 12, 24);
+                    if (typeof showLibWarning === 'function') showLibWarning('Chart.js não carregou. Gráficos foram desativados.');
+                } catch(e) {}
+                return;
+            }
             if (charts[chartInstanceVar]) charts[chartInstanceVar].destroy();
 
             const chartColors = {
@@ -2135,7 +2239,7 @@
                 const colors = [];
                 for (let i = 0; i < count; i++) {
                     const hue = Math.round((i * step) % 360);
-                    colors.push(`hsl(${hue}, 95%, 45%)`);
+                    colors.push('hsl(' + hue + ', 95%, 45%)');
                 }
                 return colors;
             };
@@ -2175,7 +2279,12 @@
                 return { h: 210, s: 85, l: 50 };
             };
 
-            const hslToCss = ({h,s,l}) => `hsl(${Math.max(0,Math.min(360,h))}, ${Math.max(0,Math.min(100,s))}%, ${Math.max(0,Math.min(100,l))}%)`;
+            const hslToCss = function({h,s,l}) {
+                var hh = Math.max(0, Math.min(360, h));
+                var ss = Math.max(0, Math.min(100, s));
+                var ll = Math.max(0, Math.min(100, l));
+                return 'hsl(' + hh + ', ' + ss + '%, ' + ll + '%)';
+            };
             const vividifyColor = (color, satBoost = 8, lightBoost = 6) => {
                 const hsl = parseColorToHsl(color);
                 hsl.s = Math.min(100, hsl.s + satBoost);
@@ -2261,6 +2370,43 @@
                             }
                         };
                         arr.push(barSelectionOverlay);
+
+                        // Glow de contorno do chartArea quando houver qualquer filtro ativo
+                        const avgFilteredGlow = {
+                            id: 'avgFilteredGlow',
+                            afterDatasetsDraw(chart) {
+                                try {
+                                    if (chartInstanceVar !== 'typeAverage') return;
+                                    const hasFilter = !!(dashboardSelection && (dashboardSelection.consultant || dashboardSelection.pauseType));
+                                    if (!hasFilter) return;
+                                    const area = chart.chartArea;
+                                    if (!area) return;
+                                    const ctx = chart.ctx;
+                                    const glowColor = '#FF6A00';
+                                    const radius = 12;
+                                    ctx.save();
+                                    ctx.globalCompositeOperation = 'lighter';
+                                    ctx.strokeStyle = glowColor;
+                                    ctx.lineWidth = 4;
+                                    ctx.shadowColor = glowColor;
+                                    ctx.shadowBlur = 26;
+                                    // Desenha um retângulo arredondado em volta da área do gráfico
+                                    ctx.beginPath();
+                                    ctx.moveTo(area.left + radius, area.top);
+                                    ctx.lineTo(area.right - radius, area.top);
+                                    ctx.quadraticCurveTo(area.right, area.top, area.right, area.top + radius);
+                                    ctx.lineTo(area.right, area.bottom - radius);
+                                    ctx.quadraticCurveTo(area.right, area.bottom, area.right - radius, area.bottom);
+                                    ctx.lineTo(area.left + radius, area.bottom);
+                                    ctx.quadraticCurveTo(area.left, area.bottom, area.left, area.bottom - radius);
+                                    ctx.lineTo(area.left, area.top + radius);
+                                    ctx.quadraticCurveTo(area.left, area.top, area.left + radius, area.top);
+                                    ctx.stroke();
+                                    ctx.restore();
+                                } catch(e) {}
+                            }
+                        };
+                        arr.push(avgFilteredGlow);
                     }
                     return arr;
                 })(),
@@ -2483,7 +2629,10 @@
                             // 3) Preenche a barra inteira com efeito "neon" (glow)
                             let selectedColor = chart.data.datasets[0].backgroundColor;
                             if (Array.isArray(selectedColor)) selectedColor = selectedColor[highlightIndex] || highlightColor;
-                            const vivid = vividifyColor(selectedColor || highlightColor);
+                            const baseNeon = (chartInstanceVar === 'typeAverage') ? '#FF6A00' : (selectedColor || highlightColor);
+                            const vivid = (chartInstanceVar === 'typeAverage') 
+                                ? vividifyColor(baseNeon, 18, 12) 
+                                : vividifyColor(baseNeon);
 
                             // Passo A: preenchimento principal nítido (barra inteira) com leve sombra para "lift"
                             octx.save();
@@ -2506,9 +2655,9 @@
                             octx.save();
                             octx.globalCompositeOperation = 'lighter';
                             octx.fillStyle = vivid;
-                            octx.globalAlpha = 0.35;
+                            octx.globalAlpha = (chartInstanceVar === 'typeAverage') ? 0.45 : 0.35;
                             octx.shadowColor = vivid;
-                            octx.shadowBlur = 24;
+                            octx.shadowBlur = (chartInstanceVar === 'typeAverage') ? 28 : 24;
                             octx.shadowOffsetX = 0;
                             octx.shadowOffsetY = 0;
                             octx.fillRect(clampLeft, top, clampWidth, height);
@@ -2557,8 +2706,14 @@
         }
 
         function renderCharts() {
-            // Dataset do gráfico de consultores: aplica filtro por tipo de pausa (se houver), mas não por consultor
-            const consultantChartDataset = filteredData.filter(d => !dashboardSelection.pauseType || d.TIPO === dashboardSelection.pauseType);
+            // Dataset do gráfico de consultores: aplica filtro por tipo e data, mas ignora filtro por consultor
+            const consultantChartDataset = originalData.filter(d => {
+                const matchType = !dashboardSelection.pauseType || d.TIPO === dashboardSelection.pauseType;
+                let matchDate = true;
+                if (currentPauseStartDate) matchDate = matchDate && d.DATA_INICIO_OBJ >= currentPauseStartDate;
+                if (currentPauseEndDate) matchDate = matchDate && d.DATA_INICIO_OBJ <= currentPauseEndDate;
+                return matchType && matchDate;
+            });
             const consData = aggregateData('CONSULTOR', consultantChartDataset);
             const consLabels = Object.keys(consData).sort((a, b) => consData[b] - consData[a]);
             const abbreviatedLabels = consLabels.map(name => abbreviateName(name));
@@ -2640,12 +2795,12 @@
                 typeLabels, 
                 avgChartData, 
                 'Média Duração', 
-                '#F59E0B', 
+                '#FF6A00', 
                 null, 
                 'min',
                 null,
                 selectedTypeIndex,
-                '#F59E0B'
+                '#FF6A00'
             );
 
             createChart(
@@ -2673,15 +2828,15 @@
         }
 
         function renderCallTabulationCharts() {
-            // Aplica seleção global
-            const selectionTabDataset = callTabulationsFilteredData.filter(d => {
-                const matchOperator = !dashboardSelection.tabOperator || d.OPERADOR === dashboardSelection.tabOperator;
+            // Para manter todas as barras visíveis e apenas destacar a selecionada,
+            // cada gráfico ignora o filtro da própria dimensão e aplica os demais.
+            const datasetForOperatorBars = callTabulationsFilteredData.filter(d => {
                 const matchType = !dashboardSelection.tabType || d.TABULADO_COMO === dashboardSelection.tabType;
                 const matchCategory = !dashboardSelection.tabCategory || d.CATEGORIA_TABULACAO === dashboardSelection.tabCategory;
-                return matchOperator && matchType && matchCategory;
+                return matchType && matchCategory; // ignora filtro de operador
             });
 
-            const operatorData = aggregateTabulationData('OPERADOR', selectionTabDataset);
+            const operatorData = aggregateTabulationData('OPERADOR', datasetForOperatorBars);
             const operatorLabels = Object.keys(operatorData).sort((a, b) => operatorData[b] - operatorData[a]);
             const abbreviatedOperatorLabels = operatorLabels.map(name => abbreviateName(name));
             const selectedOperatorIndex = dashboardSelection.tabOperator ? operatorLabels.indexOf(dashboardSelection.tabOperator) : null;
@@ -2692,7 +2847,7 @@
                 abbreviatedOperatorLabels,
                 operatorLabels.map(k => operatorData[k]),
                 'Total de Tabulações',
-                '#7C3AED',
+                '#1D4ED8',
                 operatorLabels,
                 'count',
                 (idx) => {
@@ -2708,10 +2863,22 @@
                 '#F59E0B'
             );
 
-            const typeData = aggregateTabulationData('TABULADO_COMO', selectionTabDataset);
+            const datasetForTypeBars = callTabulationsFilteredData.filter(d => {
+                const matchOperator = !dashboardSelection.tabOperator || d.OPERADOR === dashboardSelection.tabOperator;
+                const matchCategory = !dashboardSelection.tabCategory || d.CATEGORIA_TABULACAO === dashboardSelection.tabCategory;
+                return matchOperator && matchCategory; // ignora filtro de tipo
+            });
+            const typeData = aggregateTabulationData('TABULADO_COMO', datasetForTypeBars);
             const typeLabels = Object.keys(typeData).sort();
             const abbreviatedTypeLabelsForLegend = typeLabels.map(lbl => abbreviateLabel(lbl));
             const selectedTypeIndex = dashboardSelection.tabType ? typeLabels.indexOf(dashboardSelection.tabType) : null;
+            // Ajuste de estilo: quando um tipo estiver selecionado no donut,
+            // a barra correspondente usa a mesma cor estável do rótulo.
+            const barColorForTabType = (() => {
+                if (!dashboardSelection.tabType) return '#22C55E';
+                if (typeLabels.length <= 1) return stableColorForKey(typeLabels[0]);
+                return typeLabels.map(lbl => lbl === dashboardSelection.tabType ? stableColorForKey(lbl) : '#22C55E');
+            })();
             createChart(
                 'total-tabulations-type-chart',
                 'tabulationTypeTotal',
@@ -2719,7 +2886,7 @@
                 typeLabels,
                 typeLabels.map(k => typeData[k]),
                 'Total de Tabulações',
-                '#22C55E',
+                barColorForTabType,
                 null,
                 'count',
                 (idx) => {
@@ -2735,7 +2902,12 @@
                 '#F59E0B'
             );
 
-            const categoryData = aggregateTabulationData('CATEGORIA_TABULACAO', selectionTabDataset);
+            const datasetForCategoryBars = callTabulationsFilteredData.filter(d => {
+                const matchOperator = !dashboardSelection.tabOperator || d.OPERADOR === dashboardSelection.tabOperator;
+                const matchType = !dashboardSelection.tabType || d.TABULADO_COMO === dashboardSelection.tabType;
+                return matchOperator && matchType; // ignora filtro de categoria
+            });
+            const categoryData = aggregateTabulationData('CATEGORIA_TABULACAO', datasetForCategoryBars);
             const categoryLabels = Object.keys(categoryData).sort();
             const selectedCategoryIndex = dashboardSelection.tabCategory ? categoryLabels.indexOf(dashboardSelection.tabCategory) : null;
             createChart(
@@ -3085,6 +3257,16 @@
             let currentCard = null;
             let placeholder = null;
 
+            // Ajusta a altura máxima do conteúdo para caber dentro do painel e liberar scroll
+            function updateContentMaxHeight() {
+                if (!panel || !content || !header) return;
+                const panelRect = panel.getBoundingClientRect();
+                const headerH = header.getBoundingClientRect().height || header.offsetHeight || 48;
+                // Espaço disponível dentro do painel (com margem mínima)
+                const available = Math.max(120, panelRect.height - headerH - 8);
+                content.style.maxHeight = available + 'px';
+            }
+
             function showPanelForCurrentTab() {
                 const isPauses = !els.main.pausesDashboardContent.classList.contains('hidden');
                 const card = document.getElementById(isPauses ? 'pauses-filters-card' : 'tabulations-filters-card');
@@ -3097,6 +3279,9 @@
                 currentCard = card;
                 panel.style.display = 'block';
                 panel.classList.remove('minimized');
+                // Garante que o conteúdo não vaze e libere scroll quando necessário
+                content.style.display = '';
+                updateContentMaxHeight();
             }
 
             function closePanel() {
@@ -3115,6 +3300,8 @@
                 let startX = 0, startY = 0;
                 let panelX = 0, panelY = 0;
                 header.addEventListener('mousedown', (e) => {
+                    // evita iniciar drag quando minimizado ou clicando em botões
+                    if (panel.classList.contains('minimized') || e.target.closest('.floating-actions')) return;
                     isDragging = true;
                     startX = e.clientX;
                     startY = e.clientY;
@@ -3157,10 +3344,11 @@
                     if (!isResizing) return;
                     const dx = e.clientX - startX;
                     const dy = e.clientY - startY;
-                    const newW = Math.max(360, startW + dx);
-                    const newH = Math.max(280, startH + dy);
+                    const newW = Math.max(260, startW + dx);
+                    const newH = Math.max(260, startH + dy);
                     panel.style.width = newW + 'px';
                     panel.style.height = newH + 'px';
+                    updateContentMaxHeight();
                 });
                 window.addEventListener('mouseup', () => { isResizing = false; });
             })();
@@ -3183,14 +3371,55 @@
                         panel.classList.add('minimized');
                         panel.style.width = '';
                         panel.style.height = '';
+                        // ao minimizar, posiciona próximo ao menu rápido no rodapé
+                        panel.style.top = '';
+                        panel.style.left = '';
+                        // Esconde conteúdo ao minimizar
+                        content.style.display = 'none';
+                        content.style.maxHeight = '0px';
+                        // troca ícone para “Maximizar”
+                        minimizeBtn.title = 'Maximizar';
+                        minimizeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/></svg>';
                     } else {
                         // Restaurar dimensões anteriores ao minimizar
                         panel.classList.remove('minimized');
                         if (panel.dataset.prevWidth) { panel.style.width = panel.dataset.prevWidth; } else { panel.style.width = ''; }
                         if (panel.dataset.prevHeight) { panel.style.height = panel.dataset.prevHeight; } else { panel.style.height = ''; }
+                        // volta a permitir coordenadas padrão (top/left)
+                        panel.style.top = '';
+                        panel.style.left = '';
+                        // Mostra conteúdo e reajusta a altura disponível
+                        content.style.display = '';
+                        updateContentMaxHeight();
+                        // volta ícone para “Minimizar”
+                        minimizeBtn.title = 'Minimizar';
+                        minimizeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14"/></svg>';
                     }
                 });
             }
+
+            // Permite restaurar ao clicar no cabeçalho quando minimizado
+            if (header) {
+                header.addEventListener('click', (e) => {
+                    const targetIsButton = e.target.closest('.floating-actions');
+                    if (targetIsButton) return; // não conflita com botões
+                    if (panel.classList.contains('minimized')) {
+                        panel.classList.remove('minimized');
+                        // restaura dimensões se existiam
+                        if (panel.dataset.prevWidth) panel.style.width = panel.dataset.prevWidth; else panel.style.width = '';
+                        if (panel.dataset.prevHeight) panel.style.height = panel.dataset.prevHeight; else panel.style.height = '';
+                        content.style.display = '';
+                        updateContentMaxHeight();
+                    }
+                });
+            }
+
+            // Atualiza ao redimensionar a janela
+            window.addEventListener('resize', () => {
+                if (panel.style.display === 'block' && !panel.classList.contains('minimized')) {
+                    updateContentMaxHeight();
+                }
+            });
         }
 
         // --- Menu Rápido Flutuante ---
@@ -3288,59 +3517,64 @@
             setupFloatingFiltersPanel();
             setupQuickMenu();
 
-            // Inicializa a tabela de pausas
-            tabulatorTable = new Tabulator("#pause-detail-table", {
-                height: "500px",
-                layout: "fitData",
-                placeholder: "<span class='text-slate-400'>Nenhum dado para exibir. Carregue um arquivo CSV ou use a API.</span>",
-                columns: [
-                    { title: "Consultor", field: "CONSULTOR", headerFilter: "input", width: 150 },
-                    { title: "Tipo de Pausa", field: "TIPO", headerFilter: "input" },
-                    { title: "Data Início", field: "DATA_INICIO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
-                    { title: "Duração (HH:MM:SS)", field: "DURACAO_MINUTES", hozAlign: "center", formatter: (cell) => formatMinutesToHHMMSS(cell.getValue()) },
-                    { title: "Duração (Min)", field: "DURACAO_MINUTES", hozAlign: "right", formatter: (c) => c.getValue().toFixed(1) },
-                    { title: "Meta / Média (Min)", field: "TIPO", hozAlign: "right", formatter: (cell) => {
-                        const type = cell.getValue();
-                        const expected = expectedDurations[type];
-                        if (expected) return expected.minutes.toFixed(1);
-                        const avg = filteredAveragesForComparison[type] || 0;
-                        return avg.toFixed(1);
-                    }},
-                    { title: "Status", field: "DURACAO_MINUTES", hozAlign: "center", formatter: (cell) => {
-                        const duration = cell.getValue();
-                        const type = cell.getRow().getData().TIPO;
-                        const expected = expectedDurations[type];
-                        let statusText = '';
-
-                        if (expected) {
-                            const lowerBound = expected.minutes - expected.tolerance;
-                            const upperBound = expected.minutes + expected.tolerance;
-                            if (duration >= lowerBound && duration <= upperBound) {
-                                statusText = '<span class="status-success font-medium">✓ Correto</span>';
-                            } else if (duration < lowerBound) {
-                                statusText = '<span class="status-warning font-semibold">↓ Curto</span>';
-                            } else {
-                                statusText = '<span class="status-danger font-semibold">↑ Longo</span>';
-                            }
-                        } else {
+            // Inicializa a tabela de pausas (com fallback se Tabulator não estiver disponível)
+            if (typeof Tabulator === 'undefined') {
+                if (typeof showLibWarning === 'function') showLibWarning('Tabulator não carregou. Tabela de Pausas indisponível.');
+                var cont = document.querySelector('#pause-detail-table');
+                if (cont) cont.innerHTML = "<div class='p-3 text-slate-300'>Tabulator não carregou; verifique internet ou firewall. Você ainda pode carregar dados e exportar.</div>";
+            } else {
+                tabulatorTable = new Tabulator("#pause-detail-table", {
+                    height: "500px",
+                    layout: "fitData",
+                    placeholder: "<span class='text-slate-400'>Nenhum dado para exibir. Carregue um arquivo CSV ou use a API.</span>",
+                    columns: [
+                        { title: "Consultor", field: "CONSULTOR", headerFilter: "input", width: 150 },
+                        { title: "Tipo de Pausa", field: "TIPO", headerFilter: "input" },
+                        { title: "Data Início", field: "DATA_INICIO_OBJ", hozAlign: "center", width: 180, formatter: (cell) => formatDateTimeDisplay(cell.getValue()) },
+                        { title: "Duração (HH:MM:SS)", field: "DURACAO_MINUTES", hozAlign: "center", formatter: (cell) => formatMinutesToHHMMSS(cell.getValue()) },
+                        { title: "Meta / Média (Min)", field: "TIPO", hozAlign: "right", formatter: (cell) => {
+                            const type = cell.getValue();
+                            const expected = expectedDurations[type];
+                            if (expected) return expected.minutes.toFixed(1);
                             const avg = filteredAveragesForComparison[type] || 0;
-                            const isAbove = duration > (avg * 1.1) && avg > 0;
-                            statusText = isAbove
-                                ? '<span class="status-danger font-semibold">↑ Acima</span>'
-                                : '<span class="status-success font-medium">✓ Normal</span>';
-                        }
-                        return statusText;
-                    }}
-                ],
-                locale: "pt-br",
-                langs:{
-                    "pt-br":{
-                        "headerFilters":{
-                            "default":"filtrar...",
+                            return avg.toFixed(1);
+                        }},
+                        { title: "Status", field: "DURACAO_MINUTES", hozAlign: "center", formatter: (cell) => {
+                            const duration = cell.getValue();
+                            const type = cell.getRow().getData().TIPO;
+                            const expected = expectedDurations[type];
+                            let statusText = '';
+
+                            if (expected) {
+                                const lowerBound = expected.minutes - expected.tolerance;
+                                const upperBound = expected.minutes + expected.tolerance;
+                                if (duration >= lowerBound && duration <= upperBound) {
+                                    statusText = '<span class="status-success font-medium">✓ Correto</span>';
+                                } else if (duration < lowerBound) {
+                                    statusText = '<span class="status-warning font-semibold">↓ Curto</span>';
+                                } else {
+                                    statusText = '<span class="status-danger font-semibold">↑ Longo</span>';
+                                }
+                            } else {
+                                const avg = filteredAveragesForComparison[type] || 0;
+                                const isAbove = duration > (avg * 1.1) && avg > 0;
+                                statusText = isAbove
+                                    ? '<span class="status-danger font-semibold">↑ Acima</span>'
+                                    : '<span class="status-success font-medium">✓ Normal</span>';
+                            }
+                            return statusText;
+                        }}
+                    ],
+                    locale: "pt-br",
+                    langs:{
+                        "pt-br":{
+                            "headerFilters":{
+                                "default":"filtrar...",
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
 
             // Event listeners para o dashboard de Pausas
             if (els.main.fileInput) {
@@ -3392,7 +3626,7 @@
                 });
             }
 
-            const debouncedApplyFilters = debounce(applyFilters, 300);
+            const debouncedApplyFilters = debounce(applyFilters, 0);
             if (els.main.filters) {
                 Object.values(els.main.filters).forEach(el => {
                     if (el) {
@@ -3499,41 +3733,543 @@
         }
 
         function exportarDadosParaHtml() {
-            // Clona a tabela para não modificar a original
-            const tabelaOriginal = tabulatorTable.element;
-            const tabelaClone = tabelaOriginal.cloneNode(true);
-        
-            // Remove os filtros do cabeçalho da cópia
-            const filtros = tabelaClone.querySelectorAll('.tabulator-header-filter');
-            filtros.forEach(filtro => filtro.parentNode.removeChild(filtro));
-        
-            // Estilos básicos para a exportação
+            // Detecta qual dashboard está ativo
+            const isPauses = !els.main.pausesDashboardContent.classList.contains('hidden');
+
+            // Função util para pegar DataURL de um canvas
+            const getCanvasDataUrl = (id) => {
+                const canvas = document.getElementById(id);
+                try {
+                    return canvas ? canvas.toDataURL('image/png') : null;
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            // Estilos alinhados ao tema escuro do painel
             const estilos = `
                 <style>
-                    body { font-family: sans-serif; }
-                    table { border-collapse: collapse; width: 100%; }
-                    th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
-                    tr:nth-child(even) { background-color: #f2f2f2; }
-                    th { background-color: #4CAF50; color: white; }
+                    :root {
+                        --bg: #0b0e14;
+                        --panel: #111827;
+                        --text: #e5e7eb;
+                        --muted: #94a3b8;
+                        --border: rgba(255,255,255,0.12);
+                        --accent: #1D4ED8;
+                        --ok: #10b981;
+                        --warn: #f59e0b;
+                        --err: #ef4444;
+                    }
+                    body { margin: 24px; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
+                    h1 { font-size: 20px; margin: 0 0 16px; }
+                    .meta { margin-bottom: 18px; color: var(--muted); font-size: 14px; }
+                    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.35); }
+                    table { width: 100%; border-collapse: collapse; }
+                    thead th { text-align: left; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--border); padding: 10px; background: rgba(255,255,255,0.04); }
+                    tbody td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+                    tbody tr:nth-child(odd) td { background: rgba(255,255,255,0.02); }
+                    .status-success { color: var(--ok); }
+                    .status-warning { color: var(--warn); }
+                    .status-danger { color: var(--err); }
+                    .small { font-size: 12px; color: var(--muted); }
+                    .kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0 8px; }
+                    .kpi-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+                    .kpi-title { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+                    .kpi-value { font-size: 18px; font-weight: 600; }
+                    .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 14px; }
+                    .chart { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+                    .chart-title { font-size: 14px; margin-bottom: 8px; color: var(--text); }
+                    .chart img { width: 100%; height: auto; border-radius: 6px; }
+                    .ai { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-top: 14px; }
+                    .ai-title { font-size: 14px; margin-bottom: 8px; color: var(--text); }
                 </style>
             `;
-        
-            const nomeArquivo = 'dados_pausa.html';
-            const html = `
+
+            // Linhas formatadas do dashboard de Pausas
+            const buildPauseRowHtml = (d) => {
+                const consultor = d.CONSULTOR || '';
+                const tipo = d.TIPO || '';
+                const dataInicio = formatDateTimeDisplay(d.DATA_INICIO_OBJ);
+                const durHHMMSS = formatMinutesToHHMMSS(d.DURACAO_MINUTES);
+                const durMin = (typeof d.DURACAO_MINUTES === 'number') ? d.DURACAO_MINUTES.toFixed(1) : '';
+
+                // Meta / Média
+                let metaMedia;
+                const expected = expectedDurations[tipo];
+                if (expected) {
+                    metaMedia = expected.minutes.toFixed(1);
+                } else {
+                    const avg = (filteredAveragesForComparison && filteredAveragesForComparison[tipo]) ? filteredAveragesForComparison[tipo] : 0;
+                    metaMedia = avg.toFixed(1);
+                }
+
+                // Status
+                let statusHtml = '';
+                if (expected) {
+                    const lowerBound = expected.minutes - expected.tolerance;
+                    const upperBound = expected.minutes + expected.tolerance;
+                    if (d.DURACAO_MINUTES >= lowerBound && d.DURACAO_MINUTES <= upperBound) {
+                        statusHtml = '<span class="status-success">✓ Correto</span>';
+                    } else if (d.DURACAO_MINUTES < lowerBound) {
+                        statusHtml = '<span class="status-warning">↓ Curto</span>';
+                    } else {
+                        statusHtml = '<span class="status-danger">↑ Longo</span>';
+                    }
+                } else {
+                    const avg = (filteredAveragesForComparison && filteredAveragesForComparison[tipo]) ? filteredAveragesForComparison[tipo] : 0;
+                    const isAbove = d.DURACAO_MINUTES > (avg * 1.1) && avg > 0;
+                    statusHtml = isAbove ? '<span class="status-danger">↑ Acima</span>' : '<span class="status-success">✓ Normal</span>';
+                }
+
+                return `<tr>
+                    <td>${consultor}</td>
+                    <td>${tipo}</td>
+                    <td>${dataInicio}</td>
+                    <td>${durHHMMSS}</td>
+                    <td style="text-align:right;">${durMin}</td>
+                    <td style="text-align:right;">${metaMedia}</td>
+                    <td style="text-align:center;">${statusHtml}</td>
+                </tr>`;
+            };
+            // Linhas formatadas do dashboard de Tabulações
+            const buildTabRowHtml = (d) => {
+                const operador = d.OPERADOR || '';
+                const tipo = d.TABULADO_COMO || '';
+                const categoria = d.CATEGORIA_TABULACAO || '';
+                const dataHora = formatDateTimeDisplay(d.DATA_HORA_TABULACAO || d.DATA_HORA || d.DATA_HORA_TABULACAO_OBJ);
+                return `<tr>
+                    <td>${operador}</td>
+                    <td>${tipo}</td>
+                    <td>${categoria}</td>
+                    <td>${dataHora}</td>
+                </tr>`;
+            };
+
+            let html = '';
+            let nomeArquivo = '';
+
+            if (isPauses) {
+                if (!tabulatorTable) {
+                    alert('Tabela de Pausas não inicializada. Carregue dados antes de exportar.');
+                    return;
+                }
+
+                const activeRows = tabulatorTable.getRows();
+                const visibleData = activeRows.map(r => r.getData());
+                const datasetSnapshot = (Array.isArray(originalData) && originalData.length) ? originalData : visibleData;
+
+                const selConsult = (els.main.filters && els.main.filters.consultant) ? (els.main.filters.consultant.value || 'Todos') : 'Todos';
+                const selType = (els.main.filters && els.main.filters.pauseType) ? (els.main.filters.pauseType.value || 'Todos') : 'Todos';
+                const startDate = (els.main.filters && els.main.filters.startDate) ? els.main.filters.startDate.value : '';
+                const endDate = (els.main.filters && els.main.filters.endDate) ? els.main.filters.endDate.value : '';
+
+                const kpiTotalPausas = els.main.kpis.totalPauses ? els.main.kpis.totalPauses.textContent : '';
+                const kpiTotalGlobalPause = els.main.kpis.totalDuration ? els.main.kpis.totalDuration.textContent : '';
+                const kpiUniqueConsultants = els.main.kpis.uniqueConsultants ? els.main.kpis.uniqueConsultants.textContent : '';
+
+                // Captura imagens dos gráficos atuais para exportar offline mantendo as cores da análise online
+                const getDataUrl = (id) => {
+                    const el = document.getElementById(id);
+                    try { return el && el.toDataURL ? el.toDataURL('image/png') : ''; } catch(e){ return ''; }
+                };
+                const imgConsultant = getDataUrl('total-pause-consultant-chart');
+                const imgTypeTotal = getDataUrl('total-pause-type-chart');
+                const imgTypeAvg = getDataUrl('average-pause-type-chart');
+                const imgTypeDist = getDataUrl('pause-type-distribution-chart');
+
+                // Monta linhas da tabela estática
+                const tableRowsHtml = datasetSnapshot.map(d => buildPauseRowHtml(d)).join('');
+                // Opcional: conteúdo de análise IA, se estiver visível no painel
+                const aiSectionHtml = (els.main.ai && els.main.ai.section && !els.main.ai.section.classList.contains('hidden'))
+                    ? ('\n                        <div class="ai">\n                            <div class="ai-title">Análise de Pausas (IA)</div>\n                            <div>' + ((els.main.ai.content && els.main.ai.content.innerHTML) ? els.main.ai.content.innerHTML : '') + '</div>\n                        </div>\n                    ')
+                    : '';
+
+                nomeArquivo = 'relatorio_pausas.html';
+                html = `
                 <!DOCTYPE html>
                 <html lang="pt-BR">
                 <head>
                     <meta charset="UTF-8">
-                    <title>Exportação de Pausas</title>
+                    <title>Relatório de Pausas</title>
                     ${estilos}
+                    <style>
+                        .charts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:14px; }
+                        .chart { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+                        .chart-title { font-size: 14px; margin-bottom: 8px; color: var(--text); }
+                        .chart img { width: 100%; height: auto; border-radius: 6px; }
+                        .chart-container { position: relative; width: 100%; height: 300px; }
+                        .chart-container canvas { width: 100% !important; height: 100% !important; display: block; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+                        thead th { text-align: left; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--border); padding: 10px; background: rgba(255,255,255,0.04); }
+                        tbody td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+                        .small { font-size: 12px; color: var(--muted); }
+                        /* Menu rápido minimalista no export */
+                        .quick-menu { position: fixed; right: 16px; bottom: 16px; z-index: 55; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+                        .quick-main { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 30%, rgba(37,99,235,0.95), rgba(59,130,246,0.85)); color: #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.22); cursor: pointer; }
+                        .quick-items { display: none; flex-direction: column; align-items: center; gap: 10px; }
+                        .quick-menu.open .quick-items { display: flex; }
+                        .quick-item { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.88); color: #0f172a; box-shadow: 0 6px 14px rgba(0,0,0,0.20); border: 1px solid rgba(255,255,255,0.28); cursor: pointer; }
+                    </style>
                 </head>
                 <body>
-                    <h1>Relatório de Pausas</h1>
-                    ${tabelaClone.outerHTML}
+                    <div class="panel">
+                        <h1>Relatório de Pausas</h1>
+                        <div class="meta">Exportado em ${new Date().toLocaleString('pt-BR')} · Consultor: ${selConsult} · Tipo: ${selType} · Período: ${startDate || 'início'} a ${endDate || 'fim'}</div>
+                        <div class="kpi-grid">
+                            <div class="kpi-card"><div class="kpi-title">Pausas Registradas</div><div class="kpi-value">${kpiTotalPausas}</div></div>
+                            <div class="kpi-card"><div class="kpi-title">Total Global de Pausa</div><div class="kpi-value">${kpiTotalGlobalPause}</div></div>
+                            <div class="kpi-card"><div class="kpi-title">Consultores Únicos</div><div class="kpi-value">${kpiUniqueConsultants}</div></div>
+                        </div>
+
+                        <div class="charts">
+                            <div class="chart"><div class="chart-title">Total de Duração por Consultor</div><div class="chart-container"><canvas id="exp-pause-consultant-chart"></canvas></div></div>
+                            <div class="chart"><div class="chart-title">Total de Duração por Tipo</div><div class="chart-container"><canvas id="exp-pause-type-total-chart"></canvas></div></div>
+                            <div class="chart"><div class="chart-title">Média de Duração por Tipo</div><div class="chart-container"><canvas id="exp-pause-type-avg-chart"></canvas></div></div>
+                            <div class="chart"><div class="chart-title">Distribuição do Tempo por Tipo</div><div class="chart-container"><canvas id="exp-pause-type-dist-chart"></canvas></div></div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0;">
+                            <div>
+                                <label class="small">Consultor</label>
+                                <select id="exp-filter-consultant" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;"></select>
+                            </div>
+                            <div>
+                                <label class="small">Tipo</label>
+                                <select id="exp-filter-type" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;"></select>
+                            </div>
+                            <div>
+                                <label class="small">Data Início</label>
+                                <input type="date" id="exp-filter-start" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;" />
+                            </div>
+                            <div>
+                                <label class="small">Data Fim</label>
+                                <input type="date" id="exp-filter-end" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;" />
+                            </div>
+                        </div>
+
+                        ${aiSectionHtml}
+
+                        <table class="table-dark">
+                            <thead>
+                                <tr>
+                                    <th id="th-consultor" style="cursor:pointer;">Consultor</th>
+                                    <th id="th-tipo" style="cursor:pointer;">Tipo de Pausa</th>
+                                    <th id="th-data" style="cursor:pointer;">Data Início</th>
+                                    <th>Duração (HH:MM:SS)</th>
+                                    <th id="th-min" style="text-align:right;cursor:pointer;">Min</th>
+                                    <th style="text-align:right;">Meta / Média (Min)</th>
+                                    <th style="text-align:center;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exp-pause-tbody">
+                                ${tableRowsHtml}
+                            </tbody>
+                        </table>
+                        <div class="small">Itens: <span id="exp-items-count">${visibleData.length}</span></div>
+                    </div>
+                    <script>
+                    // Filtros offline leves para tabela e KPIs
+                    const expectedDurations = ${JSON.stringify(expectedDurations)};
+                    const rawData = ${JSON.stringify(datasetSnapshot)};
+                    let filteredData = rawData.slice();
+                    let selection = { consultant: ${JSON.stringify(selConsult==='Todos'?null:selConsult)}, type: ${JSON.stringify(selType==='Todos'?null:selType)} };
+                    let state = { query: '', sortField: null, sortDir: 'asc' };
+
+                    function formatDateTimeDisplay(dateStr){ if(!dateStr) return ''; const d=new Date(dateStr); return d.toLocaleString('pt-BR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+                    function formatMinutesToHHMMSS(totalMinutes){ if(isNaN(totalMinutes)|| totalMinutes<0) return '00:00:00'; const h=Math.floor(totalMinutes/60); const m=Math.floor(totalMinutes%60); const s=Math.round((totalMinutes-Math.floor(totalMinutes))*60); return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+                    function aggregateAverage(key, dataset){ const totals={}, counts={}; dataset.forEach(d=>{ const k=d[key]; totals[k]=(totals[k]||0)+(d.DURACAO_MINUTES||0); counts[k]=(counts[k]||0)+1; }); const avgs={}; for(const k in totals){ avgs[k]=totals[k]/counts[k]; } return avgs; }
+                    function buildPauseRow(d){
+                        const consultor = d.CONSULTOR || '';
+                        const tipo = d.TIPO || '';
+                        const dataInicio = formatDateTimeDisplay(d.DATA_INICIO_OBJ);
+                        const durMin = (d.DURACAO_MINUTES||0).toFixed(1);
+                        const durHH = formatMinutesToHHMMSS(d.DURACAO_MINUTES||0);
+                        let metaMedia;
+                        const expected = expectedDurations[tipo];
+                        if(expected){ metaMedia = expected.minutes.toFixed(1); }
+                        else { const avg = (aggregateAverage('TIPO', filteredData)[tipo]||0); metaMedia = avg.toFixed(1); }
+                        let statusHtml='';
+                        if(expected){ const lb=expected.minutes-expected.tolerance; const ub=expected.minutes+expected.tolerance; if((d.DURACAO_MINUTES||0)>=lb && (d.DURACAO_MINUTES||0)<=ub) statusHtml='<span class="status-success">✓ Correto</span>'; else if((d.DURACAO_MINUTES||0)<lb) statusHtml='<span class="status-warning">↓ Curto</span>'; else statusHtml='<span class="status-danger">↑ Longo</span>'; }
+                        else { const avg=(aggregateAverage('TIPO', filteredData)[tipo]||0); const isAbove=(d.DURACAO_MINUTES||0)>(avg*1.1)&&avg>0; statusHtml = isAbove?'<span class="status-danger">↑ Acima</span>':'<span class="status-success">✓ Normal</span>'; }
+                        return '<tr>'+
+                            '<td>'+consultor+'</td>'+
+                            '<td>'+tipo+'</td>'+
+                            '<td>'+dataInicio+'</td>'+
+                            '<td>'+durHH+'</td>'+
+                            '<td style="text-align:right;">'+durMin+'</td>'+
+                            '<td style="text-align:right;">'+metaMedia+'</td>'+
+                            '<td style="text-align:center;">'+statusHtml+'</td>'+
+                        '</tr>';
+                    }
+                    function updateKPIs(){
+                        const totalMin = filteredData.reduce((s,d)=> s + (d.DURACAO_MINUTES||0), 0);
+                        const uniq = new Set(filteredData.map(d=> d.CONSULTOR));
+                        const cards = document.querySelectorAll('.kpi-card .kpi-value');
+                        if(cards[0]) cards[0].textContent = String(filteredData.length);
+                        if(cards[1]) cards[1].textContent = formatMinutesToHHMMSS(totalMin);
+                        if(cards[2]) cards[2].textContent = String(uniq.size);
+                        const itemsEl = document.getElementById('exp-items-count'); if(itemsEl) itemsEl.textContent = String(filteredData.length);
+                    }
+                    // Utilidades de gráfico simples (sem dependências externas)
+                    function makePalette(n, base){ const colors=['#3A7FFF','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#22C55E','#EAB308']; if(base) colors.unshift(base); return colors.slice(0,n); }
+function stableColorForKey(key){ const s=String(key||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } const hue=h%360; const sat=70; const light=50; return 'hsl(' + hue + ', ' + sat + '%, ' + light + '%)'; }
+function stableColorForKey(key){ const s=String(key||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } const hue=h%360; const sat=70; const light=50; return 'hsl(' + hue + ', ' + sat + '%, ' + light + '%)'; }
+                    function drawBarChart(canvasId, labels, values, options){ const canvas=document.getElementById(canvasId); if(!canvas) return; const ctx=canvas.getContext('2d'); const W=canvas.width=canvas.clientWidth; const H=canvas.height=canvas.clientHeight; ctx.clearRect(0,0,W,H); const padding=40; const max=Math.max(1, ...values); const barW=(W-padding*2)/values.length*0.8; const gap=(W-padding*2)/values.length*0.2; const colors=options.colors||makePalette(values.length, options.baseColor); const selected=options.selectedIndex; // axes
+                        ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(padding,H-padding); ctx.lineTo(W-padding,H-padding); ctx.stroke(); const hits=[]; for(let i=0;i<values.length;i++){ const x=padding + i*(barW+gap); const h=(H-padding*2)*values[i]/max; const y=H-padding - h; ctx.fillStyle = (selected===i)? (options.selectColor||'#60A5FA') : colors[i%colors.length]; ctx.fillRect(x,y,barW,h); hits.push({x,y,w:barW,h,index:i}); // label
+                            ctx.fillStyle='#94a3b8'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(String(labels[i]).slice(0,10), x+barW/2, H-padding+14); }
+                        // click handler
+                        canvas.onclick=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left, my=ev.clientY-rect.top; for(const hit of hits){ if(mx>=hit.x && mx<=hit.x+hit.w && my>=hit.y && my<=hit.y+hit.h){ if(options.onClick) options.onClick(hit.index); break; } } } }
+                    function drawBarChartEnhanced(canvasId, labels, values, options){ const canvas=document.getElementById(canvasId); if(!canvas) return; const ctx=canvas.getContext('2d'); const W=canvas.width=canvas.clientWidth; const H=canvas.height=canvas.clientHeight; const padding=40; const max=Math.max(1, ...values); const barW=(W-padding*2)/values.length*0.8; const gap=(W-padding*2)/values.length*0.2; const colors=(options.colors||makePalette(values.length, options.baseColor)); const selected=options.selectedIndex; const unit=options.unit||null; function drawBars(){ ctx.clearRect(0,0,W,H); ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(padding,H-padding); ctx.lineTo(W-padding,H-padding); ctx.stroke(); for(let i=0;i<values.length;i++){ const x=padding + i*(barW+gap); const h=(H-padding*2)*values[i]/max; const y=H-padding - h; let fillColor = Array.isArray(colors) ? (colors[i]||colors[i%colors.length]) : colors[i%colors.length]; if(selected===i) fillColor = options.selectColor||'#60A5FA'; ctx.fillStyle = fillColor; ctx.fillRect(x,y,barW,h); ctx.fillStyle='#94a3b8'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(String(labels[i]).slice(0,16), x+barW/2, H-padding+14); } }
+                        const hits=[]; for(let i=0;i<values.length;i++){ const x=padding + i*(barW+gap); const h=(H-padding*2)*values[i]/max; const y=H-padding - h; hits.push({x,y,w:barW,h,index:i}); }
+                        function drawTooltip(idx){ if(idx<0) return; const label=labels[idx]; const val=values[idx]; const rect=hits[idx]; const tx=rect.x+rect.w/2; const ty=Math.max(30, rect.y-10); const tipW=180, tipH=44; ctx.save(); ctx.fillStyle='rgba(17,24,39,0.95)'; ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.beginPath(); try{ ctx.roundRect(tx-tipW/2, ty-tipH, tipW, tipH, 8); }catch(e){ ctx.rect(tx-tipW/2, ty-tipH, tipW, tipH); } ctx.fill(); ctx.stroke(); ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(String(label), tx, ty-26); ctx.fillStyle='#93c5fd'; ctx.font='12px system-ui'; const txt = unit==='min' ? ('Duração: '+ (typeof val==='number'?val.toFixed(1):String(val)) +' min') : ('Total: '+val); ctx.fillText(txt, tx, ty-10); ctx.restore(); }
+                        let hoverIndex=-1; canvas.onmousemove=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left, my=ev.clientY-rect.top; hoverIndex=-1; for(const hit of hits){ if(mx>=hit.x && mx<=hit.x+hit.w && my>=hit.y && my<=hit.y+hit.h){ hoverIndex=hit.index; break; } } drawBars(); drawTooltip(hoverIndex); canvas.style.cursor=(hoverIndex>=0 || options.onClick)?'pointer':'default'; };
+                        canvas.onclick=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left, my=ev.clientY-rect.top; for(const hit of hits){ if(mx>=hit.x && mx<=hit.x+hit.w && my>=hit.y && my<=hit.y+hit.h){ if(options.onClick) options.onClick(hit.index); break; } } } drawBars(); }
+                    function drawDoughnutChart(canvasId, labels, values, options){ const canvas=document.getElementById(canvasId); if(!canvas) return; const ctx=canvas.getContext('2d'); const W=canvas.width=canvas.clientWidth; const H=canvas.height=canvas.clientHeight; ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2, r=Math.min(W,H)/2-20, ir=r*0.55; const total=values.reduce((s,v)=>s+v,0)||1; const colors=options.colors||makePalette(values.length); let start= -Math.PI/2; const hits=[]; for(let i=0;i<values.length;i++){ const val=values[i]; const ang=2*Math.PI*(val/total); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+ang); ctx.closePath(); ctx.fillStyle=colors[i%colors.length]; ctx.fill(); // donut hole
+                            ctx.globalCompositeOperation='destination-out'; ctx.beginPath(); ctx.arc(cx,cy,ir,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; hits.push({start,end:start+ang,index:i}); start+=ang; }
+                        // simple legend
+                        ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(options.title||'', cx, 18);
+                        canvas.onclick=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left - cx; const my=ev.clientY-rect.top - cy; const ang=Math.atan2(my,mx); let a=ang; if(a< -Math.PI/2) a += 2*Math.PI; for(const h of hits){ if(a>=h.start && a<=h.end){ if(options.onClick) options.onClick(h.index); break; } } } }
+                    function aggregateSumBy(dataset, key){ const map={}; dataset.forEach(d=>{ const k=d[key]||'Desconhecido'; map[k]=(map[k]||0)+(d.DURACAO_MINUTES||0); }); const labels=Object.keys(map).sort(); return { labels, values: labels.map(k=> map[k]) } }
+                    function aggregateAvgByType(dataset){ const totals={}, counts={}; dataset.forEach(d=>{ const k=d.TIPO||'Desconhecido'; totals[k]=(totals[k]||0)+(d.DURACAO_MINUTES||0); counts[k]=(counts[k]||0)+1; }); const labels=Object.keys(totals).sort(); const values=labels.map(k=> totals[k]/counts[k]); return { labels, values } }
+                    function renderCharts(){ // consultant totals
+                        const byConsult=aggregateSumBy(filteredData,'CONSULTOR'); const selIdxC = selection.consultant ? byConsult.labels.indexOf(selection.consultant) : -1; drawBarChartEnhanced('exp-pause-consultant-chart', byConsult.labels, byConsult.values, { baseColor:'#3A7FFF', selectedIndex: selIdxC, unit:'min', onClick: (idx)=>{ const label=byConsult.labels[idx]; selection.consultant = (selection.consultant===label)? null : label; render(); } });
+                        // type totals
+                        const byType=aggregateSumBy(filteredData,'TIPO'); const selIdxT = selection.type ? byType.labels.indexOf(selection.type) : -1; const typeColors = byType.labels.map(function(lbl){ return stableColorForKey(lbl); }); drawBarChartEnhanced('exp-pause-type-total-chart', byType.labels, byType.values, { colors:typeColors, selectedIndex: selIdxT, unit:'min', onClick: (idx)=>{ const label=byType.labels[idx]; selection.type = (selection.type===label)? null : label; render(); } });
+                        // type averages
+                        const avgType=aggregateAvgByType(filteredData); const selIdxTA = selection.type ? avgType.labels.indexOf(selection.type) : -1; const avgColors = avgType.labels.map(function(lbl){ return stableColorForKey(lbl); }); drawBarChartEnhanced('exp-pause-type-avg-chart', avgType.labels, avgType.values, { colors:avgColors, selectedIndex: selIdxTA, unit:'min', onClick: (idx)=>{ const label=avgType.labels[idx]; selection.type = (selection.type===label)? null : label; render(); } });
+                        // distribution doughnut
+                        drawDoughnutChart('exp-pause-type-dist-chart', byType.labels, byType.values, { title:'Distribuição', onClick: (idx)=>{ const label=byType.labels[idx]; selection.type = (selection.type===label)? null : label; render(); } });
+                    }
+                    function matchesQuery(d,q){ if(!q) return true; const s=q.toLowerCase(); return (String(d.CONSULTOR||'').toLowerCase().includes(s) || String(d.TIPO||'').toLowerCase().includes(s) || String(formatDateTimeDisplay(d.DATA_INICIO_OBJ)).toLowerCase().includes(s)); }
+                    function applyFilters(){
+                        const sd = document.getElementById('exp-filter-start').value;
+                        const ed = document.getElementById('exp-filter-end').value;
+                        filteredData = rawData.filter(d=>{
+                            const cm = !selection.consultant || d.CONSULTOR===selection.consultant;
+                            const tm = !selection.type || d.TIPO===selection.type;
+                            let dm = true; if(sd) dm = dm && (new Date(d.DATA_INICIO_OBJ) >= new Date(sd)); if(ed) dm = dm && (new Date(d.DATA_INICIO_OBJ) <= new Date(ed));
+                            return cm && tm && dm && matchesQuery(d, state.query);
+                        });
+                        if(state.sortField){ const dir = state.sortDir==='asc'?1:-1; filteredData.sort((a,b)=>{ let av=a[state.sortField], bv=b[state.sortField]; if(state.sortField==='DATA_INICIO_OBJ'){ av=new Date(av); bv=new Date(bv); } if(av<bv) return -1*dir; if(av>bv) return 1*dir; return 0; }); }
+                    }
+                    function render(){
+                        applyFilters();
+                        updateKPIs();
+                        const tbody = document.getElementById('exp-pause-tbody'); if(tbody){ tbody.innerHTML = filteredData.map(buildPauseRow).join(''); }
+                        renderCharts();
+                    }
+                    function populateFilters(){
+                        const cSel=document.getElementById('exp-filter-consultant');
+                        const tSel=document.getElementById('exp-filter-type');
+                        const cons = Array.from(new Set(rawData.map(d=> d.CONSULTOR))).sort();
+                        const types = Array.from(new Set(rawData.map(d=> d.TIPO))).sort();
+                        cSel.innerHTML = '<option value="">Todos</option>' + cons.map(function(c){ return '<option '+ (selection.consultant===c?'selected':'') +' value="'+c+'">'+c+'</option>'; }).join('');
+                        tSel.innerHTML = '<option value="">Todos</option>' + types.map(function(t){ return '<option '+ (selection.type===t?'selected':'') +' value="'+t+'">'+t+'</option>'; }).join('');
+                        document.getElementById('exp-filter-start').value = ${JSON.stringify(startDate||'')};
+                        document.getElementById('exp-filter-end').value = ${JSON.stringify(endDate||'')};
+                        cSel.onchange = function(e){ selection.consultant = e.target.value || null; render(); };
+                        tSel.onchange = function(e){ selection.type = e.target.value || null; render(); };
+                        document.getElementById('exp-filter-start').onchange = render;
+                        document.getElementById('exp-filter-end').onchange = render;
+                        const searchEl = document.getElementById('exp-search'); if(searchEl){ searchEl.oninput = function(e){ state.query = e.target.value.trim(); render(); }; }
+                        function cycleSort(field){ state.sortField = (state.sortField===field) ? field : field; state.sortDir = (state.sortField===field && state.sortDir==='asc') ? 'desc' : 'asc'; render(); }
+                        const thC=document.getElementById('th-consultor'), thT=document.getElementById('th-tipo'), thD=document.getElementById('th-data'), thM=document.getElementById('th-min');
+                        if(thC) thC.onclick = function(){ cycleSort('CONSULTOR'); };
+                        if(thT) thT.onclick = function(){ cycleSort('TIPO'); };
+                        if(thD) thD.onclick = function(){ cycleSort('DATA_INICIO_OBJ'); };
+                        if(thM) thM.onclick = function(){ cycleSort('DURACAO_MINUTES'); };
+                        const clr=document.getElementById('exp-clear'); if(clr){ clr.onclick = function(){ selection.consultant=null; selection.type=null; cSel.value=''; tSel.value=''; document.getElementById('exp-filter-start').value=''; document.getElementById('exp-filter-end').value=''; state.query=''; if(searchEl) searchEl.value=''; state.sortField=null; render(); }; }
+                        const exp=document.getElementById('exp-export-csv'); if(exp){ exp.onclick = function(){ const csv=['Consultor,Tipo,Data Inicio,Duracao Min']; filteredData.forEach(function(d){ csv.push([d.CONSULTOR,d.TIPO,formatDateTimeDisplay(d.DATA_INICIO_OBJ),(d.DURACAO_MINUTES||0).toFixed(1)].join(',')); }); const blob=new Blob([csv.join('\n')],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='pausas.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }; }
+                        // Menu rápido export
+                        function setupQuickMenu(){ const menu=document.getElementById('quick-menu'); if(!menu) return; const main=document.getElementById('quick-main-btn'); const filterBtn=document.getElementById('quick-filter-btn'); const repBtn=document.getElementById('quick-report-btn'); const aiBtn=document.getElementById('quick-ai-btn'); if(main) main.onclick=function(){ menu.classList.toggle('open'); }; if(filterBtn) filterBtn.onclick=function(){ document.getElementById('exp-filter-consultant').scrollIntoView({behavior:'smooth',block:'center'}); }; if(repBtn) repBtn.onclick=function(){ // reexporta o próprio HTML
+                                const blob=new Blob([document.documentElement.outerHTML],{type:'text/html;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='relatorio_pausas_offline.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }; if(aiBtn) aiBtn.onclick=function(){ const ai=document.querySelector('.ai'); if(ai) ai.scrollIntoView({behavior:'smooth',block:'center'}); } }
+                    }
+                    // Insere menu rápido
+                    document.body.insertAdjacentHTML('beforeend', '\n<div id="quick-menu" class="quick-menu">\n  <button id="quick-main-btn" class="quick-main" aria-label="Menu rápido">\n    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>\n  </button>\n  <div class="quick-items">\n    <button id="quick-filter-btn" class="quick-item" aria-label="Abrir filtros">\n      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.586a1 1 0 0 1-.293.707l-6.414 6.414a1 1 0 0 0-.293.707V17l-4 4v-6.586a1 1 0 0 0-.293.707L3.293 7.293A1 1 0 0 1 3 6.586V4z"/></svg>\n    </button>\n    <button id="quick-report-btn" class="quick-item" aria-label="Relatório">\n      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14"/></svg>\n    </button>\n    <button id="quick-ai-btn" class="quick-item" aria-label="Análise IA">\n      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="20" rx="6" ry="6" stroke-width="2"/><text x="12" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">IA</text></svg>\n    </button>\n  </div>\n</div>');
+                    populateFilters(); render(); setupQuickMenu();
+                    ${'</'+'script>'}
                 </body>
                 </html>
-            `;
-        
+                `;
+            } else {
+                if (!callTabulationsTable) {
+                    alert('Tabela de Tabulações não inicializada. Carregue dados antes de exportar.');
+                    return;
+                }
+
+                const activeRows = callTabulationsTable.getRows();
+                const visibleData = activeRows.map(r => r.getData());
+                const datasetSnapshot = (Array.isArray(callTabulationsOriginalData) && callTabulationsOriginalData.length) ? callTabulationsOriginalData : visibleData;
+
+                const selOperador = (els.callTabulations.filters && els.callTabulations.filters.operator) ? (els.callTabulations.filters.operator.value || 'Todos') : 'Todos';
+                const selTipo = (els.callTabulations.filters && els.callTabulations.filters.type) ? (els.callTabulations.filters.type.value || 'Todos') : 'Todos';
+                const selCategoria = (els.callTabulations.filters && els.callTabulations.filters.category) ? (els.callTabulations.filters.category.value || 'Todas') : 'Todas';
+                const startDate = (els.callTabulations.filters && els.callTabulations.filters.startDate) ? els.callTabulations.filters.startDate.value : '';
+                const endDate = (els.callTabulations.filters && els.callTabulations.filters.endDate) ? els.callTabulations.filters.endDate.value : '';
+
+                const kpiTotal = els.callTabulations.kpis.total ? els.callTabulations.kpis.total.textContent : '';
+                const kpiUniqueOps = els.callTabulations.kpis.uniqueOperators ? els.callTabulations.kpis.uniqueOperators.textContent : '';
+                const kpiAvgDay = els.callTabulations.kpis.avgPerDay ? els.callTabulations.kpis.avgPerDay.textContent : '';
+                // Captura imagens dos gráficos atuais para exportar offline mantendo as cores da análise online
+                const getDataUrl = (id) => {
+                    const el = document.getElementById(id);
+                    try { return el && el.toDataURL ? el.toDataURL('image/png') : ''; } catch(e){ return ''; }
+                };
+                const imgOperator = getDataUrl('total-tabulations-operator-chart');
+                const imgType = getDataUrl('total-tabulations-type-chart');
+                const imgCategory = getDataUrl('total-tabulations-category-chart');
+                const imgTypeDist = getDataUrl('tabulation-type-distribution-chart');
+
+                // Monta linhas da tabela estática
+                const tableRowsHtml = datasetSnapshot.map(d => buildTabRowHtml(d)).join('');
+
+                nomeArquivo = 'relatorio_tabulacoes.html';
+                html = `
+                <!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório de Tabulações</title>
+                    ${estilos}
+                    <style>
+                        .charts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:14px; }
+                        .chart { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+                        .chart-title { font-size: 14px; margin-bottom: 8px; color: var(--text); }
+                        .chart img { width: 100%; height: auto; border-radius: 6px; }
+                        .chart-container { position: relative; width: 100%; height: 300px; }
+                        .chart-container canvas { width: 100% !important; height: 100% !important; display: block; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+                        thead th { text-align: left; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--border); padding: 10px; background: rgba(255,255,255,0.04); }
+                        tbody td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text); }
+                        .small { font-size: 12px; color: var(--muted); }
+                        .quick-menu { position: fixed; right: 16px; bottom: 16px; z-index: 55; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+                        .quick-main { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 30%, rgba(37,99,235,0.95), rgba(59,130,246,0.85)); color: #fff; box-shadow: 0 8px 20px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.22); cursor: pointer; }
+                        .quick-items { display: none; flex-direction: column; align-items: center; gap: 10px; }
+                        .quick-menu.open .quick-items { display: flex; }
+                        .quick-item { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.88); color: #0f172a; box-shadow: 0 6px 14px rgba(0,0,0,0.20); border: 1px solid rgba(255,255,255,0.28); cursor: pointer; }
+                    </style>
+                </head>
+                <body>
+                    <div class="panel">
+                        <h1>Relatório de Tabulações</h1>
+                        <div class="meta">Exportado em ${new Date().toLocaleString('pt-BR')} · Operador: ${selOperador} · Tipo: ${selTipo} · Categoria: ${selCategoria} · Período: ${startDate || 'início'} a ${endDate || 'fim'}</div>
+                        <div class="kpi-grid">
+                            <div class="kpi-card"><div class="kpi-title">Total de Tabulações</div><div class="kpi-value">${kpiTotal}</div></div>
+                            <div class="kpi-card"><div class="kpi-title">Operadores Únicos</div><div class="kpi-value">${kpiUniqueOps}</div></div>
+                            <div class="kpi-card"><div class="kpi-title">Média por Dia</div><div class="kpi-value">${kpiAvgDay}</div></div>
+                        </div>
+
+                        <div class="charts">
+                            <div class="chart"><div class="chart-title">Total de Tabulações por Operador</div><div class="chart-container"><canvas id="exp-tab-operator-chart"></canvas></div></div>
+                            <div class="chart"><div class="chart-title">Total de Tabulações por Tipo</div><div class="chart-container"><canvas id="exp-tab-type-chart"></canvas></div></div>
+                            <div class="chart"><div class="chart-title">Total de Tabulações por Categoria</div><div class="chart-container"><canvas id="exp-tab-category-chart"></canvas></div></div>
+                            <div class="chart"><div class="chart-title">Distribuição de Tabulações por Tipo</div><div class="chart-container"><canvas id="exp-tab-type-dist-chart"></canvas></div><div id="exp-tab-type-dist-legend" class="small" style="margin-top:6px;"></div></div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:14px 0;">
+                            <div>
+                                <label class="small">Operador</label>
+                                <select id="exp-filter-operator" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;"></select>
+                            </div>
+                            <div>
+                                <label class="small">Tipo</label>
+                                <select id="exp-filter-tab-type" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;"></select>
+                            </div>
+                            <div>
+                                <label class="small">Categoria</label>
+                                <select id="exp-filter-tab-category" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;"></select>
+                            </div>
+                            <div>
+                                <label class="small">Data Início</label>
+                                <input type="date" id="exp-filter-tab-start" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;" />
+                            </div>
+                            <div>
+                                <label class="small">Data Fim</label>
+                                <input type="date" id="exp-filter-tab-end" style="width:100%;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;" />
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:10px;align-items:center;margin:8px 0;">
+                            <input id="exp-tab-search" type="text" placeholder="Buscar (operador/tipo/categoria/data)..." style="flex:1;padding:8px;background:#0c1220;color:#e5e7eb;border:1px solid var(--border);border-radius:8px;" />
+                            <button id="exp-tab-clear" style="padding:8px 12px;border-radius:8px;background:#374151;color:#e5e7eb;border:1px solid var(--border);">Limpar filtros</button>
+                            <button id="exp-tab-export-csv" style="padding:8px 12px;border-radius:8px;background:#1D4ED8;color:#fff;border:1px solid #163ea8;">Exportar CSV</button>
+                        </div>
+
+                        <table class="table-dark">
+                            <thead>
+                                <tr>
+                                    <th id="th-op" style="cursor:pointer;">Operador</th>
+                                    <th id="th-tab" style="cursor:pointer;">Tabulado Como</th>
+                                    <th id="th-cat" style="cursor:pointer;">Categoria</th>
+                                    <th id="th-dt" style="cursor:pointer;">Data/Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exp-tab-tbody">
+                                ${tableRowsHtml}
+                            </tbody>
+                        </table>
+                        <div class="small">Itens: <span id="exp-items-count">${visibleData.length}</span></div>
+                    </div>
+                    <script>
+                    // Filtros offline leves para tabela e KPIs
+                    const rawData = ${JSON.stringify(datasetSnapshot)};
+                    let filtered = rawData.slice();
+                    let selection = { operator: ${JSON.stringify(selOperador==='Todos'?null:selOperador)}, type: ${JSON.stringify(selTipo==='Todos'?null:selTipo)}, category: ${JSON.stringify(selCategoria==='Todas'?null:selCategoria)} };
+                    let state = { query: '', sortField: null, sortDir: 'asc' };
+                    // Utilidades: cores estáveis e abreviações de rótulos
+function stableColorForKey(key){ const s=String(key||''); let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))>>>0; } const hue=h%360; const sat=70; const light=50; return 'hsl(' + hue + ', ' + sat + '%, ' + light + '%)'; }
+                    function abbreviateLabel(str){ const s=String(str||'').trim(); const map={
+                        'TRANSFERENCIA':'Transf.', 'TRANSFERÊNCIA':'Transf.', 'NAO ATENDEU':'N/Atendeu', 'NÃO ATENDEU':'N/Atendeu',
+                        'AGUARDANDO RETORNO':'Aguard. Ret.', 'AGUARDANDO':'Aguard.', 'RETORNO':'Ret.', 'CLIENTE NAO ATENDEU':'Cli N/Atendeu',
+                        'CLIENTE NÃO ATENDEU':'Cli N/Atendeu', 'SEM CONTATO':'Sem Cont.', 'SEM RETORNO':'Sem Ret.', 'ENCERRADO':'Enc.',
+                        'EM ATENDIMENTO':'Em Atend.', 'ATENDIDO':'Atendido', 'EM ESPERA':'Espera', 'AGENDADO':'Agend.', 'AGENDAMENTO':'Agend.',
+                        'CANCELADO':'Canc.', 'PENDENTE':'Pend.', 'FINALIZADO':'Final.', 'RECLAMACAO':'Recl.', 'RECLAMAÇÃO':'Recl.',
+                        'DUVIDA':'Dúvida', 'DÚVIDA':'Dúvida', 'APROVACAO':'Aprov.', 'APROVAÇÃO':'Aprov.'
+                    }; const upper=s.toUpperCase(); if(map[upper]) return map[upper]; return s.length>18? s.slice(0,18)+'…' : s; }
+                    function formatDateTimeDisplay(dateStr){ if(!dateStr) return ''; const d=new Date(dateStr); return d.toLocaleString('pt-BR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+                    function buildTabRow(d){ const operador=d.OPERADOR||''; const tipo=d.TABULADO_COMO||''; const categoria=d.CATEGORIA_TABULACAO||''; const dt = d.DATA_HORA_TABULACAO || d.DATA_HORA || d.DATA_HORA_TABULACAO_OBJ; const dataHora=formatDateTimeDisplay(dt); return '<tr>'+'<td>'+operador+'</td>'+'<td>'+tipo+'</td>'+'<td>'+categoria+'</td>'+'<td>'+dataHora+'</td>'+'</tr>'; }
+                    function updateKPIs(){ const cards=document.querySelectorAll('.kpi-card .kpi-value'); if(cards[0]) cards[0].textContent=String(filtered.length); const uniqOps = new Set(filtered.map(d=> d.OPERADOR)); if(cards[1]) cards[1].textContent=String(uniqOps.size); const days=new Set(filtered.map(d=>{ const dt=d.DATA_HORA_TABULACAO||d.DATA_HORA||d.DATA_HORA_TABULACAO_OBJ; const date=new Date(dt); return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0'); })); const avg = days.size ? (filtered.length/days.size) : 0; if(cards[2]) cards[2].textContent=avg.toFixed(1); const itemsEl=document.getElementById('exp-items-count'); if(itemsEl) itemsEl.textContent=String(filtered.length); }
+                    // Gráficos simples
+                    function makePalette(n, base){ const colors=['#3A7FFF','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#22C55E','#EAB308']; if(base) colors.unshift(base); return colors.slice(0,n); }
+                    function drawBarChartEnhanced(canvasId, labels, values, options){ const canvas=document.getElementById(canvasId); if(!canvas) return; const ctx=canvas.getContext('2d'); const W=canvas.width=canvas.clientWidth; const H=canvas.height=canvas.clientHeight; const padding=40; const max=Math.max(1, ...values); const barW=(W-padding*2)/values.length*0.8; const gap=(W-padding*2)/values.length*0.2; const colors=(options.colors||makePalette(values.length, options.baseColor)); const selected=options.selectedIndex; const unit=options.unit||null; function drawBars(){ ctx.clearRect(0,0,W,H); ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(padding,H-padding); ctx.lineTo(W-padding,H-padding); ctx.stroke(); for(let i=0;i<values.length;i++){ const x=padding + i*(barW+gap); const h=(H-padding*2)*values[i]/max; const y=H-padding - h; let fillColor = Array.isArray(colors) ? (colors[i]||colors[i%colors.length]) : colors[i%colors.length]; if(selected===i) fillColor = options.selectColor||'#60A5FA'; ctx.fillStyle = fillColor; ctx.fillRect(x,y,barW,h); ctx.fillStyle='#94a3b8'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(String(labels[i]).slice(0,16), x+barW/2, H-padding+14); } }
+                        const hits=[]; for(let i=0;i<values.length;i++){ const x=padding + i*(barW+gap); const h=(H-padding*2)*values[i]/max; const y=H-padding - h; hits.push({x,y,w:barW,h,index:i}); }
+                        function drawTooltip(idx){ if(idx<0) return; const label=labels[idx]; const val=values[idx]; const rect=hits[idx]; const tx=rect.x+rect.w/2; const ty=Math.max(30, rect.y-10); const tipW=180, tipH=44; ctx.save(); ctx.fillStyle='rgba(17,24,39,0.95)'; ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1; ctx.beginPath(); try{ ctx.roundRect(tx-tipW/2, ty-tipH, tipW, tipH, 8); }catch(e){ ctx.rect(tx-tipW/2, ty-tipH, tipW, tipH); } ctx.fill(); ctx.stroke(); ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(String(label), tx, ty-26); ctx.fillStyle='#93c5fd'; ctx.font='12px system-ui'; const txt = unit==='min' ? ('Duração: '+ (typeof val==='number'?val.toFixed(1):String(val)) +' min') : ('Total: '+val); ctx.fillText(txt, tx, ty-10); ctx.restore(); }
+                        let hoverIndex=-1; canvas.onmousemove=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left, my=ev.clientY-rect.top; hoverIndex=-1; for(const hit of hits){ if(mx>=hit.x && mx<=hit.x+hit.w && my>=hit.y && my<=hit.y+hit.h){ hoverIndex=hit.index; break; } } drawBars(); drawTooltip(hoverIndex); canvas.style.cursor=(hoverIndex>=0 || options.onClick)?'pointer':'default'; };
+                        canvas.onclick=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left, my=ev.clientY-rect.top; for(const hit of hits){ if(mx>=hit.x && mx<=hit.x+hit.w && my>=hit.y && my<=hit.y+hit.h){ if(options.onClick) options.onClick(hit.index); break; } } } drawBars(); }
+                    function drawDoughnutChart(canvasId, labels, values, options){ const canvas=document.getElementById(canvasId); if(!canvas) return; const ctx=canvas.getContext('2d'); const W=canvas.width=canvas.clientWidth; const H=canvas.height=canvas.clientHeight; ctx.clearRect(0,0,W,H); const cx=W/2, cy=H/2, r=Math.min(W,H)/2-20, ir=r*0.55; const total=values.reduce((s,v)=>s+v,0)||1; const colors=options.colors||makePalette(values.length); let start= -Math.PI/2; const hits=[]; for(let i=0;i<values.length;i++){ const val=values[i]; const ang=2*Math.PI*(val/total); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+ang); ctx.closePath(); ctx.fillStyle=colors[i%colors.length]; ctx.fill(); ctx.globalCompositeOperation='destination-out'; ctx.beginPath(); ctx.arc(cx,cy,ir,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; hits.push({start,end:start+ang,index:i}); start+=ang; } ctx.fillStyle='#e5e7eb'; ctx.font='12px system-ui'; ctx.textAlign='center'; ctx.fillText(options.title||'', cx, 18); canvas.onclick=function(ev){ const rect=canvas.getBoundingClientRect(); const mx=ev.clientX-rect.left - cx; const my=ev.clientY-rect.top - cy; const ang=Math.atan2(my,mx); let a=ang; if(a< -Math.PI/2) a += 2*Math.PI; for(const h of hits){ if(a>=h.start && a<=h.end){ if(options.onClick) options.onClick(h.index); break; } } } }
+                    function aggregateSumBy(dataset, key){ const map={}; dataset.forEach(d=>{ const k=d[key]||'Desconhecido'; map[k]=(map[k]||0)+1; }); const labels=Object.keys(map).sort(); return { labels, values: labels.map(k=> map[k]) } }
+                    function renderLegend(labels, values, colors, elId){ const el=document.getElementById(elId); if(!el) return; const total = values.reduce((s,v)=>s+v,0)||1; el.innerHTML = labels.map(function(l,i){ const pct = ((values[i]/total)*100).toFixed(1); const color = Array.isArray(colors)? colors[i%colors.length] : colors; return '<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">' +
+                        '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:'+color+';"></span>' +
+                        '<span>'+l+'</span>' +
+                        '<span class="small">('+pct+'%)</span>' +
+                    '</div>'; }).join(''); }
+                    function renderCharts(){ const byOp=aggregateSumBy(filtered,'OPERADOR'); const selIdxO = selection.operator ? byOp.labels.indexOf(selection.operator) : -1; const byOpLabels = byOp.labels.map(function(l){ return abbreviateLabel(l); }); drawBarChartEnhanced('exp-tab-operator-chart', byOpLabels, byOp.values, { baseColor:'#3A7FFF', selectedIndex: selIdxO, onClick:(idx)=>{ const l=byOp.labels[idx]; selection.operator = (selection.operator===l)? null : l; render(); } }); const byType=aggregateSumBy(filtered,'TABULADO_COMO'); const selIdxT = selection.type ? byType.labels.indexOf(selection.type) : -1; const typeColors=byType.labels.map(function(lbl){ return stableColorForKey(lbl); }); const byTypeLabels = byType.labels.map(function(l){ return abbreviateLabel(l); }); drawBarChartEnhanced('exp-tab-type-chart', byTypeLabels, byType.values, { colors:typeColors, selectedIndex: selIdxT, onClick:(idx)=>{ const l=byType.labels[idx]; selection.type = (selection.type===l)? null : l; render(); } }); const byCat=aggregateSumBy(filtered,'CATEGORIA_TABULACAO'); const selIdxC = selection.category ? byCat.labels.indexOf(selection.category) : -1; const catColors=byCat.labels.map(function(lbl){ return stableColorForKey(lbl); }); const byCatLabels = byCat.labels.map(function(l){ return abbreviateLabel(l); }); drawBarChartEnhanced('exp-tab-category-chart', byCatLabels, byCat.values, { colors:catColors, selectedIndex: selIdxC, onClick:(idx)=>{ const l=byCat.labels[idx]; selection.category = (selection.category===l)? null : l; render(); } }); drawDoughnutChart('exp-tab-type-dist-chart', byType.labels, byType.values, { title:'Distribuição', onClick:(idx)=>{ const l=byType.labels[idx]; selection.type = (selection.type===l)? null : l; render(); } }); renderLegend(byType.labels, byType.values, typeColors, 'exp-tab-type-dist-legend'); }
+                    function matchesQuery(d,q){ if(!q) return true; const s=q.toLowerCase(); return (String(d.OPERADOR||'').toLowerCase().includes(s) || String(d.TABULADO_COMO||'').toLowerCase().includes(s) || String(d.CATEGORIA_TABULACAO||'').toLowerCase().includes(s) || String(formatDateTimeDisplay(d.DATA_HORA_TABULACAO||d.DATA_HORA||d.DATA_HORA_TABULACAO_OBJ)).toLowerCase().includes(s)); }
+                    function applyFilters(){
+                        const sd=document.getElementById('exp-filter-tab-start').value;
+                        const ed=document.getElementById('exp-filter-tab-end').value;
+                        filtered = rawData.filter(d=>{
+                            const om = !selection.operator || d.OPERADOR===selection.operator;
+                            const tm = !selection.type || d.TABULADO_COMO===selection.type;
+                            const cm = !selection.category || d.CATEGORIA_TABULACAO===selection.category;
+                            let dm=true; const dt=d.DATA_HORA_TABULACAO||d.DATA_HORA||d.DATA_HORA_TABULACAO_OBJ; if(sd) dm = dm && (new Date(dt) >= new Date(sd)); if(ed) dm = dm && (new Date(dt) <= new Date(ed));
+                            return om && tm && cm && dm && matchesQuery(d, state.query);
+                        });
+                        if(state.sortField){ const dir = state.sortDir==='asc'?1:-1; filtered.sort((a,b)=>{ let av=a[state.sortField], bv=b[state.sortField]; if(state.sortField==='DATA_HORA_TABULACAO' || state.sortField==='DATA_HORA' || state.sortField==='DATA_HORA_TABULACAO_OBJ'){ av=new Date(a.DATA_HORA_TABULACAO||a.DATA_HORA||a.DATA_HORA_TABULACAO_OBJ); bv=new Date(b.DATA_HORA_TABULACAO||b.DATA_HORA||b.DATA_HORA_TABULACAO_OBJ); } if(av<bv) return -1*dir; if(av>bv) return 1*dir; return 0; }); }
+                    }
+                    function render(){ applyFilters(); updateKPIs(); const tbody=document.getElementById('exp-tab-tbody'); if(tbody){ tbody.innerHTML = filtered.map(buildTabRow).join(''); } renderCharts(); }
+                    function populateFilters(){ const oSel=document.getElementById('exp-filter-operator'); const tSel=document.getElementById('exp-filter-tab-type'); const cSel=document.getElementById('exp-filter-tab-category'); const ops=Array.from(new Set(rawData.map(d=> d.OPERADOR))).sort(); const types=Array.from(new Set(rawData.map(d=> d.TABULADO_COMO))).sort(); const cats=Array.from(new Set(rawData.map(d=> d.CATEGORIA_TABULACAO))).sort(); oSel.innerHTML = '<option value="">Todos</option>' + ops.map(function(o){ return '<option '+ (selection.operator===o?'selected':'') +' value="'+o+'">'+o+'</option>'; }).join(''); tSel.innerHTML = '<option value="">Todos</option>' + types.map(function(t){ return '<option '+ (selection.type===t?'selected':'') +' value="'+t+'">'+t+'</option>'; }).join(''); cSel.innerHTML = '<option value="">Todas</option>' + cats.map(function(c){ return '<option '+ (selection.category===c?'selected':'') +' value="'+c+'">'+c+'</option>'; }).join(''); document.getElementById('exp-filter-tab-start').value = ${JSON.stringify(startDate||'')}; document.getElementById('exp-filter-tab-end').value = ${JSON.stringify(endDate||'')}; oSel.onchange=function(e){ selection.operator = e.target.value || null; render(); }; tSel.onchange=function(e){ selection.type = e.target.value || null; render(); }; cSel.onchange=function(e){ selection.category = e.target.value || null; render(); }; document.getElementById('exp-filter-tab-start').onchange = render; document.getElementById('exp-filter-tab-end').onchange = render; const searchEl=document.getElementById('exp-tab-search'); if(searchEl){ searchEl.oninput=function(e){ state.query=e.target.value.trim(); render(); }; } function cycleSort(field){ state.sortField=(state.sortField===field)?field:field; state.sortDir=(state.sortField===field && state.sortDir==='asc')?'desc':'asc'; render(); } const thOp=document.getElementById('th-op'), thTab=document.getElementById('th-tab'), thCat=document.getElementById('th-cat'), thDt=document.getElementById('th-dt'); if(thOp) thOp.onclick=function(){ cycleSort('OPERADOR'); }; if(thTab) thTab.onclick=function(){ cycleSort('TABULADO_COMO'); }; if(thCat) thCat.onclick=function(){ cycleSort('CATEGORIA_TABULACAO'); }; if(thDt) thDt.onclick=function(){ cycleSort('DATA_HORA_TABULACAO'); }; const clr=document.getElementById('exp-tab-clear'); if(clr){ clr.onclick=function(){ selection.operator=null; selection.type=null; selection.category=null; oSel.value=''; tSel.value=''; cSel.value=''; document.getElementById('exp-filter-tab-start').value=''; document.getElementById('exp-filter-tab-end').value=''; state.query=''; if(searchEl) searchEl.value=''; state.sortField=null; render(); }; } const exp=document.getElementById('exp-tab-export-csv'); if(exp){ exp.onclick=function(){ const csv=['Operador,Tabulado Como,Categoria,Data/Hora']; filtered.forEach(function(d){ const dt=formatDateTimeDisplay(d.DATA_HORA_TABULACAO||d.DATA_HORA||d.DATA_HORA_TABULACAO_OBJ); csv.push([d.OPERADOR,d.TABULADO_COMO,d.CATEGORIA_TABULACAO,dt].join(',')); }); const blob=new Blob([csv.join('\n')],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='tabulacoes.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }; } }
+                    // Insere menu rápido
+                    document.body.insertAdjacentHTML('beforeend', '\n<div id="quick-menu" class="quick-menu">\n  <button id="quick-main-btn" class="quick-main" aria-label="Menu rápido">\n    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>\n  </button>\n  <div class="quick-items">\n    <button id="quick-filter-btn" class="quick-item" aria-label="Abrir filtros">\n      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.586a1 1 0 0 1-.293.707l-6.414 6.414a1 1 0 0 0-.293.707V17l-4 4v-6.586a1 1 0 0 0-.293.707L3.293 7.293A1 1 0 0 1 3 6.586V4z"/></svg>\n    </button>\n    <button id="quick-report-btn" class="quick-item" aria-label="Relatório">\n      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14"/></svg>\n    </button>\n    <button id="quick-ai-btn" class="quick-item" aria-label="Análise IA">\n      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="20" rx="6" ry="6" stroke-width="2"/><text x="12" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor">IA</text></svg>\n    </button>\n  </div>\n</div>');
+                    function setupQuickMenu(){ const menu=document.getElementById('quick-menu'); if(!menu) return; const main=document.getElementById('quick-main-btn'); const filterBtn=document.getElementById('quick-filter-btn'); const repBtn=document.getElementById('quick-report-btn'); const aiBtn=document.getElementById('quick-ai-btn'); if(main) main.onclick=function(){ menu.classList.toggle('open'); }; if(filterBtn) filterBtn.onclick=function(){ document.getElementById('exp-filter-operator').scrollIntoView({behavior:'smooth',block:'center'}); }; if(repBtn) repBtn.onclick=function(){ const blob=new Blob([document.documentElement.outerHTML],{type:'text/html;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='relatorio_tabulacoes_offline.html'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }; if(aiBtn) aiBtn.onclick=function(){ /* sem IA dinâmica offline, apenas navegar */ const ai=document.querySelector('.ai'); if(ai) ai.scrollIntoView({behavior:'smooth',block:'center'}); } }
+                    populateFilters(); render(); setupQuickMenu();
+                    ${'</'+'script>'}
+                </body>
+                </html>
+                `;
+            }
+
+            // Dispara download
             const link = document.createElement('a');
             link.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
             link.download = nomeArquivo;
