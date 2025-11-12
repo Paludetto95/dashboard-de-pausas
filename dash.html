@@ -3073,37 +3073,51 @@
                     }
                     window.geminiApiKey = keyJson.apiKey;
                 }
-                const modelsToTry = ['gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', 'gemini-1.5-flash'];
+                const apiVersionsToTry = ['v1beta', 'v1beta2'];
+                const modelsToTry = [
+                    'gemini-1.5-flash-latest',
+                    'gemini-1.5-pro-latest',
+                    'gemini-1.5-flash-001',
+                    'gemini-1.5-pro-001',
+                    'gemini-1.0-pro',
+                    'gemini-pro'
+                ];
                 let aiText = '';
                 let lastError = null;
-                for (const model of modelsToTry) {
-                    try {
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${window.geminiApiKey}`;
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                        });
-                        const respText = await response.text();
-                        if (!response.ok) {
-                            let errorJson = {};
-                            try { errorJson = JSON.parse(respText); } catch {}
-                            const msg = errorJson.error?.message || `Erro API IA (${model}): ${response.status} (${respText.slice(0,120)})`;
-                            throw new Error(msg);
+                outerLoop:
+                for (const apiVersion of apiVersionsToTry) {
+                    for (const model of modelsToTry) {
+                        try {
+                            const apiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${window.geminiApiKey}`;
+                            const response = await fetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                            });
+                            const respText = await response.text();
+                            if (!response.ok) {
+                                let errorJson = {};
+                                try { errorJson = JSON.parse(respText); } catch {}
+                                const msg = errorJson.error?.message || `Erro API IA (${model}, ${apiVersion}): ${response.status} (${respText.slice(0,120)})`;
+                                // Alguns erros indicam modelo não suportado/indisponível neste endpoint; tenta próximo
+                                const transient = /not found|unsupported|Invalid model|Method not found/i.test(msg);
+                                if (transient) throw new Error(msg);
+                                throw new Error(msg);
+                            }
+                            let dataObj = null;
+                            try { dataObj = JSON.parse(respText); } catch {
+                                throw new Error(`Resposta não-JSON do modelo (${model}). Trecho: ${respText.slice(0,120)}`);
+                            }
+                            aiText = dataObj.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                            if (aiText) {
+                                break outerLoop;
+                            } else {
+                                lastError = new Error('Resposta da IA vazia ou malformada.');
+                            }
+                        } catch (err) {
+                            lastError = err;
+                            // tenta próximo modelo/versão
                         }
-                        let dataObj = null;
-                        try { dataObj = JSON.parse(respText); } catch {
-                            throw new Error(`Resposta não-JSON do modelo (${model}). Trecho: ${respText.slice(0,120)}`);
-                        }
-                        aiText = dataObj.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                        if (aiText) {
-                            break;
-                        } else {
-                            lastError = new Error('Resposta da IA vazia ou malformada.');
-                        }
-                    } catch (err) {
-                        lastError = err;
-                        // tenta próximo modelo
                     }
                 }
                 if (!aiText) throw lastError || new Error('Falha ao gerar análise. Modelos indisponíveis.');
