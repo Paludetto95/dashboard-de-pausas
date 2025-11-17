@@ -451,7 +451,9 @@
             background: #1C1C24; border-bottom: 1px solid #2D2D3A !important;
         }
         .tabulator .tabulator-row:hover .tabulator-cell {
-            background-color: rgba(58, 127, 255, 0.1) !important;
+            /* Azul forte e um pouco escuro para alto contraste com texto branco */
+            background-color: #1D4ED8 !important; /* blue-700 */
+            color: #FFFFFF !important;
         }
         .tabulator .tabulator-cell {
             color: var(--text-main) !important;
@@ -1018,29 +1020,74 @@
                     </button>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="chart-card">
-                        <h3 class="chart-title">Total de Duração por Consultor</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="cards-grid">
+                    <div class="chart-card" id="card-total-pause-consultant">
+                        <div class="flex items-center justify-between">
+                            <h3 class="chart-title">Total de Duração por Consultor</h3>
+                            <div class="flex items-center gap-2">
+                                <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="total-pause-consultant-chart">⤢</button>
+                                <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                            </div>
+                        </div>
                         <div class="chart-container">
                             <canvas id="total-pause-consultant-chart"></canvas>
                         </div>
                     </div>
-                    <div class="chart-card">
-                        <h3 class="chart-title">Total de Duração por Tipo</h3>
+                    <div class="chart-card md:col-span-1" id="card-productivity-consultant">
+                        <div class="flex items-center justify-between">
+                            <h3 id="productivity-chart-title" class="chart-title">Tempo de Pausas (Produtivas vs. Improdutivas) por Consultor</h3>
+                            <div class="flex items-center gap-2">
+                                <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="pause-productivity-consultant-chart">⤢</button>
+                                <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="pause-productivity-consultant-chart"></canvas>
+                        </div>
+                        <div class="flex justify-end mt-2">
+                            <button id="productivity-drillback-btn" class="px-3 py-1 bg-slate-600 text-slate-100 text-sm rounded hidden">Voltar</button>
+                        </div>
+                        <!-- Lista micro das pausas do consultor em drilldown -->
+                        <div id="productivity-drilldown-list" class="mt-3 hidden">
+                            <h4 class="text-sm font-semibold text-slate-200 mb-2">Pausas detalhadas (micro)</h4>
+                            <div id="productivity-drilldown-list-content" class="text-sm text-slate-300 max-h-80 overflow-y-auto pr-2" style="max-height: 22rem; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                    <div class="chart-card" id="card-total-pause-type">
+                        <div class="flex items-center justify-between">
+                            <h3 class="chart-title">Total de Duração por Tipo</h3>
+                            <div class="flex items-center gap-2">
+                                <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="total-pause-type-chart">⤢</button>
+                                <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                            </div>
+                        </div>
                         <div class="chart-container">
                             <canvas id="total-pause-type-chart"></canvas>
                         </div>
                     </div>
-                    <div class="chart-card">
-                        <h3 class="chart-title">Média de Duração por Tipo</h3>
-                        <div class="chart-container">
-                            <canvas id="average-pause-type-chart"></canvas>
+                    <div class="chart-card" id="card-type-distribution">
+                        <div class="flex items-center justify-between">
+                            <h3 class="chart-title">Distribuição do Tempo por Tipo</h3>
+                            <div class="flex items-center gap-2">
+                                <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="pause-type-distribution-chart">⤢</button>
+                                <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="chart-card">
-                        <h3 class="chart-title">Distribuição do Tempo por Tipo</h3>
                         <div class="chart-container">
                             <canvas id="pause-type-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overlay de Tela Cheia para Gráficos -->
+                <div id="fullscreen-overlay" class="hidden" style="position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);backdrop-filter:blur(2px);">
+                    <div id="fullscreen-header" style="position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#fff;z-index:1002;">
+                        <div id="fullscreen-title" class="text-lg font-semibold"></div>
+                        <button id="fullscreen-close" class="rounded-md bg-white/10 px-3 py-1 text-white hover:bg-white/20">Fechar</button>
+                    </div>
+                    <div id="fullscreen-content" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1001;">
+                        <div id="fullscreen-box" style="width:70vw;height:70vh;background:#0B1020;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.4);padding:12px;display:flex;align-items:center;justify-content:center;">
+                            <!-- Canvas do gráfico será movido para cá durante a ampliação -->
                         </div>
                     </div>
                 </div>
@@ -1069,27 +1116,51 @@
             </div>
         
             <!-- Charts for Call Tabulations -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <div class="chart-card">
-                <h3 class="chart-title">Total de Tabulações por Operador</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6" id="tab-cards-grid">
+            <div class="chart-card" id="card-tab-total-operator">
+                <div class="flex items-center justify-between">
+                    <h3 class="chart-title">Total de Tabulações por Operador</h3>
+                    <div class="flex items-center gap-2">
+                        <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="total-tabulations-operator-chart">⤢</button>
+                        <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="total-tabulations-operator-chart"></canvas>
                 </div>
             </div>
-            <div class="chart-card">
-                <h3 class="chart-title">Total de Tabulações por Tipo</h3>
+            <div class="chart-card" id="card-tab-total-type">
+                <div class="flex items-center justify-between">
+                    <h3 class="chart-title">Total de Tabulações por Tipo</h3>
+                    <div class="flex items-center gap-2">
+                        <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="total-tabulations-type-chart">⤢</button>
+                        <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="total-tabulations-type-chart"></canvas>
                 </div>
             </div>
-            <div class="chart-card">
-                <h3 class="chart-title">Total de Tabulações por Categoria</h3>
+            <div class="chart-card" id="card-tab-total-category">
+                <div class="flex items-center justify-between">
+                    <h3 class="chart-title">Total de Tabulações por Categoria</h3>
+                    <div class="flex items-center gap-2">
+                        <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="total-tabulations-category-chart">⤢</button>
+                        <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="total-tabulations-category-chart"></canvas>
                 </div>
             </div>
-            <div class="chart-card">
-                <h3 class="chart-title">Distribuição de Tabulações por Tipo</h3>
+            <div class="chart-card" id="card-tab-type-dist">
+                <div class="flex items-center justify-between">
+                    <h3 class="chart-title">Distribuição de Tabulações por Tipo</h3>
+                    <div class="flex items-center gap-2">
+                        <button class="text-slate-300 hover:text-white" title="Expandir" data-expand-btn data-target="tabulation-type-distribution-chart">⤢</button>
+                        <button class="text-slate-300 hover:text-white cursor-move" title="Mover" data-drag-handle>⇅</button>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="tabulation-type-distribution-chart"></canvas>
                 </div>
@@ -1173,6 +1244,135 @@
             'GRUPO_USUARIO': ['Grupo Usuário', 'GRUPO USUÁRIO', 'GRUPO_USUARIO'],
             'INFORMACAO_ATENDIMENTO': ['Informação do Atendimento', 'INFORMAÇÃO DO ATENDIMENTO', 'INFORMACAO_ATENDIMENTO'],
         };
+
+        // ===== Tela Cheia de Gráficos & Drag-and-Drop de Cards =====
+        (function(){
+            const overlay = document.getElementById('fullscreen-overlay');
+            const content = document.getElementById('fullscreen-content');
+            const fullscreenBox = document.getElementById('fullscreen-box');
+            const closeBtn = document.getElementById('fullscreen-close');
+            const grids = Array.from(document.querySelectorAll('#cards-grid, #tab-cards-grid'));
+            const state = { active:false, canvas:null, parent:null, title:'' };
+
+            function openFullscreenByCanvasId(canvasId){
+                const canvas = document.getElementById(canvasId);
+                if(!canvas) return;
+                const card = canvas.closest('.chart-card');
+                const titleEl = card ? card.querySelector('.chart-title, h3') : null;
+                state.title = titleEl ? titleEl.textContent : 'Gráfico';
+                const titleTarget = document.getElementById('fullscreen-title');
+                if(titleTarget) titleTarget.textContent = state.title;
+
+                state.parent = canvas.parentElement;
+                state.canvas = canvas;
+                (fullscreenBox || content).appendChild(canvas);
+                overlay.classList.remove('hidden');
+                state.active = true;
+
+                canvas.style.height = '100%';
+                canvas.style.width = '100%';
+                try {
+                    const chartInstance = (window.Chart && window.Chart.getChart) ? window.Chart.getChart(canvasId) : null;
+                    if(chartInstance && chartInstance.resize) chartInstance.resize();
+                } catch(e) {}
+            }
+
+            function closeFullscreen(){
+                if(!state.active || !state.canvas || !state.parent) return;
+                state.parent.appendChild(state.canvas);
+                overlay.classList.add('hidden');
+                state.canvas.style.height = '';
+                state.canvas.style.width = '';
+                try {
+                    const chartInstance = (window.Chart && window.Chart.getChart) ? window.Chart.getChart(state.canvas.id) : null;
+                    if(chartInstance && chartInstance.resize) chartInstance.resize();
+                } catch(e) {}
+                state.active = false;
+                state.canvas = null;
+                state.parent = null;
+            }
+
+            function setupExpandButtons(){
+                document.querySelectorAll('[data-expand-btn]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const target = btn.getAttribute('data-target');
+                        if(target) openFullscreenByCanvasId(target);
+                    });
+                });
+                // Duplo clique no canvas também amplia
+                document.querySelectorAll('.chart-card canvas').forEach(cv => {
+                    cv.addEventListener('dblclick', () => openFullscreenByCanvasId(cv.id));
+                });
+            }
+
+            function enableCardDragAndDrop(){
+                let dragging = null;
+                grids.forEach(grid => {
+                    const cards = grid.querySelectorAll('.chart-card');
+                    cards.forEach(card => {
+                        card.setAttribute('draggable','true');
+                        const handle = card.querySelector('[data-drag-handle]');
+                        // Permite arrastar com o handle; se não existir, arrasta o card inteiro
+                        const startDrag = (e)=>{
+                            dragging = card;
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', card.id || '');
+                            card.classList.add('ring-2','ring-white/30');
+                        };
+                        if(handle){
+                            handle.addEventListener('mousedown', (e)=>{
+                                // Mousedown para iniciar drag via handle
+                                card.setAttribute('draggable','true');
+                            });
+                            card.addEventListener('dragstart', startDrag);
+                        } else {
+                            card.addEventListener('dragstart', startDrag);
+                        }
+                        card.addEventListener('dragend', ()=>{
+                            card.classList.remove('ring-2','ring-white/30');
+                            persistOrder(grid);
+                            dragging = null;
+                        });
+                        card.addEventListener('dragover', (e)=>{
+                            e.preventDefault();
+                            if(!dragging || dragging === card) return;
+                            const rect = card.getBoundingClientRect();
+                            const insertBefore = (e.clientY - rect.top) < rect.height/2;
+                            grid.insertBefore(dragging, insertBefore ? card : card.nextSibling);
+                        });
+                        card.addEventListener('drop', (e)=>{ e.preventDefault(); });
+                    });
+                    grid.addEventListener('dragover', (e)=>{
+                        e.preventDefault();
+                        if(dragging && !grid.contains(dragging)) grid.appendChild(dragging);
+                    });
+                    grid.addEventListener('drop', (e)=>{ e.preventDefault(); persistOrder(grid); });
+                });
+            }
+
+            function persistOrder(grid){
+                const ids = Array.from(grid.querySelectorAll('.chart-card')).map(el=>el.id);
+                try{ localStorage.setItem('cards-order#'+(grid.id||'grid'), JSON.stringify(ids)); }catch{}
+            }
+            function restoreOrder(){
+                grids.forEach(grid => {
+                    let ids = [];
+                    try{ ids = JSON.parse(localStorage.getItem('cards-order#'+(grid.id||'grid'))||'[]'); }catch{}
+                    if(Array.isArray(ids) && ids.length){
+                        ids.forEach(id=>{ const el = document.getElementById(id); if(el) grid.appendChild(el); });
+                    }
+                });
+            }
+
+            function init(){
+                setupExpandButtons();
+                enableCardDragAndDrop();
+                restoreOrder();
+                if(closeBtn) closeBtn.addEventListener('click', closeFullscreen);
+                if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeFullscreen(); });
+            }
+            document.addEventListener('DOMContentLoaded', init);
+        })();
         // Aliases extras para maior compatibilidade com variações de cabeçalho
         columnAliasesCallTabulations['DATA_HORA_TABULACAO'].push('DATA HORA', 'DATA/HORA', 'DATA_HORA', 'DATA HORA TABULAÇÃO', 'DATA HORA TABULACAO', 'DT TABULAÇÃO', 'DT TABULACAO', 'DT/HORA');
         columnAliasesCallTabulations['TABULADO_COMO'].push('STATUS FINAL', 'TABULAÇÃO', 'TABULACAO', 'RESULTADO');
@@ -1186,6 +1386,8 @@
             'Pausa Intervalo': { minutes: 15, tolerance: 2 },
             'Pausa (intervalo)': { minutes: 15, tolerance: 2 },
             'Banheiro': { minutes: 10, tolerance: 3 },
+            'Formalização': { minutes: 30, tolerance: 3 },
+            'Formalizacao': { minutes: 30, tolerance: 3 },
             'Negociação': { minutes: 15, tolerance: 3 },
             'Em Negociação': { minutes: 15, tolerance: 3 },
             'Cadastrando Proposta': { minutes: 5, tolerance: 2 },
@@ -1218,6 +1420,10 @@
                     pauseType: document.getElementById('pause-type-filter'),
                     startDate: document.getElementById('start-date-filter'),
                     endDate: document.getElementById('end-date-filter'),
+                },
+                productivity: {
+                    backBtn: document.getElementById('productivity-drillback-btn'),
+                    titleEl: document.getElementById('productivity-chart-title'),
                 },
                 apiControls: {
                     startDate: document.getElementById('argus-start-date'),
@@ -1279,8 +1485,8 @@
 
         let charts = {
             consultantTotal: null,
+            consultantProductivity: null,
             typeTotal: null,
-            typeAverage: null,
             typeDistribution: null,
             tabulationOperatorTotal: null,
             tabulationTypeTotal: null,
@@ -1296,6 +1502,9 @@
             tabType: null,
             tabCategory: null
         };
+
+        // Estado de drilldown para o gráfico de produtividade por consultor
+        let productivityDrilldown = null; // { consultant: string, category: 'productive'|'unproductive' }
 
         // --- Funções Utilitárias ---
         function debounce(func, delay) {
@@ -1331,6 +1540,15 @@
             if (typeof str !== 'string') return '';
             return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
         }
+        // Normalização para busca e classificação (minúsculo, sem acentos, só a-z0-9)
+        function normalizeForSearch(str) {
+            if (typeof str !== 'string') return '';
+            return str
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]/g, '');
+        }
         function normalizeDataString(str) {
             if (!str) return 'Não informado';
             return str.trim().replace(/\s+/g, ' ');
@@ -1341,6 +1559,37 @@
                 if (word.length === 0) return '';
                 return word.charAt(0).toUpperCase() + word.slice(1);
             }).join(' ');
+        }
+
+        // Classificação dinâmica de tipos de pausa em Produtivas vs Improdutivas
+        // Ajuste livre: adicione/remova palavras-chave conforme a sua operação.
+        const pauseCategoryKeywords = {
+            productive: [
+                'treinamento','reuni','qualidade','backoffice','crm','cadastro','suporte','posvenda','pos venda','pos-venda',
+                'documentacao','documentação','pesquisando','planejamento','briefing','whatsapp','email','e-mail','cliente',
+                // Novos produtivos explicitamente citados
+                'negociacao','emnegociacao','formalizacao','novolead','pesquisandolead','cadastrandoproposta','proposta','feedback'
+            ],
+            unproductive: [
+                'banheiro','intervalo','almoco','almoço','cafe','café','descanso','particular','deslogado','sematividade',
+                'naoinformado','nãoinformado','parada','cozinha','fumando','refeicao','refeição','pausa'
+            ]
+        };
+        function categorizePauseType(tipo) {
+            if (!tipo) return 'unproductive';
+            // Normaliza removendo acentos e caracteres não alfanuméricos para ampliar match
+            const tNorm = normalizeForSearch(String(tipo));
+            // Matches explícitos por equivalência total
+            const directProductive = ['emnegociacao','negociacao','formalizacao','novolead','pesquisandolead','cadastrandoproposta','proposta','feedback'];
+            const directUnproductive = ['banheiro','intervalo','almoco','cafe','pausaintervalo','pausa'];
+            if (directProductive.some(k => tNorm.includes(k))) return 'productive';
+            if (directUnproductive.some(k => tNorm.includes(k))) return 'unproductive';
+            // Palavras-chave genéricas
+            if (pauseCategoryKeywords.productive.some(k => tNorm.includes(k))) return 'productive';
+            if (pauseCategoryKeywords.unproductive.some(k => tNorm.includes(k))) return 'unproductive';
+            // Fallback: se contiver 'produtiv', trata como produtiva
+            if (tNorm.includes('produtiv')) return 'productive';
+            return 'unproductive';
         }
         function parseDateTimeRobust(dateTimeStr) {
             if (!dateTimeStr || typeof dateTimeStr !== 'string' || dateTimeStr.trim() === '' || dateTimeStr.includes('#########') || dateTimeStr.includes('#')) { return null; }
@@ -2171,7 +2420,9 @@
             const source = dataset || filteredData;
             const agg = {};
             source.forEach(d => {
-                agg[d[key]] = (agg[d[key]] || 0) + d.DURACAO_MINUTES;
+                const k = d[key];
+                const val = Number(d.DURACAO_MINUTES) || 0; // garante numérico
+                agg[k] = (agg[k] || 0) + val;
             });
             return agg;
         }
@@ -2198,6 +2449,17 @@
             for(const k in totals) avgs[k] = totals[k] / counts[k];
             return avgs;
         }
+
+        // Quantidade de registros por chave (para Pausas)
+        function aggregateCount(key, dataset) {
+            const source = dataset || filteredData;
+            const counts = {};
+            source.forEach(d => {
+                const k = d[key] || 'Não informado';
+                counts[k] = (counts[k] || 0) + 1;
+            });
+            return counts;
+        }
         
         // Função global: mapeia um rótulo estável para uma cor HSL determinística
         // Usada por múltiplos gráficos (barras e donut) para manter consistência.
@@ -2211,7 +2473,7 @@
             return 'hsl(' + hue + ', ' + sat + '%, ' + light + '%)';
         }
         
-        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = '#F59E0B') {
+        function createChart(canvasId, chartInstanceVar, type, labels, data, label, color, fullLabels = null, tooltipUnit = 'min', onSelect = null, highlightIndex = null, highlightColor = '#F59E0B', countsMap = null, expectedLine = null, topConsultantMap = null) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
@@ -2306,20 +2568,50 @@
 
             // Altura do canvas é controlada pelo container via CSS; evitar setar inline
 
+            // Dataset base e opcional linha pontilhada de meta/contagem
+            const baseDataset = {
+                label: label,
+                data: data,
+                backgroundColor: backgroundColor,
+                borderColor: type === 'doughnut' ? '#252532' : 'transparent',
+                borderWidth: type === 'doughnut' ? 1.2 : 1,
+                hoverOffset: type === 'doughnut' ? 8 : 0,
+                // Destacar o slice selecionado com pequeno "pop-out"
+                offset: (type === 'doughnut') ? labels.map((_, idx) => (highlightIndex !== null && idx === highlightIndex) ? 12 : 0) : undefined
+            };
+            const datasets = [baseDataset];
+            const maxExpected = (expectedLine && Array.isArray(expectedLine)) 
+                ? expectedLine.filter(function(v){ return typeof v === 'number' && isFinite(v); }).reduce(function(m,v){ return Math.max(m, v); }, 0)
+                : null;
+            if (expectedLine && Array.isArray(expectedLine)) {
+                datasets.push({
+                    type: 'line',
+                    label: 'Média esperada (fixas/dia)',
+                    data: expectedLine,
+                    yAxisID: 'yCount',
+                    borderColor: '#e5e7eb',
+                    borderDash: [6,4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHitRadius: 6,
+                    spanGaps: false,
+                    order: 99,
+                    tension: 0,
+                    segment: {
+                        borderColor: function(ctx){
+                            const idx = ctx.p0DataIndex || 0;
+                            const lbl = labels[idx];
+                            return stableColorForKey(lbl);
+                        }
+                    }
+                });
+            }
+
             const config = {
                 type: type,
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: label,
-                        data: data,
-                        backgroundColor: backgroundColor,
-                        borderColor: type === 'doughnut' ? '#252532' : 'transparent',
-                        borderWidth: type === 'doughnut' ? 1.2 : 1,
-                        hoverOffset: type === 'doughnut' ? 8 : 0,
-                        // Destacar o slice selecionado com pequeno "pop-out"
-                        offset: (type === 'doughnut') ? labels.map((_, idx) => (highlightIndex !== null && idx === highlightIndex) ? 12 : 0) : undefined
-                    }]
+                    datasets: datasets
                 },
                 // Plugins de efeito de seleção (glow em doughnut, overlay neon em barra)
                 plugins: (function(){
@@ -2370,6 +2662,36 @@
                             }
                         };
                         arr.push(barSelectionOverlay);
+
+                        // Labels de contagem de pausas por barra
+                        const countLabels = {
+                            id: 'countLabelsBar',
+                            afterDatasetsDraw(chart) {
+                                try {
+                                    if (!countsMap) return;
+                                    const meta = chart.getDatasetMeta(0);
+                                    if (!meta || !meta.data) return;
+                                    const ctx = chart.ctx;
+                                    ctx.save();
+                                    ctx.fillStyle = '#cbd5e1';
+                                    ctx.font = '11px system-ui';
+                                    ctx.textAlign = 'center';
+                                    meta.data.forEach((el, i) => {
+                                        const lbl = chart.data && chart.data.labels ? chart.data.labels[i] : null;
+                                        // Quando usamos rótulos abreviados, procure a contagem pelo rótulo completo
+                                        const fullLbl = Array.isArray(fullLabels) ? fullLabels[i] : null;
+                                        if (!lbl) return;
+                                        const count = countsMap[(fullLbl || lbl)];
+                                        if (!count) return;
+                                        const x = el.x;
+                                        const y = el.y - 6; // acima da barra
+                                        ctx.fillText(String(count), x, y);
+                                    });
+                                    ctx.restore();
+                                } catch(e) {}
+                            }
+                        };
+                        arr.push(countLabels);
 
                         // Glow de contorno do chartArea quando houver qualquer filtro ativo
                         const avgFilteredGlow = {
@@ -2446,14 +2768,37 @@
                                     if (type === 'doughnut') {
                                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const perc = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+                                        const count = countsMap ? (countsMap[context.label] || countsMap[(fullLabels && fullLabels[context.dataIndex]) || context.label] || null) : null;
                                         if (tooltipUnit === 'min') {
-                                            return `${lbl}${formatMinutesToHHMM(val)} (${perc})`;
+                                            return `${lbl}${formatMinutesToHHMM(val)} (${perc})` + (count!=null ? ` • ${count}` : '');
                                         } else {
-                                            return `${lbl}${val} (${perc})`;
+                                            return `${lbl}${val} (${perc})` + (count!=null ? ` • ${count}` : '');
                                         }
                                     }
+                                    // Para dataset de linha (contagem esperada), mostrar o valor bruto
+                                    if (context.dataset && (context.dataset.type === 'line' || context.dataset.yAxisID === 'yCount')) {
+                                        return `${context.dataset.label}: ${val}`;
+                                    }
                                     if (tooltipUnit === 'min') {
-                                        return `Duração: ${formatMinutesToHHMM(val)} (${val.toFixed(1)} min)`;
+                                        const labelText = `Duração: ${formatMinutesToHHMM(val)} (${val.toFixed(1)} min)`;
+                                        let extra = '';
+                                        if (context && typeof context.dataIndex === 'number') {
+                                            const key = (fullLabels && fullLabels[context.dataIndex]) || context.label;
+                                            const count = countsMap ? countsMap[key] : null;
+                                            if (count!=null) extra += ` • ${count}`;
+                                            const expected = (expectedLine && Array.isArray(expectedLine)) ? expectedLine[context.dataIndex] : null;
+                                            if (chartInstanceVar === 'typeTotal' && expected!=null && count!=null && count > expected) {
+                                                const diff = count - expected;
+                                                extra += ` • Excedeu: ${diff}`;
+                                            }
+                                            if (chartInstanceVar === 'typeTotal' && topConsultantMap && topConsultantMap[key]) {
+                                                const info = topConsultantMap[key];
+                                                const name = abbreviateName(info.consultant || '');
+                                                const c = info.count || 0;
+                                                extra += ` • Top: ${name} (${c})`;
+                                            }
+                                        }
+                                        return labelText + extra;
                                     } else {
                                         return `${label}: ${val}`;
                                     }
@@ -2507,7 +2852,19 @@
                                     return (config.data && config.data.labels) ? config.data.labels[index] : value;
                                 }
                             }
-                        }
+                        },
+                        ...(expectedLine ? {
+                            yCount: {
+                                position: 'right',
+                                beginAtZero: true,
+                                grid: { color: 'transparent' },
+                                display: false,
+                                ticks: { 
+                                    color: '#cbd5e1',
+                                    suggestedMax: (maxExpected && isFinite(maxExpected)) ? Math.ceil(maxExpected * 1.1) : undefined
+                                }
+                            }
+                        } : {})
                     } : {},
                     onHover: (evt, elements) => {
                         try { canvas.style.cursor = (onSelect && elements && elements.length > 0) ? 'pointer' : 'default'; } catch(e) {}
@@ -2715,6 +3072,7 @@
                 return matchType && matchDate;
             });
             const consData = aggregateData('CONSULTOR', consultantChartDataset);
+            const consCounts = aggregateCount('CONSULTOR', consultantChartDataset);
             const consLabels = Object.keys(consData).sort((a, b) => consData[b] - consData[a]);
             const abbreviatedLabels = consLabels.map(name => abbreviateName(name));
             const selectedIndex = dashboardSelection.consultant ? consLabels.indexOf(dashboardSelection.consultant) : null;
@@ -2723,7 +3081,7 @@
                 'consultantTotal', 
                 'bar', 
                 abbreviatedLabels,
-                consLabels.map(k => consData[k]), 
+                consLabels.map(k => Number(consData[k]) || 0), 
                 'Total Duração', 
                 '#1D4ED8',
                 consLabels,
@@ -2739,8 +3097,585 @@
                     renderCharts();
                 },
                 selectedIndex,
-                '#F59E0B'
+                '#F59E0B',
+                consCounts
             );
+
+            // Gráfico: Produtivas vs Improdutivas por Consultor (barras empilhadas) com drilldown por tipo
+            try {
+                const selectedOnlyConsultant = (dashboardSelection && dashboardSelection.consultant) ? dashboardSelection.consultant : null;
+                const byConsultant = selectedOnlyConsultant ? [selectedOnlyConsultant] : consLabels.slice();
+
+                // Se houver drilldown ativo, mostrar tipos de pausa para o consultor e categoria selecionados
+                if (productivityDrilldown && productivityDrilldown.consultant) {
+                    const targetConsultant = productivityDrilldown.consultant;
+                    const targetCategory = productivityDrilldown.category; // 'productive'|'unproductive'
+                    const subset = consultantChartDataset.filter(function(d){
+                        const cat = categorizePauseType(d.TIPO);
+                        const matchCat = targetCategory === 'productive' ? (cat === 'productive') : (cat !== 'productive');
+                        return d.CONSULTOR === targetConsultant && matchCat;
+                    });
+                    const typeAgg = aggregateData('TIPO', subset);
+                    const typeCnt = aggregateCount('TIPO', subset);
+                    const typeLabelsDD = Object.keys(typeAgg).sort(function(a,b){ return typeAgg[b]-typeAgg[a]; });
+                    const titleBase = `Tipos de Pausa de ${abbreviateName(targetConsultant)} — ${targetCategory==='productive'?'Produtiva':'Improdutiva/Pausa'} (mais micro)`;
+                    if (els.main.productivity && els.main.productivity.titleEl) {
+                        els.main.productivity.titleEl.textContent = titleBase;
+                    }
+                    if (els.main.productivity && els.main.productivity.backBtn) {
+                        els.main.productivity.backBtn.classList.remove('hidden');
+                        els.main.productivity.backBtn.onclick = function(){
+                            productivityDrilldown = null;
+                            if (els.main.productivity && els.main.productivity.titleEl) {
+                                els.main.productivity.titleEl.textContent = 'Tempo de Pausas (Produtivas vs. Improdutivas) por Consultor';
+                            }
+                            els.main.productivity.backBtn.classList.add('hidden');
+                            const listWrap = document.getElementById('productivity-drilldown-list');
+                            const listContent = document.getElementById('productivity-drilldown-list-content');
+                            if (listWrap) { listWrap.classList.add('hidden'); listWrap.classList.remove('mt-0'); listWrap.classList.add('mt-3'); }
+                            if (listContent) listContent.innerHTML = '';
+                            const canvasEl = document.getElementById('pause-productivity-consultant-chart');
+                            const chartContainer = canvasEl ? canvasEl.parentElement : null;
+                            if (chartContainer) chartContainer.classList.remove('hidden');
+                            const btn = document.getElementById('productivity-drillback-btn');
+                            const btnWrap = btn ? btn.parentElement : null;
+                            if (btnWrap) { btnWrap.classList.remove('mt-0'); btnWrap.classList.add('mt-2'); }
+                            renderCharts();
+                        };
+                    }
+                    // Oculta o gráfico nesta visão de drilldown; mostra apenas a lista micro e botão Voltar
+                    const canvasElDD = document.getElementById('pause-productivity-consultant-chart');
+                    const chartContainerDD = canvasElDD ? canvasElDD.parentElement : null;
+                    if (charts.consultantProductivity) try { charts.consultantProductivity.destroy(); } catch(e) {}
+                    if (chartContainerDD) chartContainerDD.classList.add('hidden');
+
+                    const normalizeTypeKey = function(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); };
+                    // Dias únicos e total de Banheiro para limiar por consultor/dia
+                    const uniqueDaysConsultantDD = new Set();
+                    let totalBanheiroConsultantDD = 0;
+                    subset.forEach(function(d){
+                        const dt = d && d.DATA_INICIO_OBJ;
+                        if (dt && dt instanceof Date && !isNaN(dt)) {
+                            uniqueDaysConsultantDD.add(dt.toISOString().slice(0,10));
+                        } else if (d && d.DATA_INICIO) {
+                            const s = String(d.DATA_INICIO);
+                            uniqueDaysConsultantDD.add(s.slice(0,10));
+                        }
+                        const tNorm = normalizeTypeKey(d && d.TIPO);
+                        if (tNorm === 'BANHEIRO') {
+                            totalBanheiroConsultantDD += (Number(d && d.DURACAO_MINUTES) || 0);
+                        }
+                    });
+                    const banThresholdDD = 30 * (uniqueDaysConsultantDD.size || 1);
+                    // Contagem por dia para Pesquisando Lead
+                    const pesqLeadCountsByDayDD = {};
+                    subset.forEach(function(d){
+                        const tNorm = normalizeTypeKey(d && d.TIPO);
+                        if (tNorm !== 'PESQUISANDO LEAD') return;
+                        let day = null;
+                        const dt = d && d.DATA_INICIO_OBJ;
+                        if (dt && dt instanceof Date && !isNaN(dt)) {
+                            day = dt.toISOString().slice(0,10);
+                        } else if (d && d.DATA_INICIO) {
+                            const s = String(d.DATA_INICIO);
+                            day = s.slice(0,10);
+                        }
+                        const key = day || '__unknown_day__';
+                        pesqLeadCountsByDayDD[key] = (pesqLeadCountsByDayDD[key] || 0) + 1;
+                    });
+                    const pesqLeadExceededAnyDayDD = Object.values(pesqLeadCountsByDayDD).some(function(cnt){ return cnt > 20; });
+
+                    const typeColorsDD = typeLabelsDD.map(function(lbl){
+                        const keyNorm = normalizeTypeKey(lbl);
+                        let exceeded = false;
+                        if (keyNorm === 'ALMOCO') {
+                            exceeded = subset.some(function(d){ return normalizeTypeKey(d && d.TIPO) === 'ALMOCO' && ((Number(d && d.DURACAO_MINUTES) || 0) > 61); });
+                        } else if (keyNorm === 'PAUSA (INTERVALO)' || keyNorm === 'INTERVALO' || keyNorm === 'PAUSA INTERVALO') {
+                            exceeded = subset.some(function(d){ return (function(k){ return k==='PAUSA (INTERVALO)'||k==='INTERVALO'||k==='PAUSA INTERVALO'; })(normalizeTypeKey(d && d.TIPO)) && ((Number(d && d.DURACAO_MINUTES) || 0) >= 16); });
+                        } else if (keyNorm === 'FORMALIZACAO') {
+                            exceeded = subset.some(function(d){ return normalizeTypeKey(d && d.TIPO) === 'FORMALIZACAO' && ((Number(d && d.DURACAO_MINUTES) || 0) > 30); });
+                        } else if (keyNorm === 'PESQUISANDO LEAD') {
+                            const anyLong = subset.some(function(d){ return normalizeTypeKey(d && d.TIPO) === 'PESQUISANDO LEAD' && ((Number(d && d.DURACAO_MINUTES) || 0) >= 5); });
+                            exceeded = anyLong || pesqLeadExceededAnyDayDD;
+                        } else if (keyNorm === 'BANHEIRO') {
+                            exceeded = totalBanheiroConsultantDD > banThresholdDD;
+                        } else {
+                            // Regras padrão via expectedDurations
+                            exceeded = subset.some(function(d){
+                                const t = d && d.TIPO;
+                                if (!t) return false;
+                                if (normalizeTypeKey(t) !== keyNorm) return false;
+                                const exp = expectedDurations[t];
+                                if (!exp) return false;
+                                const dur = Number(d && d.DURACAO_MINUTES) || 0;
+                                return dur > (exp.minutes + exp.tolerance);
+                            });
+                        }
+                        return exceeded ? '#EF4444' : ((targetCategory === 'productive') ? '#2563EB' : '#FF6A00');
+                    });
+
+                    // Gráfico de tipos não é exibido no drilldown — apenas lista micro
+
+                    // Renderizar lista micro com todas as pausas do consultor, destacando excedentes
+                    try {
+                            const listWrap = document.getElementById('productivity-drilldown-list');
+                            const listContent = document.getElementById('productivity-drilldown-list-content');
+                            if (listWrap && listContent) {
+                            
+                            // Elevar a lista micro mais para cima (sem espaço do gráfico)
+                            try {
+                                const btn = document.getElementById('productivity-drillback-btn');
+                                const btnWrap = btn ? btn.parentElement : null;
+                                if (btnWrap) { btnWrap.classList.remove('mt-2'); btnWrap.classList.add('mt-0'); }
+                                listWrap.classList.remove('mt-3');
+                                listWrap.classList.add('mt-0');
+                            } catch(e) {}
+                            // Calcular dias únicos do consultor e total de Banheiro (para a regra por consultor/dia)
+                            const uniqueDaysConsultant = new Set();
+                            let totalBanheiroConsultant = 0;
+                            subset.forEach(function(d){
+                                const dt = d && d.DATA_INICIO_OBJ;
+                                if (dt && dt instanceof Date && !isNaN(dt)) {
+                                    uniqueDaysConsultant.add(dt.toISOString().slice(0,10));
+                                } else if (d && d.DATA_INICIO) {
+                                    const s = String(d.DATA_INICIO);
+                                    uniqueDaysConsultant.add(s.slice(0,10));
+                                }
+                                const tNorm = String(d && d.TIPO || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                                if (tNorm === 'BANHEIRO') {
+                                    totalBanheiroConsultant += (Number(d && d.DURACAO_MINUTES) || 0);
+                                }
+                            });
+                            const banThreshold = 30 * (uniqueDaysConsultant.size || 1);
+
+                            // Ordenar por tempo de maior para menor
+                            const ordered = subset.slice().sort(function(a,b){
+                                const da = Number(a && a.DURACAO_MINUTES) || 0;
+                                const db = Number(b && b.DURACAO_MINUTES) || 0;
+                                return db - da;
+                            });
+                            // Contagem de "Pesquisando Lead" por dia para indicar quais dias excederam 20 registros
+                            const pesqLeadCountsByDay = {};
+                            subset.forEach(function(d){
+                                const typeNorm = String(d && d.TIPO || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                                if (typeNorm !== 'PESQUISANDO LEAD') return;
+                                let day = null;
+                                const dt = d && d.DATA_INICIO_OBJ;
+                                if (dt && dt instanceof Date && !isNaN(dt)) {
+                                    day = dt.toISOString().slice(0,10);
+                                } else if (d && d.DATA_INICIO) {
+                                    const s = String(d.DATA_INICIO);
+                                    day = s.slice(0,10);
+                                }
+                                const key = day || '__unknown_day__';
+                                pesqLeadCountsByDay[key] = (pesqLeadCountsByDay[key] || 0) + 1;
+                            });
+                            const pesqLeadExceededDays = Object.keys(pesqLeadCountsByDay).filter(function(day){ return pesqLeadCountsByDay[day] > 20; });
+
+                            const normalizeTypeKey = function(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); };
+                            const htmlItems = ordered.map(function(d){
+                                const durMin = Number(d && d.DURACAO_MINUTES) || 0;
+                                const type = d && d.TIPO ? d.TIPO : '';
+                                const typeNorm = normalizeTypeKey(type);
+                                const dtDisp = formatDateTimeDisplay(d && d.DATA_INICIO_OBJ);
+                                const durHHMMSS = formatMinutesToHHMMSS(durMin);
+                                let dayStr = null;
+                                const dtObj = d && d.DATA_INICIO_OBJ;
+                                if (dtObj && dtObj instanceof Date && !isNaN(dtObj)) {
+                                    dayStr = dtObj.toISOString().slice(0,10);
+                                } else if (d && d.DATA_INICIO) {
+                                    const s = String(d.DATA_INICIO);
+                                    dayStr = s.slice(0,10);
+                                }
+                                // Status por pausa, com regras específicas
+                                let exceeded = false;
+                                let statusText = '';
+                                if (typeNorm === 'ALMOCO') {
+                                    exceeded = durMin > 61;
+                                    statusText = exceeded ? '↑ Longo' : (durMin < 57 ? '↓ Curto' : '✓ Correto');
+                                } else if (typeNorm === 'PAUSA (INTERVALO)' || typeNorm === 'INTERVALO') {
+                                    exceeded = durMin >= 16;
+                                    statusText = exceeded ? '↑ Longo' : (durMin < 13 ? '↓ Curto' : '✓ Correto');
+                                } else if (typeNorm === 'PESQUISANDO LEAD') {
+                                    const isLong = durMin >= 5;
+                                    const dayExceeded = dayStr && pesqLeadExceededDays.includes(dayStr);
+                                    exceeded = isLong || !!dayExceeded;
+                                    if (dayExceeded && isLong) {
+                                        statusText = '↑ Longo (≥5min) · dia excedeu 20';
+                                    } else if (dayExceeded) {
+                                        statusText = 'dia excedeu 20';
+                                    } else if (isLong) {
+                                        statusText = '↑ Longo (≥5min)';
+                                    } else {
+                                        statusText = '✓ Correto (<5min)';
+                                    }
+                                } else if (typeNorm === 'FORMALIZACAO') {
+                                    const exp = expectedDurations[type];
+                                    if (exp) {
+                                        const lower = exp.minutes - exp.tolerance;
+                                        const upper = exp.minutes + exp.tolerance;
+                                        if (durMin > upper) { exceeded = true; statusText = '↑ Longo'; }
+                                        else if (durMin < lower) { exceeded = false; statusText = '↓ Curto'; }
+                                        else { exceeded = false; statusText = '✓ Correto'; }
+                                    } else {
+                                        exceeded = durMin > 30;
+                                        statusText = exceeded ? '↑ Longo' : (durMin < 30 ? '↓ Curto' : '✓ Correto');
+                                    }
+                                } else if (typeNorm === 'BANHEIRO') {
+                                    exceeded = totalBanheiroConsultant > banThreshold; // por consultor/dia (total)
+                                    statusText = exceeded ? '↑ Longo (total consultor/dia)' : '✓ Normal (total consultor/dia)';
+                                } else {
+                                    const exp = expectedDurations[type];
+                                    if (exp) {
+                                        const lower = exp.minutes - exp.tolerance;
+                                        const upper = exp.minutes + exp.tolerance;
+                                        if (durMin > upper) { exceeded = true; statusText = '↑ Longo'; }
+                                        else if (durMin < lower) { exceeded = false; statusText = '↓ Curto'; }
+                                        else { exceeded = false; statusText = '✓ Correto'; }
+                                    } else {
+                                        statusText = '';
+                                    }
+                                }
+                                const expMeta = expectedDurations[type] || expectedDurations[typeNorm] || null;
+                                const lowerMeta = expMeta ? (expMeta.minutes - expMeta.tolerance) : null;
+                                const upperMeta = expMeta ? (expMeta.minutes + expMeta.tolerance) : null;
+                                let bgCls = 'bg-slate-700/20';
+                                if (expMeta != null) {
+                                    if (durMin > upperMeta) bgCls = 'bg-red-600/25';
+                                    else if (durMin < lowerMeta) bgCls = 'bg-yellow-600/25';
+                                    else bgCls = 'bg-emerald-600/20';
+                                }
+                                const metaText = expMeta ? `${expMeta.minutes}min` : '—';
+                                return `<div class=\"flex items-center justify-between py-1 border-b border-white/10\">
+                                    <div class=\"flex-1 ${bgCls}\"><span class=\"text-slate-400\">${dtDisp}</span> — <span>${type}</span></div>
+                                    <div class=\"w-40 text-right text-slate-300 ${bgCls}\">${durHHMMSS} · Meta: ${metaText}</div>
+                                </div>`;
+                            }).join('');
+
+                            // Cabeçalho informando dias excedidos para "Pesquisando Lead", se houver
+                            let headerInfo = '';
+                            if (pesqLeadExceededDays.length > 0) {
+                                const detailDays = pesqLeadExceededDays.map(function(d){ return `${d} (${pesqLeadCountsByDay[d]} registros)`; }).join(', ');
+                                headerInfo = `<div class=\"text-xs text-red-400 mb-2\">Pesquisando Lead: dias que excederam 20 registros — ${detailDays}</div>`;
+                            }
+                            listContent.innerHTML = (headerInfo + (htmlItems || '<div class="text-slate-400">Sem pausas para listar.</div>'));
+                            listWrap.classList.remove('hidden');
+                            }
+                    } catch(e) {}
+                } else {
+                    // Modo normal: barras empilhadas por consultor
+                    const prodData = byConsultant.map(function(c){
+                        return Number(consultantChartDataset
+                            .filter(function(d){ return d.CONSULTOR === c && categorizePauseType(d.TIPO) === 'productive'; })
+                            .reduce(function(sum, d){ return sum + (Number(d.DURACAO_MINUTES) || 0); }, 0)) || 0;
+                    });
+                    const imprData = byConsultant.map(function(c){
+                        return Number(consultantChartDataset
+                            .filter(function(d){ return d.CONSULTOR === c && categorizePauseType(d.TIPO) !== 'productive'; })
+                            .reduce(function(sum, d){ return sum + (Number(d.DURACAO_MINUTES) || 0); }, 0)) || 0;
+                    });
+                    const prodCount = byConsultant.map(function(c){
+                        return consultantChartDataset
+                            .filter(function(d){ return d.CONSULTOR === c && categorizePauseType(d.TIPO) === 'productive'; })
+                            .length;
+                    });
+                    const imprCount = byConsultant.map(function(c){
+                        return consultantChartDataset
+                            .filter(function(d){ return d.CONSULTOR === c && categorizePauseType(d.TIPO) !== 'productive'; })
+                            .length;
+                    });
+                    // Preparar labels para centralizar quando há apenas um consultor selecionado
+                    let displayLabels = byConsultant.map(function(c){ return abbreviateName(c, 16); });
+                    let displayProdData = prodData.slice();
+                    let displayImprData = imprData.slice();
+                    let displayProdCount = prodCount.slice();
+                    let displayImprCount = imprCount.slice();
+                    let singleMode = false;
+                    if (byConsultant.length === 1) {
+                        singleMode = true;
+                        const onlyLabel = displayLabels[0];
+                        displayLabels = ['', onlyLabel, ''];
+                        displayProdData = [0, displayProdData[0], 0];
+                        displayImprData = [0, displayImprData[0], 0];
+                        displayProdCount = [null, displayProdCount[0], null];
+                        displayImprCount = [null, displayImprCount[0], null];
+                    }
+                    // Regra solicitada: quando o consultor tiver registro IRREGULAR para o tipo selecionado,
+                    // a barra dele fica vermelha com efeito de piscar lento.
+                    const normalizeTypeKey = function(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); };
+                    const selectedType = dashboardSelection.pauseType || null;
+                    const selectedTypeNorm = selectedType ? normalizeTypeKey(selectedType) : null;
+                    const irregularByConsultant = {};
+                    const daysByConsultant = {};
+                    const banheiroTotalsByConsultant = {};
+                    const pesqLeadCountsByConsultantDay = {};
+                    const almocoCountsByConsultantDay = {};
+                    consultantChartDataset.forEach(function(d){
+                        const c = (d && d.CONSULTOR) ? String(d.CONSULTOR) : '__unknown__';
+                        const dur = Number(d && d.DURACAO_MINUTES) || 0;
+                        const key = normalizeTypeKey(d && d.TIPO);
+                        // dia
+                        let day = null;
+                        const dt = d && d.DATA_INICIO_OBJ;
+                        if (dt && dt instanceof Date && !isNaN(dt)) {
+                            day = dt.toISOString().slice(0,10);
+                        } else if (d && d.DATA_INICIO) {
+                            const s = String(d.DATA_INICIO);
+                            day = s.slice(0,10);
+                        }
+                        if (day) {
+                            daysByConsultant[c] = daysByConsultant[c] || new Set();
+                            daysByConsultant[c].add(day);
+                        }
+                        if (!selectedTypeNorm) return; // sem tipo selecionado, não marca irregular
+                        // Somente avaliar regras do tipo selecionado
+                        if (selectedTypeNorm === 'ALMOCO' && key === 'ALMOCO') {
+                            if (dur > 61 || dur < 57) irregularByConsultant[c] = true;
+                            const k = c + '|' + (day || '__unknown_day__');
+                            almocoCountsByConsultantDay[k] = (almocoCountsByConsultantDay[k] || 0) + 1;
+                        } else if ((selectedTypeNorm === 'PAUSA (INTERVALO)' || selectedTypeNorm === 'INTERVALO' || selectedTypeNorm === 'PAUSA INTERVALO') && (key === 'PAUSA (INTERVALO)' || key === 'INTERVALO' || key === 'PAUSA INTERVALO')) {
+                            if (dur >= 16 || dur < 13) irregularByConsultant[c] = true;
+                        } else if (selectedTypeNorm === 'FORMALIZACAO' && key === 'FORMALIZACAO') {
+                            const exp = expectedDurations[d && d.TIPO];
+                            if (exp) {
+                                const lower = exp.minutes - exp.tolerance;
+                                const upper = exp.minutes + exp.tolerance;
+                                if (dur > upper || dur < lower) irregularByConsultant[c] = true;
+                            } else {
+                                if (dur > 30 || dur < 30) irregularByConsultant[c] = true;
+                            }
+                        } else if (selectedTypeNorm === 'PESQUISANDO LEAD' && key === 'PESQUISANDO LEAD') {
+                            if (dur >= 5) irregularByConsultant[c] = true;
+                            const k = c + '|' + (day || '__unknown_day__');
+                            pesqLeadCountsByConsultantDay[k] = (pesqLeadCountsByConsultantDay[k] || 0) + 1;
+                        } else if (selectedTypeNorm === 'BANHEIRO' && key === 'BANHEIRO') {
+                            banheiroTotalsByConsultant[c] = (banheiroTotalsByConsultant[c] || 0) + dur;
+                        } else if (key === selectedTypeNorm) {
+                            const exp = expectedDurations[d && d.TIPO] || expectedDurations[selectedType] || null;
+                            if (exp) {
+                                const lb = exp.minutes - exp.tolerance;
+                                const ub = exp.minutes + exp.tolerance;
+                                if (dur < lb || dur > ub) irregularByConsultant[c] = true;
+                            }
+                        }
+                    });
+                    // Pesquisando Lead: excedeu contagem por dia (>20)
+                    if (selectedTypeNorm === 'PESQUISANDO LEAD') {
+                        Object.keys(pesqLeadCountsByConsultantDay).forEach(function(k){
+                            const cnt = pesqLeadCountsByConsultantDay[k] || 0;
+                            if (cnt > 20) {
+                                const c = k.split('|')[0];
+                                irregularByConsultant[c] = true;
+                            }
+                        });
+                    }
+                    // Almoço: se houver mais de 1 no mesmo dia por consultor → irregular
+                    if (selectedTypeNorm === 'ALMOCO') {
+                        Object.keys(almocoCountsByConsultantDay).forEach(function(k){
+                            const cnt = almocoCountsByConsultantDay[k] || 0;
+                            if (cnt > 1) {
+                                const c = k.split('|')[0];
+                                irregularByConsultant[c] = true;
+                            }
+                        });
+                    }
+                    // Banheiro: total por consultor > 30 * nº de dias
+                    if (selectedTypeNorm === 'BANHEIRO') {
+                        Object.keys(banheiroTotalsByConsultant).forEach(function(c){
+                            const dayCount = (daysByConsultant[c] && daysByConsultant[c].size) ? daysByConsultant[c].size : 1;
+                            const threshold = 30 * (dayCount || 1);
+                            if ((banheiroTotalsByConsultant[c] || 0) > threshold) {
+                                irregularByConsultant[c] = true;
+                            }
+                        });
+                    }
+                    // Construir arrays de cores; quando irregular, ambas as pilhas ficam vermelhas
+                    let imprColors, prodColors;
+                    if (singleMode) {
+                        const imprBase = '#FF6A00';
+                        const prodBase = '#2563EB';
+                        // No modo single, a barra válida está no índice 1 (central)
+                        const isIrregularSingle = selectedTypeNorm ? !!irregularByConsultant[byConsultant[0]] : false;
+                        const red = '#EF4444';
+                        const green = '#22C55E';
+                        if (selectedTypeNorm) {
+                            imprColors = [imprBase, isIrregularSingle ? red : green, imprBase];
+                            prodColors = [prodBase, isIrregularSingle ? red : green, prodBase];
+                        } else {
+                            imprColors = [imprBase, imprBase, imprBase];
+                            prodColors = [prodBase, prodBase, prodBase];
+                        }
+                    } else {
+                        if (selectedTypeNorm) {
+                            imprColors = byConsultant.map(function(c){ return irregularByConsultant[c] ? '#EF4444' : '#22C55E'; });
+                            prodColors = byConsultant.map(function(c){ return irregularByConsultant[c] ? '#EF4444' : '#22C55E'; });
+                        } else {
+                            imprColors = byConsultant.map(function(){ return '#FF6A00'; });
+                            prodColors = byConsultant.map(function(){ return '#2563EB'; });
+                        }
+                    }
+                    const canvasEl = document.getElementById('pause-productivity-consultant-chart');
+                    if (canvasEl && typeof Chart !== 'undefined') {
+                        const ctx2 = canvasEl.getContext('2d');
+                        if (charts.consultantProductivity) charts.consultantProductivity.destroy();
+                        charts.consultantProductivity = new Chart(ctx2, {
+                            type: 'bar',
+                            data: {
+                                labels: singleMode ? displayLabels : abbreviatedLabels,
+                                datasets: [
+                                    { label: 'Improdutiva/Pausa', data: singleMode ? displayImprData : imprData, backgroundColor: imprColors, counts: singleMode ? displayImprCount : imprCount },
+                                    { label: 'Produtiva', data: singleMode ? displayProdData : prodData, backgroundColor: prodColors, counts: singleMode ? displayProdCount : prodCount }
+                                ]
+                            },
+                            plugins: [{
+                                id: 'countsLabelsStacked',
+                                afterDatasetsDraw(chart) {
+                                    try {
+                                        const ctx = chart.ctx;
+                                        ctx.save();
+                                        ctx.fillStyle = '#e5e7eb';
+                                        ctx.font = '11px system-ui';
+                                        chart.data.datasets.forEach(function(ds, dsIndex){
+                                            const meta = chart.getDatasetMeta(dsIndex);
+                                            if (!meta || !meta.data) return;
+                                            meta.data.forEach(function(el, i){
+                                                const count = ds.counts ? ds.counts[i] : null;
+                                                if (count == null) return;
+                                                const countNum = (typeof count === 'number') ? count : Number(count);
+                                                if (!isFinite(countNum) || countNum <= 0) return; // não desenhar zeros
+                                                const pos = el.tooltipPosition ? el.tooltipPosition() : { x: el.x, y: el.y };
+                                                const startX = Math.min(el.base ?? pos.x, el.x ?? pos.x);
+                                                const endX = Math.max(el.base ?? pos.x, el.x ?? pos.x);
+                                                const segLen = endX - startX; // comprimento real do segmento horizontal
+                                                const text = String(countNum);
+                                                const textWidth = ctx.measureText(text).width + 6;
+                                                let x = endX;
+                                                let y = pos.y + 3;
+
+                                                if (dsIndex === 0) {
+                                                    // Improdutiva: manter a quantidade dentro do segmento improdutivo
+                                                    x = endX - 6; // próximo à borda direita do segmento
+                                                    ctx.textAlign = 'right';
+                                                } else {
+                                                    // Produtiva: se couber, desenhar dentro do segmento; caso contrário, alinhar à direita da barra inteira
+                                                    if (segLen >= textWidth) {
+                                                        x = endX - 6;
+                                                        ctx.textAlign = 'right';
+                                                    } else {
+                                                        x = endX + 6; // fora, alinhado à direita do fim da barra
+                                                        ctx.textAlign = 'left';
+                                                    }
+                                                }
+                                                ctx.fillText(text, x, y);
+                                            });
+                                        });
+                                        ctx.restore();
+                                    } catch(e) {}
+                                }
+                            },
+                            // Efeito de piscar lento para barras irregulares do tipo selecionado
+                            {
+                                id: 'irregularBlink',
+                                afterDatasetsDraw(chart){
+                                    try {
+                                        if (!selectedTypeNorm) return; // sem tipo selecionado, não pisca
+                                        const meta0 = chart.getDatasetMeta(0);
+                                        const meta1 = chart.getDatasetMeta(1);
+                                        if (!meta0 || !meta0.data || !meta0.data.length) return;
+                                        const now = performance.now ? performance.now() : Date.now();
+                                        const pulse = 0.35 + 0.25 * (0.5 + 0.5 * Math.sin(now / 900)); // ~0.9s ciclo
+                                        const ctx = chart.ctx;
+                                        ctx.save();
+                                        ctx.globalCompositeOperation = 'source-over';
+                                        ctx.fillStyle = 'rgba(239, 68, 68, ' + pulse.toFixed(3) + ')'; // vermelho com alpha variável
+                                        const count = meta0.data.length;
+                                        for (let i = 0; i < count; i++) {
+                                            const label = singleMode ? byConsultant[0] : byConsultant[i];
+                                            if (!irregularByConsultant[label]) continue;
+                                            const el0 = meta0.data[i];
+                                            const el1 = (meta1 && meta1.data) ? meta1.data[i] : null;
+                                            const pos0 = el0.tooltipPosition ? el0.tooltipPosition() : { x: el0.x, y: el0.y };
+                                            let startX = Math.min(el0.base ?? pos0.x, el0.x ?? pos0.x);
+                                            let endX = Math.max(el0.base ?? pos0.x, el0.x ?? pos0.x);
+                                            if (el1) {
+                                                const pos1 = el1.tooltipPosition ? el1.tooltipPosition() : { x: el1.x, y: el1.y };
+                                                const s1 = Math.min(el1.base ?? pos1.x, el1.x ?? pos1.x);
+                                                const e1 = Math.max(el1.base ?? pos1.x, el1.x ?? pos1.x);
+                                                startX = Math.min(startX, s1);
+                                                endX = Math.max(endX, e1);
+                                            }
+                                            const y = pos0.y - (el0.height ? el0.height / 2 : 8);
+                                            const h = el0.height ? el0.height : 16;
+                                            ctx.fillRect(startX, y, Math.max(0, endX - startX), h);
+                                        }
+                                        ctx.restore();
+                                        // Agenda um novo frame para manter o pulso
+                                        try {
+                                            if (!chart.$irregularBlinkingScheduled) {
+                                                chart.$irregularBlinkingScheduled = true;
+                                                requestAnimationFrame(function(){
+                                                    chart.$irregularBlinkingScheduled = false;
+                                                    try { chart.render(); } catch(_) {}
+                                                });
+                                            }
+                                        } catch(e) {}
+                                    } catch(e) {}
+                                }
+                            }],
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                indexAxis: 'y',
+                                onClick: function(evt, elements) {
+                                    try {
+                                        if (!elements || elements.length===0) return;
+                                        const el = elements[0];
+                                        const dataIndex = el.index;
+                                        const dsIndex = el.datasetIndex; // 0=improdutiva,1=produtiva
+                                        const consultantName = singleMode ? byConsultant[0] : byConsultant[dataIndex];
+                                        if (singleMode && dataIndex !== 1) return; // evita clicar nos espaços vazios
+                                        const category = (dsIndex === 1) ? 'productive' : 'unproductive';
+                                        productivityDrilldown = { consultant: consultantName, category: category };
+                                        if (els.main.productivity && els.main.productivity.backBtn) {
+                                            els.main.productivity.backBtn.classList.remove('hidden');
+                                        }
+                                        renderCharts();
+                                    } catch(e) {}
+                                },
+                                scales: {
+                                    x: { stacked: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.08)' } },
+                                    y: { stacked: true, offset: true, ticks: { color: '#94a3b8' }, grid: { color: 'transparent' } }
+                                },
+                                plugins: {
+                                    legend: { position: 'bottom', labels: { color: '#cbd5e1', font: { size: 11 } } },
+                                    tooltip: {
+                                        callbacks: {
+                                            title: function(items){
+                                                if (selectedOnlyConsultant) return selectedOnlyConsultant;
+                                                const idx = items[0].dataIndex;
+                                                return consLabels[idx];
+                                            },
+                                            label: function(ctx){
+                                                const v = ctx.raw || 0;
+                                                const base = ctx.dataset.label + ': ' + formatMinutesToHHMM(v) + ' (' + v.toFixed(1) + ' min)';
+                                                const count = ctx.dataset.counts ? ctx.dataset.counts[ctx.dataIndex] : null;
+                                                return count!=null ? base + ' • ' + count : base;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        // Atualiza título e oculta botão voltar no modo normal
+                        if (els.main.productivity && els.main.productivity.titleEl) {
+                            els.main.productivity.titleEl.textContent = 'Tempo de Pausas (Produtivas vs. Improdutivas) por Consultor';
+                        }
+                        if (els.main.productivity && els.main.productivity.backBtn) {
+                            els.main.productivity.backBtn.classList.add('hidden');
+                        }
+                    }
+                }
+            } catch(e) { /* ignora erro de Chart */ }
             // Demais gráficos usam dataset conforme seleção atual de consultor
             const selectionDataset = filteredData.filter(d => {
                 const matchConsultant = !dashboardSelection.consultant || d.CONSULTOR === dashboardSelection.consultant;
@@ -2755,14 +3690,180 @@
                 return matchConsultantOnly; // ignora filtro por tipo aqui
             });
             const typeData = aggregateData('TIPO', datasetForTypeBars);
+            const typeCounts = aggregateCount('TIPO', datasetForTypeBars);
             const typeLabels = Object.keys(typeData).sort();
+            // Cálculo da linha pontilhada esperada (pausas fixas por dia)
+            try {
+                var uniqueDays = new Set();
+                datasetForTypeBars.forEach(function(d){
+                    var dt = d && d.DATA_INICIO_OBJ;
+                    if (dt && dt instanceof Date && !isNaN(dt)) {
+                        uniqueDays.add(dt.toISOString().slice(0,10));
+                    } else if (d && d.DATA_INICIO) {
+                        var s = String(d.DATA_INICIO);
+                        uniqueDays.add(s.slice(0,10));
+                    }
+                });
+                var numDaysAnalyzed = uniqueDays.size || 1;
+                // Contar consultores únicos dentro do período (respeita filtro atual)
+                var uniqueConsultants = new Set();
+                datasetForTypeBars.forEach(function(d){
+                    var c = (d && d.CONSULTOR) ? String(d.CONSULTOR) : null;
+                    if (c) uniqueConsultants.add(c);
+                });
+                var numConsultantsAnalyzed = uniqueConsultants.size || 1;
+            } catch(e) { var numDaysAnalyzed = 1; }
+            const normalizeTypeKey = function(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase(); };
+            // Mapa normalizado de tempos esperados por tipo (ignora acentos e caixa)
+            const expectedNormMap = (() => {
+                const m = {};
+                try {
+                    Object.keys(expectedDurations || {}).forEach(k => {
+                        m[normalizeTypeKey(k)] = expectedDurations[k];
+                    });
+                    // Sinônimos comuns para maior robustez
+                    if (!m['EM NEGOCIACAO'] && m['EM NEGOCIAÇÃO']) m['EM NEGOCIACAO'] = m['EM NEGOCIAÇÃO'];
+                    if (!m['NEGOCIACAO'] && m['NEGOCIAÇÃO']) m['NEGOCIACAO'] = m['NEGOCIAÇÃO'];
+                    if (!m['PAUSA INTERVALO'] && m['PAUSA (INTERVALO)']) m['PAUSA INTERVALO'] = m['PAUSA (INTERVALO)'];
+                } catch(e) {}
+                return m;
+            })();
+            // Verifica se alguma pausa de um tipo excede o tempo esperado + tolerância
+            const exceedsExpectedByType = function(typeKeyNorm){
+                try {
+                    const meta = expectedNormMap[typeKeyNorm];
+                    if (!meta) return false;
+                    const limit = (Number(meta.minutes) || 0) + (Number(meta.tolerance) || 0);
+                    return datasetForTypeBars.some(d => {
+                        const dn = normalizeTypeKey(d && d.TIPO);
+                        const dur = Number(d && d.DURACAO_MINUTES) || 0;
+                        return dn === typeKeyNorm && dur > limit;
+                    });
+                } catch(e) { return false; }
+            };
+            const fixedPerDayMap = { 'ALMOCO': 1, 'INTERVALO': 1 };
+            const expectedLineForType = typeLabels.map(function(lbl){
+                const key = normalizeTypeKey(lbl);
+                const per = fixedPerDayMap[key];
+                // Meta: 1 por consultor por dia (quando aplicável)
+                return per ? (per * numDaysAnalyzed * (typeof numConsultantsAnalyzed !== 'undefined' ? numConsultantsAnalyzed : 1)) : null;
+            });
+            // Novo parâmetro: se algum consultor tiver almoço (>60 min) marcar "Almoço" em vermelho
+            const lunchExceededAnyConsultant = datasetForTypeBars.some(function(d){
+                try {
+                    // Considera excedido quando passar de 61 minutos (tolerância de 1 minuto acima da meta 60)
+                    return normalizeTypeKey(d && d.TIPO) === 'ALMOCO' && ((Number(d && d.DURACAO_MINUTES) || 0) > 61);
+                } catch(e) { return false; }
+            });
+            // Intervalo deve ficar vermelho quando chegar em 16 minutos (>= 16)
+            const intervaloExceededAnyConsultant = datasetForTypeBars.some(function(d){
+                try {
+                    const key = normalizeTypeKey(d && d.TIPO);
+                    const isIntervaloKey = (key === 'PAUSA (INTERVALO)' || key === 'INTERVALO' || key === 'PAUSA INTERVALO');
+                    return isIntervaloKey && ((Number(d && d.DURACAO_MINUTES) || 0) >= 16);
+                } catch(e) { return false; }
+            });
+            // Formalização deve ficar vermelha por pausa quando ultrapassar 30 minutos (> 30)
+            const formalizacaoExceededAnyConsultant = datasetForTypeBars.some(function(d){
+                try {
+                    return normalizeTypeKey(d && d.TIPO) === 'FORMALIZACAO' && ((Number(d && d.DURACAO_MINUTES) || 0) > 30);
+                } catch(e) { return false; }
+            });
+            // Pesquisando Lead: duas regras
+            // 1) Por pausa: vermelho quando chegar a 5 minutos ou mais (>= 5)
+            const pesquisandoLeadExceededAnyPause = datasetForTypeBars.some(function(d){
+                try {
+                    return normalizeTypeKey(d && d.TIPO) === 'PESQUISANDO LEAD' && ((Number(d && d.DURACAO_MINUTES) || 0) >= 5);
+                } catch(e) { return false; }
+            });
+            // 2) Por consultor/dia: no máximo 20 registros por dia
+            const pesquisandoLeadExceededAnyConsultantDayCount = (function(){
+                try {
+                    const countsByConsultantDay = {};
+                    datasetForTypeBars.forEach(function(d){
+                        const isPesq = normalizeTypeKey(d && d.TIPO) === 'PESQUISANDO LEAD';
+                        if (!isPesq) return;
+                        const c = (d && d.CONSULTOR) ? String(d.CONSULTOR) : '__unknown__';
+                        let day = null;
+                        const dt = d && d.DATA_INICIO_OBJ;
+                        if (dt && dt instanceof Date && !isNaN(dt)) {
+                            day = dt.toISOString().slice(0,10);
+                        } else if (d && d.DATA_INICIO) {
+                            const s = String(d.DATA_INICIO);
+                            day = s.slice(0,10);
+                        }
+                        const key = c + '|' + (day || '__unknown_day__');
+                        countsByConsultantDay[key] = (countsByConsultantDay[key] || 0) + 1;
+                    });
+                    return Object.values(countsByConsultantDay).some(function(cnt){ return cnt > 20; });
+                } catch(e) { return false; }
+            })();
+            // Banheiro: vermelho quando QUALQUER consultor ultrapassar o TOTAL (> 30 min por dia analisado)
+            // Soma por consultor no período filtrado, e compara com 30 * nº de dias
+            const banheiroExceededByConsultantTotal = (function(){
+                try {
+                    const totalsByConsultant = {};
+                    datasetForTypeBars.forEach(function(d){
+                        const isBanheiro = normalizeTypeKey(d && d.TIPO) === 'BANHEIRO';
+                        if (!isBanheiro) return;
+                        const c = (d && d.CONSULTOR) ? String(d.CONSULTOR) : '__unknown__';
+                        const val = (Number(d && d.DURACAO_MINUTES) || 0);
+                        totalsByConsultant[c] = (totalsByConsultant[c] || 0) + val;
+                    });
+                    const threshold = 30 * numDaysAnalyzed;
+                    return Object.values(totalsByConsultant).some(function(total){
+                        return total > threshold;
+                    });
+                } catch(e) { return false; }
+            })();
             const selectedTypeIndex = dashboardSelection.pauseType ? typeLabels.indexOf(dashboardSelection.pauseType) : null;
             const barColorForType = (() => {
-                if (!dashboardSelection.pauseType) return '#22C55E';
-                if (typeLabels.length <= 1) return stableColorForKey(typeLabels[0]);
-                // Multi-barras: pinta somente a selecionada com a cor do donut
-                return typeLabels.map(lbl => lbl === dashboardSelection.pauseType ? stableColorForKey(lbl) : '#22C55E');
+                // Cor por barra: vermelho quando meta (contagem esperada) for excedida, senão verde;
+                // se um tipo estiver selecionado, usa a cor estável desse tipo (exceto quando excedido, que prevalece vermelho).
+                return typeLabels.map(function(lbl, i){
+                    const count = typeCounts[lbl];
+                    const expected = expectedLineForType ? expectedLineForType[i] : null;
+                    const exceededCounts = (expected != null && typeof count === 'number' && count > expected);
+                    const keyNorm = normalizeTypeKey(lbl);
+                    const isLunch = keyNorm === 'ALMOCO';
+                    const isIntervalo = (keyNorm === 'PAUSA (INTERVALO)' || keyNorm === 'INTERVALO' || keyNorm === 'PAUSA INTERVALO');
+                    const isFormalizacao = keyNorm === 'FORMALIZACAO';
+                    const isBanheiro = keyNorm === 'BANHEIRO';
+                    const isPesquisandoLead = keyNorm === 'PESQUISANDO LEAD';
+                    const exceededLunchDuration = isLunch && lunchExceededAnyConsultant;
+                    const exceededIntervaloDuration = isIntervalo && intervaloExceededAnyConsultant;
+                    const exceededFormalizacaoDuration = isFormalizacao && formalizacaoExceededAnyConsultant;
+                    const exceededBanheiroDuration = isBanheiro && banheiroExceededByConsultantTotal;
+                    const exceededPesquisandoLead = isPesquisandoLead && (pesquisandoLeadExceededAnyPause || pesquisandoLeadExceededAnyConsultantDayCount);
+                    // Regra geral: qualquer tipo com pausas que excedam o esperado + tolerância fica vermelho
+                    const exceededGenericByExpected = exceedsExpectedByType(keyNorm);
+                    if (exceededCounts || exceededLunchDuration || exceededIntervaloDuration || exceededFormalizacaoDuration || exceededBanheiroDuration || exceededPesquisandoLead || exceededGenericByExpected) return '#EF4444';
+                    if (dashboardSelection.pauseType && lbl === dashboardSelection.pauseType) {
+                        return stableColorForKey(lbl);
+                    }
+                    return '#22C55E';
+                });
             })();
+
+            // Consultor com mais pausas por tipo (para tooltip)
+            const countsPerTypeConsultant = {};
+            datasetForTypeBars.forEach(function(d){
+                const t = d && d.TIPO; const c = d && d.CONSULTOR;
+                if (!t || !c) return;
+                countsPerTypeConsultant[t] = countsPerTypeConsultant[t] || {};
+                countsPerTypeConsultant[t][c] = (countsPerTypeConsultant[t][c] || 0) + 1;
+            });
+            const topConsultantByType = {};
+            typeLabels.forEach(function(lbl){
+                const m = countsPerTypeConsultant[lbl];
+                if (!m) return;
+                let bestC = null, bestN = 0;
+                Object.keys(m).forEach(function(c){
+                    const n = m[c];
+                    if (n > bestN) { bestN = n; bestC = c; }
+                });
+                if (bestC) topConsultantByType[lbl] = { consultant: bestC, count: bestN };
+            });
             createChart(
                 'total-pause-type-chart', 
                 'typeTotal', 
@@ -2783,25 +3884,13 @@
                     renderCharts();
                 },
                 selectedTypeIndex,
-                '#F59E0B'
+                '#F59E0B',
+                typeCounts,
+                expectedLineForType,
+                topConsultantByType
             );
 
-            const typeAvgData = aggregateAverage('TIPO', selectionDataset);
-            const avgChartData = typeLabels.map(type => typeAvgData[type] || 0);
-            createChart(
-                'average-pause-type-chart', 
-                'typeAverage', 
-                'bar', 
-                typeLabels, 
-                avgChartData, 
-                'Média Duração', 
-                '#FF6A00', 
-                null, 
-                'min',
-                null,
-                selectedTypeIndex,
-                '#FF6A00'
-            );
+            // Gráfico de média por tipo removido conforme solicitação
 
             createChart(
                 'pause-type-distribution-chart', 
@@ -2823,7 +3912,8 @@
                     renderCharts();
                 },
                 selectedTypeIndex,
-                '#F59E0B'
+                '#F59E0B',
+                typeCounts
             );
         }
 
@@ -3020,7 +4110,7 @@
                 prompt = `
                     Aja como um analista de performance sênior de call center. Analise os dados de pausas abaixo.
                     Regras operacionais padrão (referências):
-                    - Almoço: 60 min; Café/Intervalo: 15 min; Banheiro: 10 min; Negociação: 15 min; Cadastrando Proposta: 10 min.
+                    - Almoço: 60 min; Café/Intervalo: 15 min; Banheiro: 10 min; Formalização: 30 min; Pesquisando Lead: <5 min por registro e até 20/dia; Negociação: 15 min; Cadastrando Proposta: 10 min.
                     Use a média da equipe como referência para tipos não listados.
                     ${focusText}Dados:\n${dataText}\n
                     Instruções:
@@ -3556,8 +4646,53 @@
                         { title: "Status", field: "DURACAO_MINUTES", hozAlign: "center", formatter: (cell) => {
                             const duration = cell.getValue();
                             const type = cell.getRow().getData().TIPO;
+                            const consultant = cell.getRow().getData().CONSULTOR;
                             const expected = expectedDurations[type];
                             let statusText = '';
+
+                            // Regra específica para Banheiro: avaliar pelo TOTAL no período analisado (30 min por dia)
+                            const normType = String(type || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                            if (normType === 'BANHEIRO') {
+                                try {
+                                    // Total de minutos de "Banheiro" POR CONSULTOR no conjunto filtrado atual
+                                    const totalBanheiroMinutesByConsultant = (filteredData || []).reduce((acc, d) => {
+                                        const t = String(d && d.TIPO || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+                                        const c = (d && d.CONSULTOR) ? String(d.CONSULTOR) : '__unknown__';
+                                        if (t === 'BANHEIRO') {
+                                            acc[c] = (acc[c] || 0) + (Number(d && d.DURACAO_MINUTES) || 0);
+                                        }
+                                        return acc;
+                                    }, {});
+                                    const totalForConsultant = totalBanheiroMinutesByConsultant[String(consultant) || '__unknown__'] || 0;
+                                    // Dias únicos analisados no conjunto filtrado atual (pode ser global para simplificar)
+                                    const uniqueDays = new Set();
+                                    (filteredData || []).forEach((d) => {
+                                        const dt = d && d.DATA_INICIO_OBJ;
+                                        if (dt && dt instanceof Date && !isNaN(dt)) {
+                                            uniqueDays.add(dt.toISOString().slice(0,10));
+                                        } else if (d && d.DATA_INICIO) {
+                                            const s = String(d.DATA_INICIO);
+                                            uniqueDays.add(s.slice(0,10));
+                                        }
+                                    });
+                                    const numDaysAnalyzed = uniqueDays.size || 1;
+                                    const exceeded = totalForConsultant > (30 * numDaysAnalyzed);
+                                    statusText = exceeded
+                                        ? '<span class="status-danger font-semibold">↑ Longo (consultor/dia)</span>'
+                                        : '<span class="status-success font-medium">✓ Normal (consultor/dia)</span>';
+                                    return statusText;
+                                } catch(e) {
+                                    // Fallback para evitar quebra: usa a regra padrão caso algo falhe
+                                }
+                            }
+                            // Regra específica para Pesquisando Lead: por pausa, deve ser < 5 minutos
+                            if (normType === 'PESQUISANDO LEAD') {
+                                const exceeded = (Number(duration) || 0) >= 5;
+                                statusText = exceeded
+                                    ? '<span class="status-danger font-semibold">↑ Longo (≥5min)</span>'
+                                    : '<span class="status-success font-medium">✓ Correto (<5min)</span>';
+                                return statusText;
+                            }
 
                             if (expected) {
                                 const lowerBound = expected.minutes - expected.tolerance;
@@ -4048,7 +5183,21 @@ function stableColorForKey(key){ const s=String(key||''); let h=0; for(let i=0;i
                     function renderCharts(){ // consultant totals
                         const byConsult=aggregateSumBy(filteredData,'CONSULTOR'); const selIdxC = selection.consultant ? byConsult.labels.indexOf(selection.consultant) : -1; drawBarChartEnhanced('exp-pause-consultant-chart', byConsult.labels, byConsult.values, { baseColor:'#3A7FFF', selectedIndex: selIdxC, unit:'min', onClick: (idx)=>{ const label=byConsult.labels[idx]; selection.consultant = (selection.consultant===label)? null : label; render(); } });
                         // type totals
-                        const byType=aggregateSumBy(filteredData,'TIPO'); const selIdxT = selection.type ? byType.labels.indexOf(selection.type) : -1; const typeColors = byType.labels.map(function(lbl){ return stableColorForKey(lbl); }); drawBarChartEnhanced('exp-pause-type-total-chart', byType.labels, byType.values, { colors:typeColors, selectedIndex: selIdxT, unit:'min', onClick: (idx)=>{ const label=byType.labels[idx]; selection.type = (selection.type===label)? null : label; render(); } });
+                        const byType=aggregateSumBy(filteredData,'TIPO');
+                        const selIdxT = selection.type ? byType.labels.indexOf(selection.type) : -1;
+                        // Cores por tipo: vermelho se houve alguma pausa estourada para o tipo
+                        const typeColors = byType.labels.map(function(lbl){
+                            const exp = expectedDurations[lbl];
+                            if(exp){
+                                const upper = exp.minutes + exp.tolerance;
+                                const exceeded = filteredData.some(function(d){
+                                    return d.TIPO === lbl && (d.DURACAO_MINUTES||0) > upper;
+                                });
+                                return exceeded ? '#EF4444' : stableColorForKey(lbl);
+                            }
+                            return stableColorForKey(lbl);
+                        });
+                        drawBarChartEnhanced('exp-pause-type-total-chart', byType.labels, byType.values, { colors:typeColors, selectedIndex: selIdxT, unit:'min', onClick: (idx)=>{ const label=byType.labels[idx]; selection.type = (selection.type===label)? null : label; render(); } });
                         // type averages
                         const avgType=aggregateAvgByType(filteredData); const selIdxTA = selection.type ? avgType.labels.indexOf(selection.type) : -1; const avgColors = avgType.labels.map(function(lbl){ return stableColorForKey(lbl); }); drawBarChartEnhanced('exp-pause-type-avg-chart', avgType.labels, avgType.values, { colors:avgColors, selectedIndex: selIdxTA, unit:'min', onClick: (idx)=>{ const label=avgType.labels[idx]; selection.type = (selection.type===label)? null : label; render(); } });
                         // distribution doughnut
