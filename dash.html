@@ -1948,40 +1948,34 @@
 
             const PROXY_URL = "/api/dados-argus";
             const payload = {};
+
             // Minutos desde 00:00 de hoje (para fallback "dia atual")
             const now = new Date();
-            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-            const minutesSinceMidnight = Math.max(1, Math.floor((now - midnight) / 60000));
-            // Sempre enviar o período do “dia em questão”
+            const minutesSinceMidnight = Math.max(1, now.getHours() * 60 + now.getMinutes());
+
+            // Lê datas dos controles (YYYY-MM-DD) e dos filtros
             const startInput = (els && els.main && els.main.apiControls) ? els.main.apiControls.startDate : null;
             const endInput = (els && els.main && els.main.apiControls) ? els.main.apiControls.endDate : null;
             const filterStartInput = (els && els.main && els.main.filters) ? els.main.filters.startDate : null;
             const filterEndInput = (els && els.main && els.main.filters) ? els.main.filters.endDate : null;
 
-            const toBRDateTime = (yyyyMMdd, time) => {
-                if (!yyyyMMdd) return '';
-                const [yyyy, mm, dd] = yyyyMMdd.split('-');
-                return `${dd}/${mm}/${yyyy} ${time}`;
-            };
-
             const getYYYYMMDD = (inp) => (inp && inp.value && /^\d{4}-\d{2}-\d{2}$/.test(inp.value)) ? inp.value : '';
             let startDate = getYYYYMMDD(startInput) || getYYYYMMDD(filterStartInput);
             let endDate = getYYYYMMDD(endInput) || getYYYYMMDD(filterEndInput);
 
-            if (!startDate && !endDate) {
-                // Default: hoje
-                const today = new Date();
-                const yyyy = String(today.getFullYear());
-                const mm = String(today.getMonth() + 1).padStart(2, '0');
-                const dd = String(today.getDate()).padStart(2, '0');
-                startDate = `${yyyy}-${mm}-${dd}`;
-                endDate = startDate;
+            const toArgusDateTime = (yyyyMMdd, time) => {
+                if (!yyyyMMdd) return '';
+                const [yyyy, mm, dd] = yyyyMMdd.split('-');
+                return `${yyyy}-${mm}-${dd} ${time}`; // Argus: YYYY-MM-DD HH:mm:ss
+            };
+
+            // Se o usuário definiu intervalo, enviar período; caso contrário, usar ultimosMinutos do dia atual
+            if (startDate && endDate) {
+                payload.periodoInicial = toArgusDateTime(startDate, '00:00:00');
+                payload.periodoFinal = toArgusDateTime(endDate, '23:59:59');
+            } else {
+                payload.ultimosMinutos = minutesSinceMidnight;
             }
-
-            if (!endDate) endDate = startDate; // garantir dia único
-
-            payload.periodoInicial = toBRDateTime(startDate, '00:00:00');
-            payload.periodoFinal = toBRDateTime(endDate, '23:59:59');
 
             // Campanha: permitir especificar o id (ex.: grupo interno = 2)
             if (options.idCampanha) {
