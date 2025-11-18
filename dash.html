@@ -1948,6 +1948,10 @@
 
             const PROXY_URL = "/api/dados-argus";
             const payload = {};
+            // Minutos desde 00:00 de hoje (para fallback "dia atual")
+            const now = new Date();
+            const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            const minutesSinceMidnight = Math.max(1, Math.floor((now - midnight) / 60000));
             // Sempre enviar o período do “dia em questão”
             const startInput = (els && els.main && els.main.apiControls) ? els.main.apiControls.startDate : null;
             const endInput = (els && els.main && els.main.apiControls) ? els.main.apiControls.endDate : null;
@@ -2005,7 +2009,30 @@
                 }
 
                 if (responseData.codStatus && responseData.codStatus < 1) {
-                    throw new Error(responseData.descStatus || "A API Argus retornou um erro.");
+                    // Fallback automático: tentar com ultimosMinutos (dia atual até agora)
+                    console.warn("Argus retornou erro:", responseData);
+                    els.main.fileStatus.textContent = 'Parâmetros inválidos, tentando fallback (dia atual)...';
+                    els.main.fileStatus.className = 'text-sm text-yellow-400 mt-4 animate-pulse';
+
+                    const fallbackPayload = { ultimosMinutos: minutesSinceMidnight };
+                    if (options.idCampanha) {
+                        fallbackPayload.idCampanha = parseInt(options.idCampanha, 10);
+                    }
+                    console.log("Fallback payload enviado:", fallbackPayload);
+
+                    const fbResp = await fetch(PROXY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(fallbackPayload)
+                    });
+                    const fbText = await fbResp.text();
+                    let fbData = {};
+                    try { fbData = JSON.parse(fbText); } catch { fbData = { message: fbText }; }
+
+                    if (!fbResp.ok || (fbData.codStatus && fbData.codStatus < 1)) {
+                        throw new Error(fbData.descStatus || fbData.message || "A API Argus retornou um erro ao usar o fallback.");
+                    }
+                    responseData = fbData; // usar dados do fallback
                 }
 
                 if (!responseData.pausasDetalhadas || !Array.isArray(responseData.pausasDetalhadas)) {

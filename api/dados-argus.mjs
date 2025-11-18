@@ -85,10 +85,23 @@ export default async function handler(req, res) {
     console.log('[Argus] Request body received:', { periodoInicial, periodoFinal, idCampanha, ultimosMinutos });
 
     function parseAndFormatDateTime(dateTimeStr) {
-        if (!dateTimeStr) return undefined;
-        const parts = dateTimeStr.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
-        if (!parts) return undefined;
-        return `${parts[3]}-${parts[2]}-${parts[1]} ${parts[4]}:${parts[5]}:${parts[6]}`;
+        if (!dateTimeStr || typeof dateTimeStr !== 'string') return undefined;
+        // Accept BR format: DD/MM/YYYY HH:mm:ss
+        let m = dateTimeStr.match(/^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})$/);
+        if (m) {
+            return `${m[3]}-${m[2]}-${m[1]} ${m[4]}:${m[5]}:${m[6]}`;
+        }
+        // Accept ISO with space: YYYY-MM-DD HH:mm:ss
+        m = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+        if (m) {
+            return `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}`;
+        }
+        // Accept ISO with 'T': YYYY-MM-DDTHH:mm:ss
+        m = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})$/);
+        if (m) {
+            return `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}:${m[6]}`;
+        }
+        return undefined;
     }
 
     // 4. Construct the request body for the Argus API
@@ -100,10 +113,18 @@ export default async function handler(req, res) {
     if (numUltimosMinutos > 0) {
         argusBody.ultimosMinutos = numUltimosMinutos;
     } else if (periodoInicial && periodoFinal) {
-        argusBody.periodoInicial = parseAndFormatDateTime(periodoInicial);
-        argusBody.periodoFinal = parseAndFormatDateTime(periodoFinal);
+        const pi = parseAndFormatDateTime(periodoInicial);
+        const pf = parseAndFormatDateTime(periodoFinal);
+        if (pi && pf) {
+            argusBody.periodoInicial = pi;
+            argusBody.periodoFinal = pf;
+        } else {
+            // Fallback se o formato não foi reconhecido
+            argusBody.ultimosMinutos = 1440;
+        }
     } else {
-        return res.status(400).json({ message: 'Parâmetros insuficientes. Forneça ultimosMinutos ou periodoInicial/periodoFinal.' });
+        // Fallback padrão quando período não informado
+        argusBody.ultimosMinutos = 1440;
     }
 
     if (numIdCampanha > 0) {
@@ -112,6 +133,10 @@ export default async function handler(req, res) {
 
     // Remove undefined keys
     Object.keys(argusBody).forEach(key => argusBody[key] === undefined && delete argusBody[key]);
+    if (!argusBody.ultimosMinutos && (!argusBody.periodoInicial || !argusBody.periodoFinal)) {
+        // Garantir que ao menos um critério válido seja enviado
+        argusBody.ultimosMinutos = 1440;
+    }
 
 
     // 5. Seleciona o token conforme a campanha (se fornecida)
