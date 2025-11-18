@@ -66,7 +66,8 @@
             /* Background image overlay */
             --dashboard-bg-image: url('800x600_como-a-analise-de-dados-pode-enriquecer-a-apresentacao-de-resultados-393-9915.png');
             --dashboard-bg-opacity: 1; /* opacidade total do overlay composto */
-            --dashboard-bg-darkness: 0.68; /* ~20% mais claro que 0.85 */
+            --dashboard-bg-darkness: 0.15; /* ~15% de escurecimento para melhorar contraste */
+            --dashboard-bg-blur: 30px; /* desfoque do fundo para suavizar a imagem */
         }
 
         body {
@@ -86,6 +87,7 @@
             background-size: cover;
             background-repeat: no-repeat;
             opacity: var(--dashboard-bg-opacity);
+            filter: blur(var(--dashboard-bg-blur));
             pointer-events: none;
             z-index: -1; /* garante que fique atrás do conteúdo */
         }
@@ -2730,7 +2732,8 @@
                         };
                         arr.push(avgFilteredGlow);
                     }
-                    return arr;
+                    // Evita entradas nulas/indefinidas que podem causar erros nos plugins do Chart.js
+                    return arr.filter(Boolean);
                 })(),
                 options: {
                     responsive: true,
@@ -4148,69 +4151,24 @@
             }
 
             try {
-                if (!window.geminiApiKey) {
-                    const response = await fetch('/api/gemini-key');
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        let errorJson = {};
-                        try { errorJson = JSON.parse(errorText); } catch {}
-                        throw new Error(errorJson.error || `Falha ao obter a chave da API Gemini do servidor. (${response.status})`);
-                    }
-                    const keyText = await response.text();
-                    let keyJson = {};
-                    try { keyJson = JSON.parse(keyText); } catch {
-                        throw new Error('Resposta inválida do servidor de chave (não-JSON).');
-                    }
-                    window.geminiApiKey = keyJson.apiKey;
+                // Chama backend para gerar análise IA, evitando bloqueios do navegador
+                const resp = await fetch('/api/generate-ai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+                const text = await resp.text();
+                if (!resp.ok) {
+                    let err = {};
+                    try { err = JSON.parse(text); } catch {}
+                    throw new Error(err.error || `Erro ao gerar análise no servidor (${resp.status})`);
                 }
-                const apiVersionsToTry = ['v1beta', 'v1beta2'];
-                const modelsToTry = [
-                    'gemini-1.5-flash-latest',
-                    'gemini-1.5-pro-latest',
-                    'gemini-1.5-flash-001',
-                    'gemini-1.5-pro-001',
-                    'gemini-1.0-pro',
-                    'gemini-pro'
-                ];
-                let aiText = '';
-                let lastError = null;
-                outerLoop:
-                for (const apiVersion of apiVersionsToTry) {
-                    for (const model of modelsToTry) {
-                        try {
-                            const apiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${window.geminiApiKey}`;
-                            const response = await fetch(apiUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                            });
-                            const respText = await response.text();
-                            if (!response.ok) {
-                                let errorJson = {};
-                                try { errorJson = JSON.parse(respText); } catch {}
-                                const msg = errorJson.error?.message || `Erro API IA (${model}, ${apiVersion}): ${response.status} (${respText.slice(0,120)})`;
-                                // Alguns erros indicam modelo não suportado/indisponível neste endpoint; tenta próximo
-                                const transient = /not found|unsupported|Invalid model|Method not found/i.test(msg);
-                                if (transient) throw new Error(msg);
-                                throw new Error(msg);
-                            }
-                            let dataObj = null;
-                            try { dataObj = JSON.parse(respText); } catch {
-                                throw new Error(`Resposta não-JSON do modelo (${model}). Trecho: ${respText.slice(0,120)}`);
-                            }
-                            aiText = dataObj.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                            if (aiText) {
-                                break outerLoop;
-                            } else {
-                                lastError = new Error('Resposta da IA vazia ou malformada.');
-                            }
-                        } catch (err) {
-                            lastError = err;
-                            // tenta próximo modelo/versão
-                        }
-                    }
+                let data = {};
+                try { data = JSON.parse(text); } catch {
+                    throw new Error('Resposta inválida do servidor de análise (não-JSON).');
                 }
-                if (!aiText) throw lastError || new Error('Falha ao gerar análise. Modelos indisponíveis.');
+                const aiText = data.text || '';
+                if (!aiText) throw new Error('Resposta da IA vazia ou malformada.');
                 const htmlText = aiText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
                 if (els.main.ai.content) {
                     els.main.ai.content.innerHTML = `<div class="prose prose-invert max-w-none">${htmlText}</div>`;

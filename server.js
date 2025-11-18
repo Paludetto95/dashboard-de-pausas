@@ -10,6 +10,7 @@ async function getArgusHandler(){
   return handler;
 }
 const geminiKeyHandler = require('./api/gemini-key.js');
+const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // Porta configurável via env
@@ -117,3 +118,73 @@ app.listen(PORT, () => {
 // Endpoint para obter a chave da API Gemini
 app.options('/api/gemini-key', geminiKeyHandler);
 app.get('/api/gemini-key', geminiKeyHandler);
+
+// Endpoint para gerar análise via Gemini no backend (evita bloqueios no navegador)
+app.post('/api/generate-ai', async (req, res) => {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY não configurada no servidor.' });
+    }
+    const prompt = (req.body && req.body.prompt) ? String(req.body.prompt) : '';
+    if (!prompt) {
+      return res.status(400).json({ error: 'Campo "prompt" é obrigatório.' });
+    }
+
+    const apiVersionsToTry = ['v1beta2', 'v1beta'];
+    const modelsToTry = [
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+      'gemini-1.5-flash-001',
+      'gemini-1.5-pro-001',
+      'gemini-1.0-pro',
+      'gemini-pro'
+    ];
+
+    let aiText = '';
+    let lastError = null;
+    outerLoop:
+    for (const apiVersion of apiVersionsToTry) {
+      for (const model of modelsToTry) {
+        try {
+          const apiUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`;
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          const respText = await response.text();
+          if (!response.ok) {
+            let errorJson = {};
+            try { errorJson = JSON.parse(respText); } catch {}
+            const msg = errorJson.error?.message || `Erro API IA (${model}, ${apiVersion}): ${response.status}`;
+            const transient = /not found|unsupported|Invalid model|Method not found/i.test(msg);
+            if (transient) throw new Error(msg);
+            throw new Error(msg);
+          }
+          let dataObj = null;
+          try { dataObj = JSON.parse(respText); } catch {
+            throw new Error(`Resposta não-JSON do modelo (${model}).`);
+          }
+          aiText = dataObj.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          if (aiText) {
+            break outerLoop;
+          } else {
+            lastError = new Error('Resposta da IA vazia ou malformada.');
+          }
+        } catch (err) {
+          lastError = err;
+          // tenta próximo modelo/versão
+        }
+      }
+    }
+
+    if (!aiText) {
+      return res.status(502).json({ error: lastError?.message || 'Falha ao gerar análise. Modelos indisponíveis.' });
+    }
+    return res.status(200).json({ text: aiText });
+  } catch (error) {
+    console.error('[Proxy] Erro em /api/generate-ai:', error);
+    return res.status(500).json({ error: 'Erro interno ao gerar análise.' });
+  }
+});
