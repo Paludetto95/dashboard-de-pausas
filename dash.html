@@ -67,7 +67,7 @@
             --dashboard-bg-image: url('800x600_como-a-analise-de-dados-pode-enriquecer-a-apresentacao-de-resultados-393-9915.png');
             --dashboard-bg-opacity: 1; /* opacidade total do overlay composto */
             --dashboard-bg-darkness: 0.15; /* ~15% de escurecimento para melhorar contraste */
-            --dashboard-bg-blur: 30px; /* desfoque do fundo para suavizar a imagem */
+            /* blur do fundo removido */
         }
 
         body {
@@ -87,7 +87,7 @@
             background-size: cover;
             background-repeat: no-repeat;
             opacity: var(--dashboard-bg-opacity);
-            filter: blur(var(--dashboard-bg-blur));
+            /* blur removido para manter a nitidez da imagem */
             pointer-events: none;
             z-index: -1; /* garante que fique atrás do conteúdo */
         }
