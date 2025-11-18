@@ -58,7 +58,7 @@
             --status-success: #00C853;
             --status-danger: #D50000;
             /* Glassmorphism tokens */
-            --glass-bg: rgba(10, 12, 16, 0.34); /* ~20% mais escuro, estilo black glass */
+            --glass-bg: rgba(10, 12, 16, 0.55); /* escurecido para um dark glass mais forte */
             --glass-border: rgba(255, 255, 255, 0.14);
             --glass-shadow: 0 10px 28px rgba(0, 0, 0, 0.30);
             --glass-blur: blur(14px) saturate(120%);
@@ -187,10 +187,10 @@
         .ai,
         .card,
         .border.rounded-lg {
-            border-color: rgba(255,255,255,0.80) !important;
+            border-color: rgba(255,255,255,0.45) !important;
             box-shadow: var(--glass-shadow),
-                         0 0 8px rgba(255,255,255,0.22),
-                         0 0 16px rgba(255,255,255,0.12);
+                         0 0 6px rgba(255,255,255,0.14),
+                         0 0 12px rgba(255,255,255,0.08);
         }
         #main-content {
             transition: margin-left 0.3s ease-in-out;
@@ -777,7 +777,10 @@
             padding: 1.25rem;
             /* Removido overflow: hidden para evitar corte da legenda em gráficos altos */
             box-shadow: var(--glass-shadow);
+            position: relative; /* necessário para glow atrás do card */
+            z-index: 0; /* cria contexto para o ::before ficar atrás */
         }
+        /* Removido: efeito glow atrás dos cards */
         .chart-title {
             font-size: 1.125rem;
             font-weight: 600;
@@ -792,6 +795,9 @@
         }
         /* Canvas deve preencher o container para manter alinhamento */
         .chart-container canvas { height: 100% !important; width: 100% !important; display: block; }
+
+        /* Glows de fundo do grid (sem depender do card) */
+        /* Removidos glows de grid e drop-shadows para foco no radial centrado */
     </style>
 </head>
 <body class="p-4 md:p-8 sidebar-open sidebar-collapsed">
@@ -820,6 +826,13 @@
                         <path d="M15 4v16" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     <span>Upload Pausas</span>
+                </li>
+                <li id="menu-refresh-interno-btn" class="menu-item">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M21 10a9 9 0 1 0-3 6l3-3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Atualizar (Grupo Interno)</span>
                 </li>
                 <li id="menu-upload-tabs-btn" class="menu-item">
                     <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1927,6 +1940,7 @@
         }
         
         async function loadArgusApiData() {
+            var options = arguments[0] || {};
             els.main.fileInput.value = '';
             els.main.fileUploadLabel.textContent = 'Escolher arquivo';
             els.main.fileStatus.textContent = 'Conectando ao servidor proxy...';
@@ -1935,15 +1949,30 @@
             const PROXY_URL = "/api/dados-argus";
             const payload = {};
             
-            const startDate = els.main.apiControls.startDate.value;
-            const endDate = els.main.apiControls.endDate.value;
+            const startInput = (els && els.main && els.main.apiControls) ? els.main.apiControls.startDate : null;
+            const endInput = (els && els.main && els.main.apiControls) ? els.main.apiControls.endDate : null;
+            const startDate = startInput ? startInput.value : '';
+            const endDate = endInput ? endInput.value : '';
 
-            if (!startDate || !endDate) {
-                return handleDataLoadError("Por favor, selecione um período de data.");
+            // Período: usa range do UI se disponível; senão, ultimosMinutos (fallback 1440)
+            // Utilidade: converter 'YYYY-MM-DD' para 'DD/MM/YYYY HH:mm:ss'
+            const toBRDateTime = (yyyyMMdd, time) => {
+                if (!yyyyMMdd) return '';
+                const [yyyy, mm, dd] = yyyyMMdd.split('-');
+                return `${dd}/${mm}/${yyyy} ${time}`;
+            };
+
+            if (startDate && endDate) {
+                payload.periodoInicial = toBRDateTime(startDate, '00:00:00');
+                payload.periodoFinal = toBRDateTime(endDate, '23:59:59');
+            } else {
+                payload.ultimosMinutos = parseInt(options.ultimosMinutos || 1440, 10);
             }
-            
-            payload.periodoInicial = `${startDate}T00:00:00`;
-            payload.periodoFinal = `${endDate}T23:59:59`;
+
+            // Campanha: permitir especificar o id (ex.: grupo interno = 2)
+            if (options.idCampanha) {
+                payload.idCampanha = parseInt(options.idCampanha, 10);
+            }
 
             console.log("Payload enviado para o Proxy:", payload);
 
@@ -1954,10 +1983,15 @@
                     body: JSON.stringify(payload)
                 });
                 
-                const responseData = await response.json();
+                const rawText = await response.text();
+                let responseData = {};
+                try { responseData = JSON.parse(rawText); } catch { responseData = { message: rawText }; }
 
                 if (!response.ok) {
-                    throw new Error(responseData.descStatus || responseData.error || `Erro do Proxy (${response.status})`);
+                    const details = responseData.details ? `\nDetalhes: ${JSON.stringify(responseData.details)}` : '';
+                    const msg = (responseData.message || responseData.descStatus || responseData.error || `Erro do Proxy (${response.status})`) + details;
+                    handleDataLoadError(msg);
+                    return;
                 }
 
                 if (responseData.codStatus && responseData.codStatus < 1) {
@@ -2582,6 +2616,8 @@
                 backgroundColor = Array.isArray(color) ? color : (color || chartColors.barDefault);
             }
 
+            // Removido: definição de glow radial atrás dos cards
+
             // Altura do canvas é controlada pelo container via CSS; evitar setar inline
 
             // Dataset base e opcional linha pontilhada de meta/contagem
@@ -2745,6 +2781,74 @@
                             }
                         };
                         arr.push(avgFilteredGlow);
+
+                        // Neon Outer Glow permanente nas barras (tema futurista minimalista)
+                        const barNeonOuterGlow = {
+                            id: 'barNeonOuterGlow',
+                            afterDatasetsDraw(chart) {
+                                try {
+                                    const meta = chart.getDatasetMeta(0);
+                                    if (!meta || !meta.data || !meta.data.length) return;
+                                    const ctx = chart.ctx;
+                                    const area = chart.chartArea;
+                                    const ds = chart.data.datasets[0];
+                                    const yScale = chart.scales && chart.scales['y'];
+                                    const xScale = chart.scales && chart.scales['x'];
+
+                                    const computeGlowColor = function(baseColor){
+                                        const hsl = parseColorToHsl(baseColor);
+                                        // Azul → ciano elétrico; Verde → verde limão/esmeralda; fallback: cor vívida da barra
+                                        if (hsl.h >= 190 && hsl.h <= 250) {
+                                            return 'hsl(190, 100%, 60%)';
+                                        }
+                                        if (hsl.h >= 90 && hsl.h <= 160) {
+                                            return 'hsl(140, 95%, 52%)';
+                                        }
+                                        return vividifyColor(baseColor, 18, 12);
+                                    };
+
+                                    ctx.save();
+                                    ctx.globalCompositeOperation = 'lighter';
+                                    meta.data.forEach((el, i) => {
+                                        const val = Array.isArray(ds.data) ? ds.data[i] : ds.data;
+                                        let base = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(0) : area.bottom;
+                                        let top = (yScale && typeof yScale.getPixelForValue === 'function') ? yScale.getPixelForValue(val) : (el && typeof el.y === 'number' ? el.y : area.top);
+                                        let height = Math.abs(base - top);
+                                        top = Math.min(top, base);
+                                        let x = (el && typeof el.x === 'number')
+                                            ? el.x
+                                            : (xScale && typeof xScale.getPixelForTick === 'function'
+                                                ? xScale.getPixelForTick(i)
+                                                : (area.left + area.right) / 2);
+                                        let width = (el && typeof el.width === 'number' && el.width > 0)
+                                            ? el.width
+                                            : Math.max(6, (area.right - area.left) / Math.max(1, meta.data.length) * 0.7);
+                                        const left = x - width / 2;
+
+                                        let baseColor = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i] : ds.backgroundColor;
+                                        const glowColor = computeGlowColor(baseColor || '#00FFFF');
+
+                                        ctx.fillStyle = glowColor;
+                                        ctx.globalAlpha = 0.38; // brilho suave em ambiente escuro
+                                        ctx.shadowColor = glowColor;
+                                        ctx.shadowBlur = 26; // blur suave para simular iluminação
+                                        ctx.shadowOffsetX = 0;
+                                        ctx.shadowOffsetY = 0;
+                                        // Garante que nada saia da área do gráfico
+                                        ctx.save();
+                                        ctx.beginPath();
+                                        ctx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
+                                        ctx.clip();
+                                        ctx.fillRect(left, top, width, height);
+                                        ctx.restore();
+                                    });
+                                    ctx.restore();
+                                } catch(e) {}
+                            }
+                        };
+                        // Desativado por padrão: o usuário prefere glow atrás dos cards
+                        // Em caso de necessidade, habilite trocando para arr.push(barNeonOuterGlow)
+                        /* no-op: bar glow disabled */
                     }
                     // Evita entradas nulas/indefinidas que podem causar erros nos plugins do Chart.js
                     return arr.filter(Boolean);
@@ -3117,6 +3221,7 @@
                 '#F59E0B',
                 consCounts
             );
+            // Removido: intensificação de glow no card de consultores
 
             // Gráfico: Produtivas vs Improdutivas por Consultor (barras empilhadas) com drilldown por tipo
             try {
@@ -3683,6 +3788,7 @@
                                 }
                             }
                         });
+                        // Removido: ajuste de glow radial do card de produtividade
                         // Atualiza título e oculta botão voltar no modo normal
                         if (els.main.productivity && els.main.productivity.titleEl) {
                             els.main.productivity.titleEl.textContent = 'Tempo de Pausas (Produtivas vs. Improdutivas) por Consultor';
@@ -4285,6 +4391,13 @@
 
             const mup = document.getElementById('menu-upload-pauses-btn');
             if (mup) mup.addEventListener('click', () => { if (els && els.main && els.main.fileInput) els.main.fileInput.click(); setActiveMenuById('menu-upload-pauses-btn'); });
+
+            const mri = document.getElementById('menu-refresh-interno-btn');
+            if (mri) mri.addEventListener('click', () => {
+                setActiveMenuById('menu-refresh-interno-btn');
+                // Atualiza via API Argus para a campanha do Grupo Interno (id=2)
+                loadArgusApiData({ idCampanha: 2 });
+            });
 
             const mut = document.getElementById('menu-upload-tabs-btn');
             if (mut) mut.addEventListener('click', () => { if (els && els.callTabulations && els.callTabulations.fileInput) els.callTabulations.fileInput.click(); setActiveMenuById('menu-upload-tabs-btn'); });

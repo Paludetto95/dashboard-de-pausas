@@ -33,10 +33,24 @@ npm install
 
 3. Configure as variáveis de ambiente:
 - Crie um arquivo `.env` na raiz do projeto
-- Adicione sua chave da API Argus:
+- Defina URL e tokens do Argus (sem expor no código):
 ```env
-ARGUS_API_TOKEN=seu_token_aqui
+# URL base da API Argus
+ARGUS_API_URL=https://argus.app.br/apiargus
+
+# Token geral (acesso a todas as campanhas)
+ARGUS_API_TOKEN_GLOBAL=coloque_o_token_geral_aqui
+
+# Opcional: tokens específicos por campanha (JSON com IDs)
+# Exemplo: {"1":"token_da_campanha_1","2":"token_da_campanha_2"}
+ARGUS_CAMPAIGN_TOKENS={"1":"token_cam_1","2":"token_cam_2"}
+
+# Chave de API da IA (se usar a análise)
+GEMINI_API_KEY=sua_chave_aqui
 ```
+
+- Se você informar `idCampanha` na requisição, o proxy usará `ARGUS_CAMPAIGN_TOKENS[idCampanha]`.
+- Caso contrário, usará `ARGUS_API_TOKEN_GLOBAL`.
 
 4. Inicie o servidor:
 ```bash
@@ -47,7 +61,7 @@ npm start
 
 ```
 ├── api/
-│   └── dados-argus.js    # Endpoints da API
+│   └── dados-argus.mjs   # Endpoint proxy Argus (usa variáveis de ambiente)
 ├── dash.html             # Interface principal
 ├── server.js            # Servidor proxy
 └── vercel.json          # Configuração do Vercel

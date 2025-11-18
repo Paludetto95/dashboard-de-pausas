@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 function toArgusDateTime(isoString) {
     if (!isoString) return undefined;
     const date = new Date(isoString);
@@ -34,14 +37,52 @@ export default async function handler(req, res) {
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
-    // 2. Get token from environment variables
-    const apiToken = process.env.ARGUS_API_TOKEN || "nahybptvaa25vyybq0fyoj8bqyahrlw52acotbquc8du1z033ezsvfn5nx0egxqz";
-    if (!apiToken) {
-        return res.status(500).json({ message: 'Token da API Argus (ARGUS_API_TOKEN) não configurado no servidor.' });
+    // 2. Configuração via variáveis de ambiente
+    const ARGUS_API_URL = process.env.ARGUS_API_URL || 'https://argus.app.br/apiargus';
+    // Prefer explicit global token, then generic ARGUS_API_TOKEN; if empty, fallback to .env file read
+    let GLOBAL_TOKEN = String(
+        (process.env.ARGUS_API_TOKEN_GLOBAL || process.env.ARGUS_API_TOKEN || '')
+    ).trim();
+    let CAMPAIGN_TOKENS = {};
+    try {
+        if (process.env.ARGUS_CAMPAIGN_TOKENS) {
+            CAMPAIGN_TOKENS = JSON.parse(process.env.ARGUS_CAMPAIGN_TOKENS);
+        }
+    } catch (e) {
+        console.warn('[Argus] ARGUS_CAMPAIGN_TOKENS inválido. Use JSON com ids como chaves.');
+    }
+    const hasCampaignTokensEnv = !!process.env.ARGUS_CAMPAIGN_TOKENS;
+
+    // Fallback: tentar ler .env diretamente se variáveis de ambiente não foram injetadas
+    if (!GLOBAL_TOKEN || GLOBAL_TOKEN.length === 0) {
+        try {
+            const envPath = path.join(process.cwd(), '.env');
+            if (fs.existsSync(envPath)) {
+                const envText = fs.readFileSync(envPath, 'utf8');
+                const lines = envText.split(/\r?\n/);
+                const kv = {};
+                for (const line of lines) {
+                    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+                    if (m) kv[m[1]] = m[2];
+                }
+                const fallbackGlobal = String((kv.ARGUS_API_TOKEN_GLOBAL || kv.ARGUS_API_TOKEN || '')).trim();
+                if (fallbackGlobal) GLOBAL_TOKEN = fallbackGlobal;
+                if (!hasCampaignTokensEnv && kv.ARGUS_CAMPAIGN_TOKENS) {
+                    try { CAMPAIGN_TOKENS = JSON.parse(kv.ARGUS_CAMPAIGN_TOKENS); } catch {}
+                }
+                console.log('[Argus] Fallback .env aplicado:', { globalTokenLen: GLOBAL_TOKEN.length, campaignKeys: Object.keys(CAMPAIGN_TOKENS || {}) });
+            }
+        } catch (e) {
+            console.warn('[Argus] Falha ao ler .env como fallback:', e?.message || e);
+        }
     }
 
+    const hasGlobalTokenEnv = GLOBAL_TOKEN.length > 0;
+    console.log('[Argus] Env check:', { hasGlobalTokenEnv, hasCampaignTokensEnv, globalTokenLen: GLOBAL_TOKEN.length, campaignKeys: Object.keys(CAMPAIGN_TOKENS || {}) });
+
     // 3. Get parameters from the frontend request body
-    const { periodoInicial, periodoFinal, idCampanha, ultimosMinutos } = req.body;
+    const { periodoInicial, periodoFinal, idCampanha, ultimosMinutos } = req.body || {};
+    console.log('[Argus] Request body received:', { periodoInicial, periodoFinal, idCampanha, ultimosMinutos });
 
     function parseAndFormatDateTime(dateTimeStr) {
         if (!dateTimeStr) return undefined;
@@ -73,18 +114,38 @@ export default async function handler(req, res) {
     Object.keys(argusBody).forEach(key => argusBody[key] === undefined && delete argusBody[key]);
 
 
-    // 5. Call the Argus API
+    // 5. Seleciona o token conforme a campanha (se fornecida)
+    let tokenToUse = GLOBAL_TOKEN;
+    const hasGlobal = GLOBAL_TOKEN.length > 0;
+    const campaignToken = (numIdCampanha > 0 && CAMPAIGN_TOKENS) ? CAMPAIGN_TOKENS[numIdCampanha] : undefined;
+    const hasCampaignForId = !!(campaignToken && String(campaignToken).trim());
+    if (hasCampaignForId) tokenToUse = campaignToken;
+    if (!tokenToUse || !String(tokenToUse).trim()) {
+        return res.status(500).json({
+            message: 'Token da API Argus não configurado. Defina ARGUS_API_TOKEN_GLOBAL ou ARGUS_CAMPAIGN_TOKENS.',
+            details: {
+                hasGlobalToken: hasGlobal,
+                hasCampaignTokensEnv: !!process.env.ARGUS_CAMPAIGN_TOKENS,
+                idCampanhaRecebido: numIdCampanha || null,
+                hasTokenForIdCampanha: hasCampaignForId,
+                globalTokenLen: GLOBAL_TOKEN.length || 0,
+                campaignKeys: Object.keys(CAMPAIGN_TOKENS || {})
+            }
+        });
+    }
+
+    // 6. Chama a API Argus
     try {
-        const response = await fetch('https://argus.app.br/apiargus/report/pausasdetalhadas', {
+        const response = await fetch(`${ARGUS_API_URL.replace(/\/$/, '')}/report/pausasdetalhadas`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Token-Signature': apiToken
+                'Token-Signature': tokenToUse
             },
             body: JSON.stringify(argusBody)
         });
 
-        // 6. Handle the response from Argus
+        // 7. Handle the response from Argus
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Argus API Error:', errorText);
@@ -102,12 +163,12 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         
-        // 7. Check if data is empty
+        // 8. Check if data is empty
         if (!data || (Array.isArray(data) && data.length === 0)) {
             return res.status(404).json({ message: 'Nenhum registro de pausa encontrado para os filtros informados. Tente ajustar o período ou os filtros de busca.' });
         }
         
-        // 8. Send the data back to the frontend
+        // 9. Send the data back to the frontend
         return res.status(200).json(data);
 
     } catch (error) {

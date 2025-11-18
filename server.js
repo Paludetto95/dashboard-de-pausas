@@ -29,6 +29,9 @@ app.get('/', (req, res) => {
 // O endpoint que o seu painel vai chamar
 app.post('/api/dados-argus', async (req, res) => {
     console.log('[Proxy] Requisição recebida para /api/dados-argus');
+    const hasGlobal = !!(process.env.ARGUS_API_TOKEN_GLOBAL && String(process.env.ARGUS_API_TOKEN_GLOBAL).trim());
+    const hasCampaignEnv = !!process.env.ARGUS_CAMPAIGN_TOKENS;
+    console.log('[Proxy] Env presence before handler:', { hasGlobalToken: hasGlobal, hasCampaignTokensEnv: hasCampaignEnv });
     try {
         const h = await getArgusHandler();
         await h(req, res);
@@ -36,6 +39,15 @@ app.post('/api/dados-argus', async (req, res) => {
         console.error('[Proxy] Erro ao processar requisição da API Argus:', error);
         res.status(500).json({ message: 'Erro interno no servidor proxy ao processar a requisição da API Argus.' });
     }
+});
+
+// Endpoint simples para checar envs
+app.get('/api/env-check', (req, res) => {
+  res.json({
+    hasGlobalToken: !!(process.env.ARGUS_API_TOKEN_GLOBAL && String(process.env.ARGUS_API_TOKEN_GLOBAL).trim()),
+    hasCampaignTokensEnv: !!process.env.ARGUS_CAMPAIGN_TOKENS,
+    campaignTokensKeys: (() => { try { return Object.keys(JSON.parse(process.env.ARGUS_CAMPAIGN_TOKENS || '{}')); } catch { return []; } })()
+  });
 });
 
 
