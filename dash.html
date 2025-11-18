@@ -2002,10 +2002,35 @@
                 try { responseData = JSON.parse(rawText); } catch { responseData = { message: rawText }; }
 
                 if (!response.ok) {
-                    const details = responseData.details ? `\nDetalhes: ${JSON.stringify(responseData.details)}` : '';
-                    const msg = (responseData.message || responseData.descStatus || responseData.error || `Erro do Proxy (${response.status})`) + details;
-                    handleDataLoadError(msg);
-                    return;
+                    // Tentar identificar erro de parâmetros inválidos vindos da Argus e aplicar fallback
+                    const detailsStr = responseData.details ? `\nDetalhes: ${JSON.stringify(responseData.details)}` : '';
+                    const baseMsg = (responseData.message || responseData.descStatus || responseData.error || `Erro do Proxy (${response.status})`);
+                    const fullMsg = baseMsg + detailsStr;
+                    const isInvalidParams = /Parametro\(s\) inv[aá]lido\(s\)/i.test(baseMsg) || /"codStatus"\s*:\s*-7/.test(baseMsg);
+                    if (isInvalidParams) {
+                        // Fallback automático com minutos desde a meia-noite (dia atual)
+                        els.main.fileStatus.textContent = 'Parâmetros inválidos, tentando fallback (dia atual)...';
+                        els.main.fileStatus.className = 'text-sm text-yellow-400 mt-4 animate-pulse';
+                        const fallbackPayload = { ultimosMinutos: minutesSinceMidnight };
+                        if (options.idCampanha) fallbackPayload.idCampanha = parseInt(options.idCampanha, 10);
+                        console.log('Fallback payload enviado (response.ok=false):', fallbackPayload);
+                        const fbResp = await fetch(PROXY_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(fallbackPayload)
+                        });
+                        const fbText = await fbResp.text();
+                        let fbData = {};
+                        try { fbData = JSON.parse(fbText); } catch { fbData = { message: fbText }; }
+                        if (!fbResp.ok || (fbData.codStatus && fbData.codStatus < 1)) {
+                            handleDataLoadError(fbData.descStatus || fbData.message || fullMsg);
+                            return;
+                        }
+                        responseData = fbData; // usar dados do fallback
+                    } else {
+                        handleDataLoadError(fullMsg);
+                        return;
+                    }
                 }
 
                 if (responseData.codStatus && responseData.codStatus < 1) {
