@@ -111,13 +111,36 @@ export default async function handler(req, res) {
     const numIdCampanha = idCampanha ? parseInt(idCampanha, 10) : 0;
 
     if (numUltimosMinutos > 0) {
-        argusBody.ultimosMinutos = numUltimosMinutos;
+        // Clamp: 1 minuto até 90 dias
+        const maxMinutes = 90 * 24 * 60; // 129600
+        const clamped = Math.min(Math.max(numUltimosMinutos, 1), maxMinutes);
+        argusBody.ultimosMinutos = clamped;
     } else if (periodoInicial && periodoFinal) {
         const pi = parseAndFormatDateTime(periodoInicial);
         const pf = parseAndFormatDateTime(periodoFinal);
         if (pi && pf) {
             argusBody.periodoInicial = pi;
             argusBody.periodoFinal = pf;
+
+            // Clamp do período: máximo 90 dias
+            try {
+                const toIso = (s) => s.replace(' ', 'T') + 'Z';
+                const start = new Date(toIso(argusBody.periodoInicial));
+                const end = new Date(toIso(argusBody.periodoFinal));
+                if (!isNaN(start) && !isNaN(end)) {
+                    const msDiff = end - start;
+                    const maxMs = 90 * 24 * 60 * 60 * 1000;
+                    if (msDiff > maxMs) {
+                        const newStart = new Date(end.getTime() - maxMs);
+                        const pad = (n) => (n < 10 ? '0' + n : n);
+                        const clampedPi = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())} ${pad(newStart.getHours())}:${pad(newStart.getMinutes())}:${pad(newStart.getSeconds())}`;
+                        argusBody.periodoInicial = clampedPi;
+                        console.log('[Argus] Período >90d; reduzido:', { periodoInicial: argusBody.periodoInicial, periodoFinal: argusBody.periodoFinal });
+                    }
+                }
+            } catch (e) {
+                // Se falhar o clamp, mantém como está
+            }
         } else {
             // Fallback se o formato não foi reconhecido
             argusBody.ultimosMinutos = 1440;
@@ -131,10 +154,14 @@ export default async function handler(req, res) {
         argusBody.idCampanha = numIdCampanha;
     }
 
-    // Remove undefined keys
-    Object.keys(argusBody).forEach(key => argusBody[key] === undefined && delete argusBody[key]);
+    // Remove undefined keys e strings vazias
+    Object.keys(argusBody).forEach((key) => {
+        const v = argusBody[key];
+        if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
+            delete argusBody[key];
+        }
+    });
     if (!argusBody.ultimosMinutos && (!argusBody.periodoInicial || !argusBody.periodoFinal)) {
-        // Garantir que ao menos um critério válido seja enviado
         argusBody.ultimosMinutos = 1440;
     }
 
