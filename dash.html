@@ -1939,6 +1939,40 @@
             }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
         }
         
+        async function showArgusQueryDialog(defaults) {
+            defaults = defaults || {};
+            const mode = (prompt('Consulta Argus:\nDigite M para "últimos minutos" ou P para "período (datas)".\n(M/P)', 'M') || '').trim().toUpperCase();
+            if (!mode) return null;
+            const result = {};
+            if (mode === 'M') {
+                const mStr = prompt('Quantidade de minutos (ex.: 120):', String(defaults.ultimosMinutos || '60'));
+                if (mStr == null) return null;
+                const m = parseInt(mStr, 10);
+                if (!isFinite(m) || m <= 0) return null;
+                result.type = 'minutes';
+                result.ultimosMinutos = m;
+            } else if (mode === 'P') {
+                const s = prompt('Data inicial (YYYY-MM-DD):', defaults.startDate || '');
+                if (s == null) return null;
+                const e = prompt('Data final (YYYY-MM-DD):', defaults.endDate || '');
+                if (e == null) return null;
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) return null;
+                result.type = 'period';
+                result.startDate = s;
+                result.endDate = e;
+            } else {
+                return null;
+            }
+            let idStr = prompt('ID da Campanha (opcional):', defaults.idCampanhaDefault != null ? String(defaults.idCampanhaDefault) : '');
+            if (idStr === null) return null;
+            idStr = idStr.trim();
+            if (idStr !== '') {
+                const id = parseInt(idStr, 10);
+                if (isFinite(id)) result.idCampanha = id;
+            }
+            return result;
+        }
+        
         async function loadArgusApiData() {
             var options = arguments[0] || {};
             els.main.fileInput.value = '';
@@ -1969,8 +2003,14 @@
                 return `${yyyy}-${mm}-${dd} ${time}`; // Argus: YYYY-MM-DD HH:mm:ss
             };
 
-            // Se o usuário definiu intervalo, enviar período; caso contrário, usar ultimosMinutos do dia atual
-            if (startDate && endDate) {
+            // Preferência aos parâmetros passados via diálogo; caso contrário, usa filtros/campos atuais
+            if (options && typeof options.ultimosMinutos === 'number') {
+                const mins = Math.max(1, parseInt(options.ultimosMinutos, 10) || minutesSinceMidnight);
+                payload.ultimosMinutos = mins;
+            } else if (options && options.startDate && options.endDate) {
+                payload.periodoInicial = toArgusDateTime(options.startDate, '00:00:00');
+                payload.periodoFinal = toArgusDateTime(options.endDate, '23:59:59');
+            } else if (startDate && endDate) {
                 payload.periodoInicial = toArgusDateTime(startDate, '00:00:00');
                 payload.periodoFinal = toArgusDateTime(endDate, '23:59:59');
             } else {
@@ -4449,10 +4489,18 @@
             if (mup) mup.addEventListener('click', () => { if (els && els.main && els.main.fileInput) els.main.fileInput.click(); setActiveMenuById('menu-upload-pauses-btn'); });
 
             const mri = document.getElementById('menu-refresh-interno-btn');
-            if (mri) mri.addEventListener('click', () => {
+            if (mri) mri.addEventListener('click', async () => {
                 setActiveMenuById('menu-refresh-interno-btn');
-                // Atualiza via API Argus para a campanha do Grupo Interno (id=2)
-                loadArgusApiData({ idCampanha: 2 });
+                const choice = await showArgusQueryDialog({ idCampanhaDefault: 2 });
+                if (!choice) return;
+                const opts = { idCampanha: choice.idCampanha || 2 };
+                if (choice.type === 'minutes') {
+                    opts.ultimosMinutos = choice.ultimosMinutos;
+                } else {
+                    opts.startDate = choice.startDate;
+                    opts.endDate = choice.endDate;
+                }
+                loadArgusApiData(opts);
             });
 
             const mut = document.getElementById('menu-upload-tabs-btn');
@@ -4892,7 +4940,19 @@
             }
 
             if (els.main.buttons.loadArgusApi) {
-                els.main.buttons.loadArgusApi.addEventListener('click', loadArgusApiData);
+                els.main.buttons.loadArgusApi.addEventListener('click', async () => {
+                    const choice = await showArgusQueryDialog({});
+                    if (!choice) return;
+                    const opts = {};
+                    if (choice.type === 'minutes') {
+                        opts.ultimosMinutos = choice.ultimosMinutos;
+                    } else {
+                        opts.startDate = choice.startDate;
+                        opts.endDate = choice.endDate;
+                    }
+                    if (choice.idCampanha) opts.idCampanha = choice.idCampanha;
+                    loadArgusApiData(opts);
+                });
             }
             
             if (els.main.buttons.clearFilters) {
