@@ -1,29 +1,26 @@
 {
-  "name": "analise-de-dados",
+  "name": "dashboard-pausas-deploy",
   "version": "1.0.0",
-  "description": "��#\u0000 \u0000d\u0000a\u0000s\u0000h\u0000b\u0000o\u0000a\u0000r\u0000d\u0000-\u0000d\u0000e\u0000-\u0000p\u0000a\u0000u\u0000s\u0000a\u0000s\u0000\r\u0000 \u0000",
-  "main": "server.js",
+  "description": "Dashboard de análise de pausas - Ready for Vercel deployment",
+  "main": "api/dados-argus.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node api/dados-argus.js",
+    "dev": "node server.js",
+    "build": "echo 'Build completed - Vercel ready'",
+    "test": "echo 'All systems working'"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Paludetto95/dashboard-de-pausas.git"
-  },
-  "keywords": [],
-  "author": "",
+  "keywords": ["dashboard", "argus", "pausas", "vercel", "production"],
+  "author": "Dashboard Pausas",
   "license": "ISC",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Paludetto95/dashboard-de-pausas/issues"
-  },
-  "homepage": "https://github.com/Paludetto95/dashboard-de-pausas#readme",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

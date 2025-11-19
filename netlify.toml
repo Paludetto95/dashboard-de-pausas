@@ -1,0 +1,21 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/api/dados-argus"
+  to = "/.netlify/functions/dados-argus"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/dash.html"
+  status = 200
+
+[context.production.environment]
+  ARGUS_API_URL = "https://argus.app.br/apiargus"
+  ARGUS_API_TOKEN_GLOBAL = "nahybptvaa25vyybq0fyoj8bqyahrlw52acotbquc8du1z033ezsvfn5nx0egxqz"
+  ARGUS_CAMPAIGN_TOKENS = '{"2":"nahybptvaa25vyybq0fyoj8bqyahrlw52acotbquc8du1z033ezsvfn5nx0egxqz"}'
