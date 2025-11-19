@@ -17,18 +17,18 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // Porta config
 
 // Middleware para permitir que o painel (rodando em outra porta/origem) se comunique com este proxy
 app.use(cors());
-// Middleware para entender o corpo das requisições como JSON
+// Middleware para entender o corpo das requisições como JSON (mantido para outros endpoints)
 app.use(express.json());
 
-app.use(express.static(__dirname));
-
-app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/dash.html');
+// Add debugging middleware
+app.use((req, res, next) => {
+    console.log(`[DEBUG] ${req.method} ${req.url}`);
+    next();
 });
 
-// O endpoint que o seu painel vai chamar
-app.post('/api/dados-argus', async (req, res) => {
-    console.log('[Proxy] Requisição recebida para /api/dados-argus');
+// O endpoint que o seu painel vai chamar, agora suportando GET
+app.get('/api/dados-argus', async (req, res) => {
+    console.log('[Proxy] Requisição GET recebida para /api/dados-argus');
     const hasGlobal = !!(process.env.ARGUS_API_TOKEN_GLOBAL && String(process.env.ARGUS_API_TOKEN_GLOBAL).trim());
     const hasCampaignEnv = !!process.env.ARGUS_CAMPAIGN_TOKENS;
     console.log('[Proxy] Env presence before handler:', { hasGlobalToken: hasGlobal, hasCampaignTokensEnv: hasCampaignEnv });
@@ -39,6 +39,28 @@ app.post('/api/dados-argus', async (req, res) => {
         console.error('[Proxy] Erro ao processar requisição da API Argus:', error);
         res.status(500).json({ message: 'Erro interno no servidor proxy ao processar a requisição da API Argus.' });
     }
+});
+
+// Adiciona suporte para POST requests também
+app.post('/api/dados-argus', async (req, res) => {
+    console.log('[Proxy] Requisição POST recebida para /api/dados-argus');
+    const hasGlobal = !!(process.env.ARGUS_API_TOKEN_GLOBAL && String(process.env.ARGUS_API_TOKEN_GLOBAL).trim());
+    const hasCampaignEnv = !!process.env.ARGUS_CAMPAIGN_TOKENS;
+    console.log('[Proxy] Env presence before handler:', { hasGlobalToken: hasGlobal, hasCampaignTokensEnv: hasCampaignEnv });
+    try {
+        const h = await getArgusHandler();
+        await h(req, res);
+    } catch (error) {
+        console.error('[Proxy] Erro ao processar requisição da API Argus:', error);
+        res.status(500).json({ message: 'Erro interno no servidor proxy ao processar a requisição da API Argus.' });
+    }
+});
+
+// Serve arquivos estáticos APÓS as rotas da API
+app.use(express.static(__dirname));
+
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/dash.html');
 });
 
 // Endpoint simples para checar envs
