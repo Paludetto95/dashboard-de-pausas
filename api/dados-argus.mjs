@@ -40,7 +40,7 @@ export default async function handler(req, res) {
     // 1. Configurações de CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader(
         'Access-Control-Allow-Headers',
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
@@ -52,13 +52,13 @@ export default async function handler(req, res) {
         return;
     }
 
-    // Apenas permite requisições GET ou POST
-    if (req.method !== 'POST' && req.method !== 'GET') {
+    // Permite requisições GET e POST
+    if (req.method !== 'GET' && req.method !== 'POST') {
         res.setHeader('Allow', ['GET', 'POST']);
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
-    // 2. Coleta de Configurações de Token (mantendo a lógica simplificada)
+    // 2. Coleta de Configurações de Token
     const ARGUS_API_URL = process.env.ARGUS_API_URL || 'https://argus.app.br/apiargus';
     const GLOBAL_TOKEN = String(
         (process.env.ARGUS_API_TOKEN_GLOBAL || process.env.ARGUS_API_TOKEN || '')
@@ -66,22 +66,20 @@ export default async function handler(req, res) {
     let CAMPAIGN_TOKENS = {};
     try {
         if (process.env.ARGUS_CAMPAIGN_TOKENS) {
-            // Assume que o valor da variável de ambiente é um JSON string
             CAMPAIGN_TOKENS = JSON.parse(process.env.ARGUS_CAMPAIGN_TOKENS);
         }
     } catch (e) {
         console.warn('[Argus] ARGUS_CAMPAIGN_TOKENS inválido ou não definido. Usando objeto vazio.');
     }
 
-    // 3. Coleta de Parâmetros de Filtro (Priorizando Query Params para GET/POST)
-    // Coleta a partir de req.query (GET) ou req.body (POST)
-    const params = (req.method === 'GET') ? req.query : req.body;
+    // 3. Coleta de Parâmetros de Filtro
+    const params = req.method === 'GET' ? (req.query || {}) : (req.body || {});
     
-    const { periodoInicial, periodoFinal, idCampanha, ultimosMinutos } = params || {};
+    const { periodoInicial, periodoFinal, idCampanha, ultimosMinutos } = params;
     
     // Converte para tipos esperados
-    const numUltimosMinutos = ultimosMinutos ? parseInt(ultimosMinutos, 10) : 0;
-    const numIdCampanha = idCampanha ? parseInt(idCampanha, 10) : 0;
+    const numUltimosMinutos = ultimosMinutos ? parseInt(String(ultimosMinutos), 10) : 0;
+    const numIdCampanha = idCampanha ? parseInt(String(idCampanha), 10) : 0;
 
     // 4. Construção do Corpo da Requisição para a API Argus
     const argusBody = {};
@@ -98,44 +96,38 @@ export default async function handler(req, res) {
         piFormatted = parseAndFormatDateTime(String(periodoInicial).trim());
         pfFormatted = parseAndFormatDateTime(String(periodoFinal).trim());
     }
-
-    if (numUltimosMinutos > 0) {
-        // Opção 1: Usar ultimosMinutos
-        argusBody.ultimosMinutos = Math.min(Math.max(numUltimosMinutos, 1), MAX_MINUTES);
-    } else if (piFormatted && pfFormatted) {
-        // Opção 2: Usar periodoInicial e periodoFinal com validação
-        argusBody.periodoInicial = piFormatted;
-        argusBody.periodoFinal = pfFormatted;
-
-        try {
-            const toDateStr = (s) => s.replace(' ', 'T') + 'Z';
-            const start = new Date(toDateStr(argusBody.periodoInicial));
-            const end = new Date(toDateStr(argusBody.periodoFinal));
-
-            if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start.getTime() < end.getTime()) {
-                const msDiff = end.getTime() - start.getTime();
-                const maxMs = MAX_MINUTES * 60 * 1000;
-
-                if (msDiff > maxMs) {
-                    // Limita o período a 90 dias
-                    const newStart = new Date(end.getTime() - maxMs);
-                    const pad = (n) => (n < 10 ? '0' + n : n);
-                    argusBody.periodoInicial = `${newStart.getFullYear()}-${pad(newStart.getMonth() + 1)}-${pad(newStart.getDate())} ${pad(newStart.getHours())}:${pad(newStart.getMinutes())}:${pad(newStart.getSeconds())}`;
-                    console.log(`[Argus] Período >${MAX_DAYS}d; reduzido para:`, { periodoInicial: argusBody.periodoInicial, periodoFinal: argusBody.periodoFinal });
-                }
+    
+    // Validação de datas
+    if (piFormatted && pfFormatted) {
+        const startDate = new Date(piFormatted.replace(' ', 'T'));
+        const endDate = new Date(pfFormatted.replace(' ', 'T'));
+        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && endDate >= startDate) {
+            const diffInMs = endDate - startDate;
+            const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+            if (diffInDays <= MAX_DAYS) {
                 isDateRangeValid = true;
+                argusBody.periodoInicial = piFormatted;
+                argusBody.periodoFinal = pfFormatted;
+            } else {
+                return res.status(400).json({
+                    message: `Período muito longo. Máximo permitido: ${MAX_DAYS} dias.`,
+                });
             }
-        } catch (e) {
-            console.error('[Argus] Erro de validação de data, reverter para padrão.', e);
         }
     }
     
-    // Opção 3: Se nenhuma das opções acima funcionar, usa o padrão de 24 horas.
-    if (!argusBody.ultimosMinutos && !isDateRangeValid) {
-        argusBody.ultimosMinutos = DEFAULT_MINUTES;
+    // Se não houver datas válidas, usa ultimosMinutos
+    if (!isDateRangeValid) {
+        const minutes = numUltimosMinutos > 0 ? numUltimosMinutos : DEFAULT_MINUTES;
+        if (minutes > MAX_MINUTES) {
+            return res.status(400).json({
+                message: `Período muito longo. Máximo permitido: ${MAX_MINUTES} minutos (${MAX_DAYS} dias).`,
+            });
+        }
+        argusBody.ultimosMinutos = minutes;
     }
     
-    // Adiciona o idCampanha se for válido
+    // Adiciona idCampanha se fornecido
     if (numIdCampanha > 0) {
         argusBody.idCampanha = numIdCampanha;
     }
@@ -157,86 +149,52 @@ export default async function handler(req, res) {
         });
     }
 
-    // 6. Chama a API Argus
+    // 6. Chama a API Argus (É um POST, mesmo que o proxy receba um GET)
     try {
-        // A API Argus sempre espera um POST, mesmo que os parâmetros venham via GET/Query String no proxy
-        const response = await fetch(`${ARGUS_API_URL.replace(/\/$/, '')}/report/pausasdetalhadas`, {
+        const url = `${ARGUS_API_URL}/pausasdetalhadas`;
+        console.log(`[Argus] Chamando: ${url}`);
+        
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Token-Signature': tokenToUse
+                'Authorization': `Bearer ${tokenToUse}`
             },
             body: JSON.stringify(argusBody)
         });
 
-        // 7. Processa a resposta da Argus
         const responseText = await response.text();
-        let data = null;
+        let data;
+        
         try {
             data = JSON.parse(responseText);
-        } catch (e) {
-            // Se a API não retornar JSON, tratamos como erro
+        } catch (parseError) {
+            console.error('[Argus] Erro ao fazer parse do JSON:', parseError);
             return res.status(response.status).json({
                 message: `Erro de formato da API Argus: Resposta não é JSON ou está malformada. Status: ${response.status}`,
-                details: responseText // Retorna o texto bruto para depuração
+                details: responseText
             });
         }
         
+        // A Argus usa codStatus = 1 para sucesso, mesmo que HTTP 200
         if (!response.ok || data.codStatus !== 1) {
-             // Tratamento de erro específico se o status HTTP for 200, mas codStatus for falha
-            const statusToUse = response.status !== 200 ? response.status : 400; // Use 400 se for erro interno reportado no JSON com 200
+            const statusToUse = response.status !== 200 ? response.status : 400; 
             return res.status(statusToUse).json({ 
                 message: `Erro da API Argus: ${data.descStatus || `Status Code ${statusToUse}`}`,
                 details: data
             });
         }
         
-        // 8. Checa se o resultado está vazio
+        // 7. Checa se o resultado está vazio
         if (!data.pausasDetalhadas || data.pausasDetalhadas.length === 0) {
             return res.status(404).json({ message: 'Nenhum registro de pausa encontrado para os filtros informados. Tente ajustar o período ou os filtros de busca.' });
         }
 
-        // 9. Extrai e envia a lista de pausas detalhadas de volta para o frontend
-        // O frontend espera apenas a lista de dados brutos
+        // 8. Extrai e envia a lista de pausas detalhadas de volta para o frontend
         return res.status(200).json(data.pausasDetalhadas);
 
     } catch (error) {
         console.error('Proxy Error (Falha no Fetch):', error);
         return res.status(500).json({ message: 'Erro interno no servidor proxy. Falha na comunicação com a API Argus.' });
     }
-}
-```
-
-### Contextualização e Resumo das Alterações:
-
-A principal mudança está no passo 3 da função `handler` em `api/dados-argus.mjs`:
-
-**Lógica de Coleta de Parâmetros:**
-O código agora suporta o método `GET` (parâmetros na URL, via `req.query`) e `POST` (parâmetros no corpo JSON, via `req.body`). Ele coleta todos os filtros ( `idCampanha`, `periodoInicial`, `periodoFinal`, `ultimosMinutos`) e os consolida na variável `params`.
-
-**Lógica de Negócios (Filtros):**
-1.  **Prioridade:** Se `ultimosMinutos` for fornecido e for um número positivo, ele será usado.
-2.  **Alternativa:** Se não for fornecido, ele tentará usar o par `periodoInicial` e `periodoFinal`.
-3.  **Validação de Data:** A data será formatada para o padrão `YYYY-MM-DD HH:mm:ss` (exigido pela Argus). O limite de 90 dias é aplicado, ajustando automaticamente o `periodoInicial` se o intervalo for muito grande, para evitar erros na API de destino.
-4.  **Padrão:** Se nenhum filtro válido for encontrado, o `ultimosMinutos` será definido como 1440 (24 horas) para garantir que alguma pausa seja retornada (se houver).
-
-**Formato de Saída:**
-O novo código garante que, em caso de sucesso, ele extraia apenas o array `pausasDetalhadas` (`data.pausasDetalhadas`) e o retorne com `res.status(200).json(...)`. Isso simplifica o consumo no seu frontend, que antes precisava iterar sobre a resposta completa.
-
-Você pode agora usar tanto requisições `POST` com JSON no corpo quanto requisições `GET` com parâmetros de consulta para o seu endpoint `/api/dados-argus`. Por exemplo:
-
-**Via GET (Exemplo):**
-```
-GET /api/dados-argus?idCampanha=1&ultimosMinutos=60
-```
-ou
-```
-GET /api/dados-argus?periodoInicial=01/01/2025%2010:00:00&periodoFinal=01/01/2025%2012:00:00
-```
-
-**Via POST (Exemplo):**
-```json
-{
-  "idCampanha": 1,
-  "ultimosMinutos": 60
 }
