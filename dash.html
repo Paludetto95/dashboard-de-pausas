@@ -1910,18 +1910,26 @@
                 handleDataLoadError("A resposta da API não continha os dados esperados.");
                 return [];
             }
-            return apiData.map(item => {
+            console.log("TransformArgusData - Total de registros:", apiData.length);
+            console.log("Primeiro registro exemplo:", apiData[0]);
+            
+            let validRecords = 0;
+            let invalidRecords = 0;
+            
+            const result = apiData.map((item, index) => {
                 const findField = (aliases) => aliases.find(alias => item[alias] !== undefined);
 
-                const consultorField = findField(['operador', 'agent_name', 'consultor', 'nome']);
-                const tipoField = findField(['descricao', 'pause_type', 'tipo', 'motivo']);
-                const dataInicioField = findField(['inicio', 'start_time', 'data_inicio']);
-                const duracaoSecondsField = findField(['duration_seconds']);
+                // Campos específicos da API Argus
+                const consultorField = findField(['nomeUsuario', 'usuarioNome', 'operador', 'agent_name', 'consultor', 'nome']);
+                const tipoField = findField(['tipoPausaDesc', 'ocupadoDesc', 'descricao', 'pause_type', 'tipo', 'motivo']);
+                const dataInicioField = findField(['dataHoraInicio', 'inicio', 'start_time', 'data_inicio']);
+                const duracaoSecondsField = findField(['tempoSegundos', 'duration_seconds']);
                 const duracaoStringField = findField(['duracao', 'tempo']);
 
                 const consultor = item[consultorField] || 'Não informado';
                 const tipo = item[tipoField] || 'Não informado';
                 const dataInicio = item[dataInicioField];
+                const grupo = item.grupoUsuarioDesc || item.grupo_desc || 'Não informado';
                 
                 let durationMinutes = 0;
                 if (item[duracaoSecondsField] !== undefined) {
@@ -1930,13 +1938,36 @@
                     durationMinutes = parseDurationToMinutes(item[duracaoStringField] || '0');
                 }
 
+                // Debug para o primeiro registro
+                if (index === 0) {
+                    console.log("Transformação do primeiro registro:");
+                    console.log("- Campos encontrados:", { consultorField, tipoField, dataInicioField, duracaoSecondsField, duracaoStringField });
+                    console.log("- Valores originais:", { consultor: item[consultorField], tipo: item[tipoField], dataInicio: item[dataInicioField], duracaoSegundos: item[duracaoSecondsField] });
+                    console.log("- Valores transformados:", { consultor, tipo, grupo, durationMinutes });
+                }
+
                 return {
                     CONSULTOR: normalizeDataString(consultor),
                     TIPO: toTitleCase(normalizeDataString(tipo)),
+                    GRUPO: normalizeDataString(grupo),
                     DATA_INICIO_OBJ: parseDateTimeRobust(dataInicio),
-                    DURACAO_MINUTES: durationMinutes
+                    DURACAO_MINUTES: durationMinutes,
+                    _raw: item // Manter dados originais para referência
                 };
-            }).filter(item => item.DATA_INICIO_OBJ && item.DURACAO_MINUTES > 0);
+            }).filter(item => {
+                const isValid = item && item.DATA_INICIO_OBJ && item.DURACAO_MINUTES >= 0;
+                if (!isValid) {
+                    invalidRecords++;
+                    if (invalidRecords <= 3) { // Logar apenas os primeiros 3 inválidos
+                        console.log(`Registro inválido #${invalidRecords}:`, item);
+                    }
+                } else {
+                    validRecords++;
+                }
+                return isValid;
+            });
+            
+            console.log(`Transformação concluída: ${validRecords} registros válidos, ${invalidRecords} inválidos`);
         }
         
         async function showArgusQueryDialog(defaults) {
@@ -2100,9 +2131,17 @@
                     throw new Error("Formato de resposta inválido: campo 'pausasDetalhadas' não encontrado.");
                 }
                 
+                console.log("Dados recebidos da API:", responseData.pausasDetalhadas);
+                console.log("Primeiro registro:", responseData.pausasDetalhadas[0]);
+                
+                console.log("Transformando dados da API...");
                 originalData = transformArgusData(responseData.pausasDetalhadas);
+                console.log("Dados transformados:", originalData);
+                console.log("Total de registros transformados:", originalData.length);
 
                 if (!originalData || originalData.length === 0) {
+                    console.log("Nenhum dado válido encontrado após transformação. Verificando filtros...");
+                    console.log("Dados originais da API:", responseData.pausasDetalhadas);
                     return handleDataLoadError("A API retornou sucesso, mas nenhum registro de pausa foi encontrado para este filtro.");
                 }
                 

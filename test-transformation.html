@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Transformação de Dados Argus</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-data { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #007bff; }
+        .result { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #28a745; }
+        .error { background: #f8e8e8; padding: 15px; border-radius: 5px; margin: 10px 0; border-left: 4px solid #dc3545; }
+        pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+        h2 { color: #333; margin-top: 20px; }
+        .summary { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Teste de Transformação de Dados da API Argus</h1>
+        <p>Este teste valida se a função transformArgusData está processando corretamente os dados da API.</p>
+        
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        // Mock da função parseDateTimeRobust
+        function parseDateTimeRobust(dateStr) {
+            if (!dateStr) return null;
+            try {
+                // Tenta interpretar como ISO string (formato Argus)
+                if (typeof dateStr === 'string' && dateStr.includes('T')) {
+                    return new Date(dateStr);
+                }
+                // Tenta interpretar como timestamp
+                if (typeof dateStr === 'number' || !isNaN(Date.parse(dateStr))) {
+                    return new Date(dateStr);
+                }
+                return null;
+            } catch (e) {
+                console.error('Erro ao parsear data:', dateStr, e);
+                return null;
+            }
+        }
+
+        // Mock da função normalizeDataString
+        function normalizeDataString(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).trim();
+        }
+
+        // Mock da função toTitleCase
+        function toTitleCase(str) {
+            if (!str) return str;
+            return str.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // Mock da função parseDurationToMinutes
+        function parseDurationToMinutes(durationStr) {
+            if (!durationStr) return 0;
+            
+            // Formato: "HH:MM:SS" ou "MM:SS" ou segundos puros
+            const parts = String(durationStr).split(':');
+            if (parts.length === 1) {
+                // Apenas segundos
+                return parseInt(parts[0], 10) / 60;
+            } else if (parts.length === 2) {
+                // MM:SS
+                return parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
+            } else if (parts.length === 3) {
+                // HH:MM:SS
+                return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10) + (parseInt(parts[2], 10) / 60);
+            }
+            return 0;
+        }
+
+        // Função transformArgusData adaptada do dash.html
+        function transformArgusData(apiData) {
+            if (!Array.isArray(apiData)) {
+                console.error("Formato de dados da API inesperado. Esperava um array.");
+                return [];
+            }
+            console.log("TransformArgusData - Total de registros:", apiData.length);
+            console.log("Primeiro registro exemplo:", apiData[0]);
+            
+            let validRecords = 0;
+            let invalidRecords = 0;
+            
+            const result = apiData.map((item, index) => {
+                const findField = (aliases) => aliases.find(alias => item[alias] !== undefined);
+
+                // Campos específicos da API Argus
+                const consultorField = findField(['nomeUsuario', 'usuarioNome', 'operador', 'agent_name', 'consultor', 'nome']);
+                const tipoField = findField(['tipoPausaDesc', 'ocupadoDesc', 'descricao', 'pause_type', 'tipo', 'motivo']);
+                const dataInicioField = findField(['dataHoraInicio', 'inicio', 'start_time', 'data_inicio']);
+                const duracaoSecondsField = findField(['tempoSegundos', 'duration_seconds']);
+                const duracaoStringField = findField(['duracao', 'tempo']);
+
+                const consultor = item[consultorField] || 'Não informado';
+                const tipo = item[tipoField] || 'Não informado';
+                const dataInicio = item[dataInicioField];
+                const grupo = item.grupoUsuarioDesc || item.grupo_desc || 'Não informado';
+                
+                let durationMinutes = 0;
+                if (item[duracaoSecondsField] !== undefined) {
+                    durationMinutes = (item[duracaoSecondsField] || 0) / 60;
+                } else if (item[duracaoStringField] !== undefined) {
+                    durationMinutes = parseDurationToMinutes(item[duracaoStringField] || '0');
+                }
+
+                // Debug para o primeiro registro
+                if (index === 0) {
+                    console.log("Transformação do primeiro registro:");
+                    console.log("- Campos encontrados:", { consultorField, tipoField, dataInicioField, duracaoSecondsField, duracaoStringField });
+                    console.log("- Valores originais:", { consultor: item[consultorField], tipo: item[tipoField], dataInicio: item[dataInicioField], duracaoSegundos: item[duracaoSecondsField] });
+                    console.log("- Valores transformados:", { consultor, tipo, grupo, durationMinutes });
+                }
+
+                return {
+                    CONSULTOR: normalizeDataString(consultor),
+                    TIPO: toTitleCase(normalizeDataString(tipo)),
+                    GRUPO: normalizeDataString(grupo),
+                    DATA_INICIO_OBJ: parseDateTimeRobust(dataInicio),
+                    DURACAO_MINUTES: durationMinutes,
+                    _raw: item // Manter dados originais para referência
+                };
+            }).filter(item => {
+                const isValid = item && item.DATA_INICIO_OBJ && item.DURACAO_MINUTES >= 0;
+                if (!isValid) {
+                    invalidRecords++;
+                    if (invalidRecords <= 3) { // Logar apenas os primeiros 3 inválidos
+                        console.log(`Registro inválido #${invalidRecords}:`, item);
+                    }
+                } else {
+                    validRecords++;
+                }
+                return isValid;
+            });
+            
+            console.log(`Transformação concluída: ${validRecords} registros válidos, ${invalidRecords} inválidos`);
+            return result;
+        }
+
+        // Dados de teste - simulando a resposta real da API Argus
+        const testData = [
+            {
+                "idCampanha": 2,
+                "campanhaDesc": "INTERNO",
+                "nomeUsuario": "AMANDA DA SILVA",
+                "dataHoraInicio": "2025-11-19T16:07:35.000-03:00",
+                "tempoSegundos": 3,
+                "grupoUsuarioDesc": "GRUPO TESTE"
+            },
+            {
+                "idCampanha": 2,
+                "campanhaDesc": "INTERNO", 
+                "nomeUsuario": "JOÃO CARLOS",
+                "dataHoraInicio": "2025-11-19T16:08:45.000-03:00",
+                "tempoSegundos": 120,
+                "grupoUsuarioDesc": "GRUPO TESTE"
+            },
+            {
+                "idCampanha": 1,
+                "campanhaDesc": "EXTERNO",
+                "nomeUsuario": "MARIA SANTOS",
+                "dataHoraInicio": "2025-11-19T16:15:22.000-03:00",
+                "tempoSegundos": 45,
+                "grupoUsuarioDesc": "OUTRO GRUPO"
+            }
+        ];
+
+        // Função para exibir os resultados
+        function runTest() {
+            const resultsDiv = document.getElementById('test-results');
+            
+            try {
+                console.log("=== INICIANDO TESTE DE TRANSFORMAÇÃO ===");
+                
+                // Executar a transformação
+                const transformedData = transformArgusData(testData);
+                
+                console.log("=== RESULTADO DA TRANSFORMAÇÃO ===");
+               

@@ -4,10 +4,19 @@
     {
       "src": "api/dados-argus.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dash.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     { "src": "/api/dados-argus", "dest": "/api/dados-argus.js" },
-    { "src": "/(.*)", "dest": "/dash.html" }
+    { "src": "/dash.html", "dest": "/dash.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
