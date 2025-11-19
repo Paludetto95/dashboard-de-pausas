@@ -204,7 +204,9 @@ export default async function handler(req, res) {
         }
 
         // 8. Extrai e envia a lista de pausas detalhadas de volta para o frontend
-        return res.status(200).json(data.pausasDetalhadas);
+        return res.status(200).json({
+            pausasDetalhadas: data.pausasDetalhadas
+        });
 
     } catch (error) {
         console.error('Proxy Error (Falha no Fetch):', error);
