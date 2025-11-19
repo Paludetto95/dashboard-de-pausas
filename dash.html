@@ -2000,25 +2000,27 @@
             const toArgusDateTime = (yyyyMMdd, time) => {
                 if (!yyyyMMdd) return '';
                 const [yyyy, mm, dd] = yyyyMMdd.split('-');
-                return `${yyyy}-${mm}-${dd}T${time}`; // agora com 'T', igual ao cURL
+                return `${yyyy}-${mm}-${dd}T${time}`; // Argus: YYYY-MM-DDTHH:mm:ss com 'T'
             };
 
             // Preferência aos parâmetros passados via diálogo; caso contrário, usa filtros/campos atuais
+            let forcedPeriod = false;
             if (options && typeof options.ultimosMinutos === 'number') {
                 const mins = Math.max(1, parseInt(options.ultimosMinutos, 10) || minutesSinceMidnight);
                 payload.ultimosMinutos = mins;
             } else if (options && options.startDate && options.endDate) {
                 payload.periodoInicial = toArgusDateTime(options.startDate, '00:00:00');
-                payload.periodoFinal = toArgusDateTime(options.endDate, '23:59:59');
+                payload.periodoFinal   = toArgusDateTime(options.endDate, '23:59:59');
+                forcedPeriod = true; // usuário escolheu período no popup
             } else if (startDate && endDate) {
                 payload.periodoInicial = toArgusDateTime(startDate, '00:00:00');
-                payload.periodoFinal = toArgusDateTime(endDate, '23:59:59');
+                payload.periodoFinal   = toArgusDateTime(endDate, '23:59:59');
             } else {
                 payload.ultimosMinutos = minutesSinceMidnight;
             }
 
-            // Campanha: permitir especificar o id (ex.: grupo interno = 2)
-            if (options.idCampanha) {
+            // Campanha: permitir especificar o id
+            if (options.idCampanha != null) {
                 payload.idCampanha = parseInt(options.idCampanha, 10);
             }
 
@@ -2036,17 +2038,17 @@
                 try { responseData = JSON.parse(rawText); } catch { responseData = { message: rawText }; }
 
                 if (!response.ok) {
-                    // Tentar identificar erro de parâmetros inválidos vindos da Argus e aplicar fallback
                     const detailsStr = responseData.details ? `\nDetalhes: ${JSON.stringify(responseData.details)}` : '';
                     const baseMsg = (responseData.message || responseData.descStatus || responseData.error || `Erro do Proxy (${response.status})`);
                     const fullMsg = baseMsg + detailsStr;
                     const isInvalidParams = /Parametro\(s\) inv[aá]lido\(s\)/i.test(baseMsg) || /"codStatus"\s*:\s*-7/.test(baseMsg);
-                    if (isInvalidParams) {
-                        // Fallback automático com minutos desde a meia-noite (dia atual)
+
+                    // Somente faz fallback automático se NÃO foi período escolhido no popup
+                    if (isInvalidParams && !forcedPeriod) {
                         els.main.fileStatus.textContent = 'Parâmetros inválidos, tentando fallback (dia atual)...';
                         els.main.fileStatus.className = 'text-sm text-yellow-400 mt-4 animate-pulse';
                         const fallbackPayload = { ultimosMinutos: minutesSinceMidnight };
-                        if (options.idCampanha) fallbackPayload.idCampanha = parseInt(options.idCampanha, 10);
+                        if (options.idCampanha != null) fallbackPayload.idCampanha = parseInt(options.idCampanha, 10);
                         console.log('Fallback payload enviado (response.ok=false):', fallbackPayload);
                         const fbResp = await fetch(PROXY_URL, {
                             method: 'POST',
@@ -2060,7 +2062,7 @@
                             handleDataLoadError(fbData.descStatus || fbData.message || fullMsg);
                             return;
                         }
-                        responseData = fbData; // usar dados do fallback
+                        responseData = fbData;
                     } else {
                         handleDataLoadError(fullMsg);
                         return;
@@ -2068,34 +2070,34 @@
                 }
 
                 if (responseData.codStatus && responseData.codStatus < 1) {
-                    // Fallback automático: tentar com ultimosMinutos (dia atual até agora)
-                    console.warn("Argus retornou erro:", responseData);
-                    els.main.fileStatus.textContent = 'Parâmetros inválidos, tentando fallback (dia atual)...';
-                    els.main.fileStatus.className = 'text-sm text-yellow-400 mt-4 animate-pulse';
-
-                    const fallbackPayload = { ultimosMinutos: minutesSinceMidnight };
-                    if (options.idCampanha) {
-                        fallbackPayload.idCampanha = parseInt(options.idCampanha, 10);
+                    // Apenas fallback se não foi período escolhido explicitamente
+                    if (!forcedPeriod) {
+                        els.main.fileStatus.textContent = 'Parâmetros inválidos, tentando fallback (dia atual)...';
+                        els.main.fileStatus.className = 'text-sm text-yellow-400 mt-4 animate-pulse';
+                        const fallbackPayload = { ultimosMinutos: minutesSinceMidnight };
+                        if (options.idCampanha != null) {
+                            fallbackPayload.idCampanha = parseInt(options.idCampanha, 10);
+                        }
+                        console.log("Fallback payload enviado:", fallbackPayload);
+                        const fbResp = await fetch(PROXY_URL, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(fallbackPayload)
+                        });
+                        const fbText = await fbResp.text();
+                        let fbData = {};
+                        try { fbData = JSON.parse(fbText); } catch { fbData = { message: fbText }; }
+                        if (!fbResp.ok || (fbData.codStatus && fbData.codStatus < 1)) {
+                            throw new Error(fbData.descStatus || fbData.message || "A API Argus retornou um erro ao usar o fallback.");
+                        }
+                        responseData = fbData;
+                    } else {
+                        throw new Error(responseData.descStatus || responseData.message || "A API Argus retornou erro para o período informado.");
                     }
-                    console.log("Fallback payload enviado:", fallbackPayload);
-
-                    const fbResp = await fetch(PROXY_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(fallbackPayload)
-                    });
-                    const fbText = await fbResp.text();
-                    let fbData = {};
-                    try { fbData = JSON.parse(fbText); } catch { fbData = { message: fbText }; }
-
-                    if (!fbResp.ok || (fbData.codStatus && fbData.codStatus < 1)) {
-                        throw new Error(fbData.descStatus || fbData.message || "A API Argus retornou um erro ao usar o fallback.");
-                    }
-                    responseData = fbData; // usar dados do fallback
                 }
 
                 if (!responseData.pausasDetalhadas || !Array.isArray(responseData.pausasDetalhadas)) {
-                     throw new Error("Formato de resposta inválido: campo 'pausasDetalhadas' não encontrado.");
+                    throw new Error("Formato de resposta inválido: campo 'pausasDetalhadas' não encontrado.");
                 }
                 
                 originalData = transformArgusData(responseData.pausasDetalhadas);
