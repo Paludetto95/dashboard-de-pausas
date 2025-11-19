@@ -2000,7 +2000,7 @@
             const toArgusDateTime = (yyyyMMdd, time) => {
                 if (!yyyyMMdd) return '';
                 const [yyyy, mm, dd] = yyyyMMdd.split('-');
-                return `${yyyy}-${mm}-${dd} ${time}`; // Argus: YYYY-MM-DD HH:mm:ss
+                return `${yyyy}-${mm}-${dd}T${time}`; // agora com 'T', igual ao cURL
             };
 
             // Preferência aos parâmetros passados via diálogo; caso contrário, usa filtros/campos atuais
