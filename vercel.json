@@ -1,8 +1,13 @@
 {
-  "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/dash.html" }
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/dados-argus.js",
+      "use": "@vercel/node"
+    }
   ],
-  "env": {
-    "ARGUS_API_TOKEN": "nahybptvaa25vyybq0fyoj8bqyahrlw52acotbquc8du1z033ezsvfn5nx0egxqz"
-  }
+  "routes": [
+    { "src": "/api/dados-argus", "dest": "/api/dados-argus.js" },
+    { "src": "/(.*)", "dest": "/dash.html" }
+  ]
 }
