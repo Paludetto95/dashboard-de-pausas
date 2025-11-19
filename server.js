@@ -29,14 +29,21 @@ app.use((req, res, next) => {
 // O endpoint que o seu painel vai chamar, agora suportando GET
 app.get('/api/dados-argus', async (req, res) => {
     console.log('[Proxy] Requisição GET recebida para /api/dados-argus');
+    console.log('[Proxy] Query params:', req.query);
     const hasGlobal = !!(process.env.ARGUS_API_TOKEN_GLOBAL && String(process.env.ARGUS_API_TOKEN_GLOBAL).trim());
     const hasCampaignEnv = !!process.env.ARGUS_CAMPAIGN_TOKENS;
     console.log('[Proxy] Env presence before handler:', { hasGlobalToken: hasGlobal, hasCampaignTokensEnv: hasCampaignEnv });
+    console.log('[Proxy] ARGUS_API_TOKEN_GLOBAL exists:', !!process.env.ARGUS_API_TOKEN_GLOBAL);
+    console.log('[Proxy] ARGUS_API_URL:', process.env.ARGUS_API_URL);
     try {
+        console.log('[Proxy] Getting Argus handler...');
         const h = await getArgusHandler();
+        console.log('[Proxy] Handler obtained, calling...');
         await h(req, res);
+        console.log('[Proxy] Handler completed successfully');
     } catch (error) {
         console.error('[Proxy] Erro ao processar requisição da API Argus:', error);
+        console.error('[Proxy] Error stack:', error.stack);
         res.status(500).json({ message: 'Erro interno no servidor proxy ao processar a requisição da API Argus.' });
     }
 });
@@ -44,14 +51,21 @@ app.get('/api/dados-argus', async (req, res) => {
 // Adiciona suporte para POST requests também
 app.post('/api/dados-argus', async (req, res) => {
     console.log('[Proxy] Requisição POST recebida para /api/dados-argus');
+    console.log('[Proxy] Body:', req.body);
     const hasGlobal = !!(process.env.ARGUS_API_TOKEN_GLOBAL && String(process.env.ARGUS_API_TOKEN_GLOBAL).trim());
     const hasCampaignEnv = !!process.env.ARGUS_CAMPAIGN_TOKENS;
     console.log('[Proxy] Env presence before handler:', { hasGlobalToken: hasGlobal, hasCampaignTokensEnv: hasCampaignEnv });
+    console.log('[Proxy] ARGUS_API_TOKEN_GLOBAL exists:', !!process.env.ARGUS_API_TOKEN_GLOBAL);
+    console.log('[Proxy] ARGUS_API_URL:', process.env.ARGUS_API_URL);
     try {
+        console.log('[Proxy] Getting Argus handler...');
         const h = await getArgusHandler();
+        console.log('[Proxy] Handler obtained, calling...');
         await h(req, res);
+        console.log('[Proxy] Handler completed successfully');
     } catch (error) {
         console.error('[Proxy] Erro ao processar requisição da API Argus:', error);
+        console.error('[Proxy] Error stack:', error.stack);
         res.status(500).json({ message: 'Erro interno no servidor proxy ao processar a requisição da API Argus.' });
     }
 });

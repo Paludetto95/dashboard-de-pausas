@@ -75,6 +75,13 @@ export default async function handler(req, res) {
     // 3. Coleta de Parâmetros de Filtro
     const params = req.method === 'GET' ? (req.query || {}) : (req.body || {});
     
+    // For GET requests, extract token-signature from query params if present
+    let tokenFromQuery = null;
+    if (req.method === 'GET' && params['token-signature']) {
+        tokenFromQuery = params['token-signature'];
+        delete params['token-signature']; // Remove from params to avoid sending to Argus API
+    }
+    
     const { periodoInicial, periodoFinal, idCampanha, ultimosMinutos } = params;
     
     // Converte para tipos esperados
@@ -135,7 +142,7 @@ export default async function handler(req, res) {
     console.log('[Argus] Corpo final para pausasdetalhadas:', argusBody);
     
     // 5. Seleciona o token e valida
-    let tokenToUse = GLOBAL_TOKEN;
+    let tokenToUse = tokenFromQuery || GLOBAL_TOKEN; // Use token from query if available, otherwise use global token
     const hasGlobal = GLOBAL_TOKEN.length > 0;
     const campaignToken = (numIdCampanha > 0 && CAMPAIGN_TOKENS) ? CAMPAIGN_TOKENS[numIdCampanha] : undefined;
     const hasTokenForIdCampanha = !!(campaignToken && String(campaignToken).trim());
@@ -151,14 +158,20 @@ export default async function handler(req, res) {
 
     // 6. Chama a API Argus (É um POST, mesmo que o proxy receba um GET)
     try {
-        const url = `${ARGUS_API_URL}/pausasdetalhadas`;
+        const url = `${ARGUS_API_URL}/report/pausasdetalhadas`;
         console.log(`[Argus] Chamando: ${url}`);
+        console.log(`[Argus] Method: ${req.method}`);
+        console.log(`[Argus] Token source: ${tokenFromQuery ? 'from query' : 'from env'}`);
+        console.log(`[Argus] Using token: ${tokenToUse.substring(0, 10)}...`);
+        
+        // Argus API uses Token-Signature header for authentication
+        console.log(`[Argus] Request body: ${JSON.stringify(argusBody)}`);
         
         const response = await fetch(url, {
-            method: 'POST',
+            method: 'POST', // Always use POST for Argus API regardless of incoming request method
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${tokenToUse}`
+                'Token-Signature': tokenToUse
             },
             body: JSON.stringify(argusBody)
         });
@@ -195,6 +208,14 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Proxy Error (Falha no Fetch):', error);
-        return res.status(500).json({ message: 'Erro interno no servidor proxy. Falha na comunicação com a API Argus.' });
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            url: `${ARGUS_API_URL}/report/pausasdetalhadas`
+        });
+        return res.status(500).json({ 
+            message: 'Erro interno no servidor proxy. Falha na comunicação com a API Argus.',
+            details: error.message 
+        });
     }
 }
