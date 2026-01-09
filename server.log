@@ -1,0 +1,30 @@
+[dotenv@17.2.3] injecting env (4) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+Servidor Proxy rodando em http://localhost:3000
+Seu painel HTML agora deve fazer requisições para este endereço.
+Servindo arquivos estáticos de: /workspaces/dashboard-de-pausas
+[DEBUG] POST /api/generate-ai
+[AI] Tentando gemini-2.0-flash-exp com versão v1beta2
+[AI] Erro com gemini-2.0-flash-exp: Erro API IA (gemini-2.0-flash-exp, v1beta2): 404
+[AI] Tentando gemini-2.0-pro-exp-02-05 com versão v1beta2
+[AI] Erro com gemini-2.0-pro-exp-02-05: Erro API IA (gemini-2.0-pro-exp-02-05, v1beta2): 404
+[AI] Tentando gemini-2.0-flash com versão v1beta2
+[AI] Erro com gemini-2.0-flash: Erro API IA (gemini-2.0-flash, v1beta2): 404
+[AI] Tentando gemini-1.5-flash com versão v1beta2
+[AI] Erro com gemini-1.5-flash: Erro API IA (gemini-1.5-flash, v1beta2): 404
+[AI] Tentando gemini-1.5-pro com versão v1beta2
+[AI] Erro com gemini-1.5-pro: Erro API IA (gemini-1.5-pro, v1beta2): 404
+[AI] Tentando gemini-2.0-flash-exp com versão v1
+[AI] Erro com gemini-2.0-flash-exp: models/gemini-2.0-flash-exp is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+[AI] Tentando gemini-2.0-pro-exp-02-05 com versão v1
+[AI] Erro com gemini-2.0-pro-exp-02-05: models/gemini-2.0-pro-exp-02-05 is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+[AI] Tentando gemini-2.0-flash com versão v1
+[AI] Erro com gemini-2.0-flash: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
+Please retry in 10.815012216s.
+[AI] Tentando gemini-1.5-flash com versão v1
+[AI] Erro com gemini-1.5-flash: models/gemini-1.5-flash is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+[AI] Tentando gemini-1.5-pro com versão v1
+[AI] Erro com gemini-1.5-pro: models/gemini-1.5-pro is not found for API version v1, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+[AI] Gerando análise estruturada local (fallback elaborado)

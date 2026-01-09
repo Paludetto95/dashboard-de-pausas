@@ -1,22 +1,41 @@
 {
   "version": 2,
+  "buildCommand": "npm install",
   "builds": [
     {
-      "src": "api/dados-argus.js",
+      "src": "server.js",
       "use": "@vercel/node"
     },
     {
-      "src": "index.html",
-      "use": "@vercel/static"
+      "src": "api/gemini-key.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/dados-argus.mjs",
+      "use": "@vercel/node"
     },
     {
       "src": "dash.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
-    { "src": "/api/dados-argus", "dest": "/api/dados-argus.js" },
+    { "src": "/api/generate-ai", "dest": "/server.js" },
+    { "src": "/api/gemini-key", "dest": "/api/gemini-key.js" },
+    { "src": "/api/dados-argus", "dest": "/api/dados-argus.mjs" },
+    { "src": "/api/env-check", "dest": "/server.js" },
+    { "src": "/export-html", "dest": "/server.js" },
     { "src": "/dash.html", "dest": "/dash.html" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  "env": {
+    "GEMINI_API_KEY": "@gemini_api_key",
+    "ARGUS_API_TOKEN_GLOBAL": "@argus_api_token_global",
+    "ARGUS_API_URL": "@argus_api_url",
+    "ARGUS_CAMPAIGN_TOKENS": "@argus_campaign_tokens"
+  }
 }
